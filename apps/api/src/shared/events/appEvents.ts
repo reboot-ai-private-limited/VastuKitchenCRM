@@ -18,8 +18,18 @@ export interface LeadWonEvent {
   byUserId: string;
 }
 
+export interface ProposalSeenEvent {
+  proposalId: string;
+  leadId: string;
+  number: string;
+  /** The sales person who sent it, i.e. who should be told. */
+  sentById: string | null;
+  customerName: string;
+}
+
 export interface AppEventMap {
   'lead.won': LeadWonEvent;
+  'proposal.seen': ProposalSeenEvent;
 }
 
 export interface EventBus {

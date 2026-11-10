@@ -6,10 +6,11 @@ import type { RoleName } from '@vastu/contracts';
  * Moving to permissions later means replacing this table, nothing deeper.
  */
 export type Scope = 'all' | 'assigned';
-export type ScopedModule = 'leads' | 'projects' | 'complaints';
+export type ScopedModule = 'leads' | 'proposals' | 'projects' | 'complaints';
 
 const SEES_ALL: Record<ScopedModule, readonly RoleName[]> = {
   leads: ['ADMIN', 'OFFICE'],
+  proposals: ['ADMIN'],
   projects: ['ADMIN'],
   complaints: ['ADMIN', 'OFFICE'],
 };

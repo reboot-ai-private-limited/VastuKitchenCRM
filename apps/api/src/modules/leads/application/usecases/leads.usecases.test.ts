@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AssignLeadUseCase } from './assignLead.usecase.js';
 import { ImportLeadsUseCase } from './importLeads.usecase.js';
 import { ListLeadsUseCase } from './listLeads.usecase.js';
-import { addLead, admin, office, sales1, world } from '../testing/fakes.js';
+import { addLead, admin, office, sales1, sales2, world } from '../testing/fakes.js';
 import { isStuck } from '../../domain/lead.entity.js';
 
 const query = { page: 1, pageSize: 20 };
@@ -89,5 +89,52 @@ describe('ImportLeadsUseCase', () => {
     expect(
       w.leads.rows.filter((l) => l.createdById === 'office1').every((l) => l.assignedToId === null),
     ).toBe(true);
+  });
+});
+
+describe('proposal hooks', () => {
+  async function setup(status: 'NEW' | 'VISIT' | 'PROPOSAL_SENT' | 'WON' | 'LOST') {
+    const { RecordProposalSentUseCase, GetLeadForProposalUseCase } =
+      await import('./proposalHooks.usecase.js');
+    let t = new Date('2026-11-10T10:00:00Z');
+    const w = world(() => t);
+    const lead = await addLead(w, { status, statusChangedAt: new Date('2026-11-01T00:00:00Z') });
+    return {
+      w,
+      lead,
+      sent: new RecordProposalSentUseCase(w.access, w.leads, w.activities, () => t),
+      get: new GetLeadForProposalUseCase(w.access),
+    };
+  }
+
+  it('moves an open lead to PROPOSAL_SENT, logs both entries and resets statusChangedAt', async () => {
+    const { w, lead, sent } = await setup('VISIT');
+    await sent.execute(sales1, lead.id, { number: 'VK-2026-0001' });
+    expect(w.leads.rows[0]?.status).toBe('PROPOSAL_SENT');
+    expect(w.leads.rows[0]?.statusChangedAt).toEqual(new Date('2026-11-10T10:00:00Z'));
+    expect(w.activities.types(lead.id)).toEqual(['PROPOSAL_SENT', 'STATUS_CHANGED']);
+  });
+
+  it('a second proposal keeps the status but still counts as movement', async () => {
+    const { w, lead, sent } = await setup('PROPOSAL_SENT');
+    await sent.execute(sales1, lead.id, { number: 'VK-2026-0002' });
+    expect(w.leads.rows[0]?.statusChangedAt).toEqual(new Date('2026-11-10T10:00:00Z'));
+    expect(w.activities.types(lead.id)).toEqual(['PROPOSAL_SENT']);
+  });
+
+  it.each(['WON', 'LOST'] as const)(
+    'leaves a %s lead alone (only logs the proposal)',
+    async (status) => {
+      const { w, lead, sent } = await setup(status);
+      await sent.execute(sales1, lead.id, { number: 'VK-2026-0003' });
+      expect(w.leads.rows[0]?.status).toBe(status);
+      expect(w.leads.rows[0]?.statusChangedAt).toEqual(new Date('2026-11-01T00:00:00Z'));
+    },
+  );
+
+  it('only gives proposals leads the actor may access', async () => {
+    const { lead, get } = await setup('NEW');
+    await expect(get.execute(sales2, lead.id)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(get.execute(sales1, lead.id)).resolves.toMatchObject({ phone: '9876500001' });
   });
 });

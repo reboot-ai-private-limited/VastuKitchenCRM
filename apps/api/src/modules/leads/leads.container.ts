@@ -16,6 +16,11 @@ import { GetLeadUseCase } from './application/usecases/getLead.usecase.js';
 import { ImportLeadsUseCase } from './application/usecases/importLeads.usecase.js';
 import { ListLeadsUseCase } from './application/usecases/listLeads.usecase.js';
 import { GetLeadTimelineUseCase } from './application/usecases/timeline.usecase.js';
+import {
+  GetLeadForProposalUseCase,
+  RecordProposalSeenUseCase,
+  RecordProposalSentUseCase,
+} from './application/usecases/proposalHooks.usecase.js';
 import { UpdateLeadUseCase } from './application/usecases/updateLead.usecase.js';
 import { ListVisitsUseCase, RecordVisitUseCase } from './application/usecases/visits.usecase.js';
 import { AppEventsLeadEvents } from './infrastructure/appEventsLeadEvents.adapter.js';
@@ -85,9 +90,17 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
   const recordVisit = new RecordVisitUseCase(access, visits, activities, directory);
   const listVisits = new ListVisitsUseCase(access, visits, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
+  const getLeadForProposal = new GetLeadForProposalUseCase(access);
+  const recordProposalSent = new RecordProposalSentUseCase(access, leads, activities);
+  const recordProposalSeen = new RecordProposalSeenUseCase(activities);
 
   return {
-    contract: { callStats: (from, to) => calls.statsByUser(from, to) },
+    contract: {
+      callStats: (from, to) => calls.statsByUser(from, to),
+      getLeadForProposal: (actor, leadId) => getLeadForProposal.execute(actor, leadId),
+      recordProposalSent: (actor, leadId, info) => recordProposalSent.execute(actor, leadId, info),
+      recordProposalSeen: (leadId, info) => recordProposalSeen.execute(leadId, info),
+    },
     buildRouter: () =>
       buildLeadsRouter({
         list: makeListLeadsController(listLeads),

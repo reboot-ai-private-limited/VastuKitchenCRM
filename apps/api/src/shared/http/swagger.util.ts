@@ -43,6 +43,11 @@ const TAGS = [
     name: 'Leads',
     description: 'Lead table, status pipeline, calls, visits, timeline, CSV import.',
   },
+  { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
+  {
+    name: 'Proposals / Public',
+    description: "No-login endpoints behind the customer's proposal link.",
+  },
 ];
 
 const requestMetaSchema = z.object({

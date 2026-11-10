@@ -12,7 +12,8 @@ Keep it flat; refine during build.
 | `leadCalls` | leadId, userId, startedAt, durationSec, answered, outcome?, note? — unique (leadId, userId, startedAt) |
 | `leadVisits` | leadId, userId, at, latitude, longitude, note?, photoUrl? |
 | `leadActivities` | leadId, type (`CREATED`/`ASSIGNED`/`STATUS_CHANGED`/`CALL`/`VISIT`), byUserId, at, data |
-| `proposals` | leadId, items[{title,desc,qty,price}], discount, total, token, sentAt, seenAt, seenCount |
+| `proposals` | number (unique), leadId, status, customer snapshot, title, items[{title,description,quantity,unitPrice,lineTotal}], subtotal, discount, total, notes, terms, validUntil, token (unique), sentAt, sentById, firstSeenAt, lastSeenAt, seenCount, createdById |
+| `counters` | _id (`proposal-<year>`), seq — atomic number sequence |
 | `projects` | leadId, customerId, name, value, stage (`design`/`site`/`delivered`), designStage, designerId, closedAt |
 | `posts` | projectId, authorId, text, photos[], visibility (`client`/`internal`), createdAt |
 | `comments` | postId, authorId, text, createdAt |

@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { env } from '@/config/env.js';
 import { buildContainers, type AppContainers } from './container.js';
 import { buildApiRouter } from './routes.js';
+import { registerSubscribers } from './subscribers.js';
 import { errorHandler, notFoundHandler } from '@/shared/http/error-handler.js';
 import { requestIdMiddleware } from '@/shared/http/request-id.middleware.js';
 import { mountSwagger } from '@/shared/http/swagger.util.js';
@@ -36,6 +37,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   // Containers, then routers (importing a route file registers its OpenAPI paths), THEN swagger.
   const containers = buildContainers();
+  registerSubscribers(containers);
   options.onContainers?.(containers);
   app.use('/api', buildApiRouter(containers));
   mountSwagger(app);

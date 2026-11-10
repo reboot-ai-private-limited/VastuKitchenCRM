@@ -3,6 +3,7 @@ import type { NewProposal, Proposal, ProposalPatch } from '../domain/proposal.en
 import type {
   ProposalListFilter,
   ProposalRepositoryPort,
+  ReminderWindow,
 } from '../domain/proposal.repository.port.js';
 import { ProposalModel, type ProposalDoc } from './proposal.schema.js';
 
@@ -105,6 +106,27 @@ export class MongoProposalRepository implements ProposalRepositoryPort {
       { new: true },
     );
     return later ? { proposal: toEntity(later), first: false } : null;
+  }
+
+  async findUnseenSent(q: ReminderWindow): Promise<Proposal[]> {
+    const docs = await ProposalModel.find({
+      status: 'SENT',
+      firstSeenAt: null,
+      sentAt: { $lt: q.before, $gt: q.after },
+    })
+      .sort({ sentAt: 1 })
+      .limit(q.limit);
+    return docs.map(toEntity);
+  }
+
+  async findSeen(q: ReminderWindow): Promise<Proposal[]> {
+    const docs = await ProposalModel.find({
+      status: 'SENT',
+      firstSeenAt: { $lt: q.before, $gt: q.after },
+    })
+      .sort({ firstSeenAt: 1 })
+      .limit(q.limit);
+    return docs.map(toEntity);
   }
 
   async list(filter: ProposalListFilter): Promise<{ items: Proposal[]; total: number }> {

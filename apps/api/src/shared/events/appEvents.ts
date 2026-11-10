@@ -27,8 +27,18 @@ export interface ProposalSeenEvent {
   customerName: string;
 }
 
+export interface LeadAssignedEvent {
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  /** The new assignee, or null when the lead was unassigned. */
+  toUserId: string | null;
+  byUserId: string;
+}
+
 export interface AppEventMap {
   'lead.won': LeadWonEvent;
+  'lead.assigned': LeadAssignedEvent;
   'proposal.seen': ProposalSeenEvent;
 }
 

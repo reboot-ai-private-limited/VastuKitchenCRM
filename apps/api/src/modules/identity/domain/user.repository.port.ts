@@ -1,3 +1,4 @@
+import type { RoleName } from '@vastu/contracts';
 import type { NewUser, User, UserListFilter } from './user.entity.js';
 
 export interface UserRepositoryPort {
@@ -14,4 +15,6 @@ export interface UserRepositoryPort {
   /** Rewrites the copied designation text on every user that holds `from`. Returns how many. */
   renameDesignation(from: string, to: string): Promise<number>;
   hasActiveAdmin(): Promise<boolean>;
+  /** Ids of active users with this role (e.g. every active Admin, for alerts that need someone). */
+  findActiveIdsByRole(role: RoleName): Promise<string[]>;
 }

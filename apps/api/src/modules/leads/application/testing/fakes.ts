@@ -1,12 +1,12 @@
 import { AppError } from '@/shared/errors/AppError.js';
-import type { LeadWonEvent } from '@/shared/events/appEvents.js';
+import type { LeadAssignedEvent, LeadWonEvent } from '@/shared/events/appEvents.js';
 import type { CallRecord, CallStat, NewCallRecord } from '../../domain/call.entity.js';
 import type { CallRepositoryPort } from '../../domain/call.repository.port.js';
 import type { Lead, LeadListFilter, LeadPatch, NewLead } from '../../domain/lead.entity.js';
 import type { LeadActivity, NewLeadActivity } from '../../domain/leadActivity.entity.js';
 import type { LeadActivityRepositoryPort } from '../../domain/leadActivity.repository.port.js';
 import type { LeadEventsPort } from '../../domain/leadEvents.port.js';
-import type { LeadRepositoryPort } from '../../domain/lead.repository.port.js';
+import type { LeadRepositoryPort, StuckQuery } from '../../domain/lead.repository.port.js';
 import type {
   CustomerRef,
   DirectoryUser,
@@ -30,6 +30,19 @@ export class FakeLeads implements LeadRepositoryPort {
   }
   async findByPhones(phones: string[]) {
     return this.rows.filter((l) => phones.includes(l.phone));
+  }
+  async findByIds(ids: string[]) {
+    return this.rows.filter((l) => ids.includes(l.id));
+  }
+  async findStuck(q: StuckQuery) {
+    return this.rows
+      .filter(
+        (l) =>
+          l.statusChangedAt < q.before &&
+          l.statusChangedAt > q.after &&
+          !['WON', 'LOST', ...q.excludeStatuses].includes(l.status),
+      )
+      .slice(0, q.limit);
   }
   async create(lead: NewLead) {
     if (this.rows.some((l) => l.phone === lead.phone)) throw AppError.conflict('dup');
@@ -131,6 +144,10 @@ export class FakeEvents implements LeadEventsPort {
   won: LeadWonEvent[] = [];
   leadWon(event: LeadWonEvent) {
     this.won.push(event);
+  }
+  assigned: LeadAssignedEvent[] = [];
+  leadAssigned(event: LeadAssignedEvent) {
+    this.assigned.push(event);
   }
 }
 

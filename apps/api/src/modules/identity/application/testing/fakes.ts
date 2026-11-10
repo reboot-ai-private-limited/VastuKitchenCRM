@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import type { RoleName } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import type { CustomerInvite, NewCustomerInvite } from '../../domain/invite.entity.js';
 import type { InviteRepositoryPort } from '../../domain/invite.repository.port.js';
@@ -50,6 +51,9 @@ export class FakeUsers implements UserRepositoryPort {
       n++;
     }
     return n;
+  }
+  async findActiveIdsByRole(role: RoleName) {
+    return this.rows.filter((u) => u.role === role && u.active).map((u) => u.id);
   }
   async hasActiveAdmin() {
     return this.rows.some((u) => u.role === 'ADMIN' && u.active);

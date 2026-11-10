@@ -46,7 +46,7 @@ describe('AssignLeadUseCase', () => {
   it('assigns only to sales people, and can unassign', async () => {
     const w = world();
     const lead = await addLead(w, { assignedToId: null });
-    const assign = new AssignLeadUseCase(w.leads, w.activities, w.directory, w.views);
+    const assign = new AssignLeadUseCase(w.leads, w.activities, w.directory, w.events, w.views);
     await expect(assign.execute(admin, lead.id, { userId: 'designer1' })).rejects.toMatchObject({
       statusCode: 400,
     });
@@ -56,6 +56,31 @@ describe('AssignLeadUseCase', () => {
     expect((await assign.execute(admin, lead.id, { userId: 'sales2' })).assigneeName).toBe('Asha');
     expect((await assign.execute(admin, lead.id, { userId: null })).lead.assignedToId).toBeNull();
     expect(w.activities.types(lead.id).filter((t) => t === 'ASSIGNED')).toHaveLength(2);
+  });
+
+  it('announces lead.assigned only when the assignee really changes', async () => {
+    const w = world();
+    const lead = await addLead(w, { assignedToId: null });
+    const assign = new AssignLeadUseCase(w.leads, w.activities, w.directory, w.events, w.views);
+    await assign.execute(admin, lead.id, { userId: 'sales2' });
+    await assign.execute(admin, lead.id, { userId: 'sales2' }); // no change
+    await assign.execute(admin, lead.id, { userId: null });
+    expect(w.events.assigned).toEqual([
+      {
+        leadId: lead.id,
+        leadName: 'Mrs Rao',
+        leadPhone: '9876500001',
+        toUserId: 'sales2',
+        byUserId: 'admin1',
+      },
+      {
+        leadId: lead.id,
+        leadName: 'Mrs Rao',
+        leadPhone: '9876500001',
+        toUserId: null,
+        byUserId: 'admin1',
+      },
+    ]);
   });
 });
 

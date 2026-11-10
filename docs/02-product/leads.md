@@ -19,7 +19,7 @@ Typical flow: `New → Contacted → Visit → Proposal Sent → Follow-up → W
 
 ## Features
 - **Add:** single form, or CSV import. One lead per phone number: a duplicate is refused with the existing lead's id (import reports duplicates, it does not overwrite).
-- **Assignment:** a lead created by a Sales user is assigned to them. Leads from Office/import stay unassigned until the Admin assigns them (only to active SALES users).
+- **Assignment:** the new assignee gets an in-app **"New lead assigned to you"** notification (not for self-assignment or unassigning). A lead created by a Sales user is assigned to them. Leads from Office/import stay unassigned until the Admin assigns them (only to active SALES users).
 - **List:** filter by status / source / assignee (`me`, `unassigned`, or a user) / stuck, search by name, phone or city.
 - **Stuck:** not Won/Lost and `statusChangedAt` older than `LEAD_STUCK_DAYS` (default 2).
 - **Who sees what:** Admin and Office see all leads; Sales see only leads assigned to them. Office can add and view, but cannot change status or log calls.

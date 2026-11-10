@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { env, isProduction } from '@/config/env.js';
 import { logger } from '@/shared/logging/logger.js';
 import { SWAGGER_DOCS_PATH } from '@/shared/http/swagger.util.js';
+import { startIntervalJob, type IntervalJob } from '@/shared/jobs/intervalJob.js';
 import { createApp } from './app.js';
 
 const SHUTDOWN_TIMEOUT_MS = 15_000;
@@ -15,9 +16,19 @@ async function start() {
   }
   logger.info('connected to MongoDB');
 
+  const jobs: IntervalJob[] = [];
   const app = createApp({
-    onContainers: () => {
-      // Scheduled jobs start here when `env.ENABLE_CRON` is true (added with the reminders module).
+    onContainers: ({ reminders }) => {
+      // Scheduled jobs run on ONE instance only (ENABLE_CRON); see docs/03-architecture/deployment.md.
+      if (env.ENABLE_CRON) {
+        jobs.push(
+          startIntervalJob('reminders', env.REMINDER_INTERVAL_MINUTES * 60_000, () =>
+            reminders.contract.run(),
+          ),
+        );
+      } else {
+        logger.info('scheduled jobs are off (ENABLE_CRON=false)');
+      }
     },
   });
 
@@ -38,6 +49,8 @@ async function start() {
       process.exit(1);
     }, SHUTDOWN_TIMEOUT_MS);
     force.unref();
+
+    for (const job of jobs) job.stop();
 
     server.close(() => {
       mongoose

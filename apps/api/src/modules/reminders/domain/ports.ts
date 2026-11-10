@@ -1,0 +1,57 @@
+import type { LeadStatus, NotificationRefDto, NotificationType } from '@vastu/contracts';
+
+export interface SentProposal {
+  id: string;
+  number: string;
+  leadId: string;
+  customerName: string;
+  sentById: string | null;
+  sentAt: Date;
+  firstSeenAt: Date | null;
+}
+
+export interface LeadSnapshot {
+  id: string;
+  name: string;
+  status: LeadStatus;
+  statusChangedAt: Date;
+  assignedToId: string | null;
+}
+
+export interface Window {
+  before: Date;
+  after: Date;
+  limit: number;
+}
+
+/** What reminders needs from proposals (the adapter wraps proposals' public contract). */
+export interface ProposalSourcePort {
+  findUnseenSent(window: Window): Promise<SentProposal[]>;
+  findSeen(window: Window): Promise<SentProposal[]>;
+}
+
+/** What reminders needs from leads (the adapter wraps leads' public contract). */
+export interface LeadSourcePort {
+  states(ids: string[]): Promise<LeadSnapshot[]>;
+  findStuck(window: Window & { excludeStatuses: LeadStatus[] }): Promise<LeadSnapshot[]>;
+}
+
+export interface Reminder {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  ref: NotificationRefDto;
+  /** Same key + same person = delivered once, however often the job runs. */
+  dedupeKey: string;
+}
+
+export interface NotifierPort {
+  /** True when delivered now; false when this key had already been delivered to that person. */
+  notify(reminder: Reminder): Promise<boolean>;
+}
+
+/** Fallback recipients when a reminder has no one else to go to. */
+export interface AdminDirectoryPort {
+  activeAdminIds(): Promise<string[]>;
+}

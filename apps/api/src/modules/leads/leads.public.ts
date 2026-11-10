@@ -1,4 +1,12 @@
-import type { RoleName } from '@vastu/contracts';
+import type { LeadStatus, RoleName } from '@vastu/contracts';
+
+export interface LeadState {
+  id: string;
+  name: string;
+  status: LeadStatus;
+  statusChangedAt: Date;
+  assignedToId: string | null;
+}
 
 export interface LeadActor {
   id: string;
@@ -23,6 +31,19 @@ export interface LeadsPublicContract {
     from: Date,
     to: Date,
   ): Promise<Array<{ userId: string; calls: number; answered: number; talkSeconds: number }>>;
+
+  /** Current status/assignee of these leads (unknown ids are absent). For reminders. */
+  getLeadStates(ids: string[]): Promise<LeadState[]>;
+  /**
+   * Open leads (never Won/Lost) whose status last changed between `after` and `before`, minus
+   * `excludeStatuses`; oldest first, at most `limit`. For the stagnant-lead reminder.
+   */
+  findStuckLeads(query: {
+    before: Date;
+    after: Date;
+    excludeStatuses: LeadStatus[];
+    limit: number;
+  }): Promise<LeadState[]>;
 
   /** The lead if `actor` may access it; otherwise throws NOT FOUND. */
   getLeadForProposal(actor: LeadActor, leadId: string): Promise<LeadForProposal>;

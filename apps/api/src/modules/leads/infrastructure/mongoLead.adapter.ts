@@ -3,7 +3,7 @@ import { CLOSED_LEAD_STATUSES } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import { escapeRegex, isDuplicateKey } from '@/shared/db/mongoErrors.js';
 import type { Lead, LeadListFilter, LeadPatch, NewLead } from '../domain/lead.entity.js';
-import type { LeadRepositoryPort } from '../domain/lead.repository.port.js';
+import type { LeadRepositoryPort, StuckQuery } from '../domain/lead.repository.port.js';
 import { LeadModel, type LeadDoc } from './lead.schema.js';
 
 const idOrNull = (v: { toString(): string } | null): string | null => (v ? v.toString() : null);
@@ -44,6 +44,21 @@ export class MongoLeadRepository implements LeadRepositoryPort {
 
   async findByPhones(phones: string[]): Promise<Lead[]> {
     return (await LeadModel.find({ phone: { $in: phones } })).map(toEntity);
+  }
+
+  async findByIds(ids: string[]): Promise<Lead[]> {
+    const valid = ids.filter((id) => isValidObjectId(id));
+    return (await LeadModel.find({ _id: { $in: valid } })).map(toEntity);
+  }
+
+  async findStuck(q: StuckQuery): Promise<Lead[]> {
+    const docs = await LeadModel.find({
+      statusChangedAt: { $lt: q.before, $gt: q.after },
+      status: { $nin: [...CLOSED_LEAD_STATUSES, ...q.excludeStatuses] },
+    })
+      .sort({ statusChangedAt: 1 })
+      .limit(q.limit);
+    return docs.map(toEntity);
   }
 
   async create(lead: NewLead): Promise<Lead> {

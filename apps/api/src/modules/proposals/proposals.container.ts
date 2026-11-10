@@ -19,6 +19,7 @@ import {
   GetProposalUseCase,
   ListProposalsUseCase,
 } from './application/usecases/queries.usecase.js';
+import { ProposalReminderQueriesUseCase } from './application/usecases/reminderQueries.usecase.js';
 import { SendProposalUseCase } from './application/usecases/sendProposal.usecase.js';
 import {
   DeleteProposalUseCase,
@@ -90,11 +91,15 @@ export function buildProposalsContainer({
   const list = new ListProposalsUseCase(proposals, gateway, views);
   const duplicate = new DuplicateProposalUseCase(access, proposals, gateway, numbers, tokens);
   const send = new SendProposalUseCase(access, proposals, gateway, links, views);
+  const reminderQueries = new ProposalReminderQueriesUseCase(proposals);
   const getPublic = new GetPublicProposalUseCase(proposals, directory);
   const recordSeen = new RecordProposalSeenUseCase(proposals, gateway, proposalEvents);
 
   return {
-    contract: {},
+    contract: {
+      findUnseenSent: (window) => reminderQueries.unseen(window),
+      findSeen: (window) => reminderQueries.seen(window),
+    },
     buildRouter: () =>
       buildProposalsRouter({
         create: makeCreateController(create, views),

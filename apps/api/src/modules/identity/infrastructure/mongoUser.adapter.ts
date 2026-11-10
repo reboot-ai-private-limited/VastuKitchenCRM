@@ -1,4 +1,5 @@
 import { isValidObjectId, type HydratedDocument } from 'mongoose';
+import type { RoleName } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import type { NewUser, User, UserListFilter } from '../domain/user.entity.js';
 import type { UserRepositoryPort } from '../domain/user.repository.port.js';
@@ -78,6 +79,11 @@ export class MongoUserRepository implements UserRepositoryPort {
   async renameDesignation(from: string, to: string): Promise<number> {
     const res = await UserModel.updateMany({ designation: from }, { $set: { designation: to } });
     return res.modifiedCount;
+  }
+
+  async findActiveIdsByRole(role: RoleName): Promise<string[]> {
+    const docs = await UserModel.find({ role, active: true }).select('_id');
+    return docs.map((d) => d.id as string);
   }
 
   async hasActiveAdmin(): Promise<boolean> {

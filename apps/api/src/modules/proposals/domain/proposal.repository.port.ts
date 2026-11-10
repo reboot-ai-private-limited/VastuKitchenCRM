@@ -1,6 +1,12 @@
 import type { NewProposal, Proposal, ProposalPatch } from './proposal.entity.js';
 import type { ProposalStatus } from '@vastu/contracts';
 
+export interface ReminderWindow {
+  before: Date;
+  after: Date;
+  limit: number;
+}
+
 export interface ProposalListFilter {
   page: number;
   pageSize: number;
@@ -24,5 +30,12 @@ export interface ProposalRepositoryPort {
    * several browsers open it at once. Null when the token is unknown or the proposal is a draft.
    */
   recordSeen(token: string, at: Date): Promise<{ proposal: Proposal; first: boolean } | null>;
+  /**
+   * SENT proposals never opened whose `sentAt` is in `(after, before)`. Oldest first, at most `limit`.
+   * Bounded on both sides so reminder runs stay small however old the data gets.
+   */
+  findUnseenSent(query: ReminderWindow): Promise<Proposal[]>;
+  /** SENT proposals whose `firstSeenAt` is in `(after, before)`. Oldest first, at most `limit`. */
+  findSeen(query: ReminderWindow): Promise<Proposal[]>;
   list(filter: ProposalListFilter): Promise<{ items: Proposal[]; total: number }>;
 }

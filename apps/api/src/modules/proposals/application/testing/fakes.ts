@@ -7,6 +7,7 @@ import type { ProposalEventsPort } from '../../domain/proposalEvents.port.js';
 import type {
   ProposalListFilter,
   ProposalRepositoryPort,
+  ReminderWindow,
 } from '../../domain/proposal.repository.port.js';
 import type { PublicTokenPort } from '../../domain/publicToken.port.js';
 import type { DirectoryUser, UserDirectoryPort } from '../../domain/userDirectory.port.js';
@@ -55,6 +56,28 @@ export class FakeProposals implements ProposalRepositoryPort {
     p.lastSeenAt = at;
     p.seenCount++;
     return { proposal: p, first };
+  }
+  async findUnseenSent(q: ReminderWindow) {
+    return this.rows
+      .filter(
+        (p) =>
+          p.status === 'SENT' &&
+          p.firstSeenAt === null &&
+          p.sentAt! < q.before &&
+          p.sentAt! > q.after,
+      )
+      .slice(0, q.limit);
+  }
+  async findSeen(q: ReminderWindow) {
+    return this.rows
+      .filter(
+        (p) =>
+          p.status === 'SENT' &&
+          p.firstSeenAt !== null &&
+          p.firstSeenAt < q.before &&
+          p.firstSeenAt > q.after,
+      )
+      .slice(0, q.limit);
   }
   async list(filter: ProposalListFilter) {
     this.lastFilter = filter;

@@ -14,6 +14,7 @@ import {
 import { CreateLeadUseCase } from './application/usecases/createLead.usecase.js';
 import { GetLeadUseCase } from './application/usecases/getLead.usecase.js';
 import { ImportLeadsUseCase } from './application/usecases/importLeads.usecase.js';
+import { ReminderQueriesUseCase } from './application/usecases/reminderQueries.usecase.js';
 import { ListLeadsUseCase } from './application/usecases/listLeads.usecase.js';
 import { GetLeadTimelineUseCase } from './application/usecases/timeline.usecase.js';
 import {
@@ -74,7 +75,7 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
   const createLead = new CreateLeadUseCase(leads, activities);
   const listLeads = new ListLeadsUseCase(leads, views, env.LEAD_STUCK_DAYS);
   const updateLead = new UpdateLeadUseCase(access, leads, views);
-  const assignLead = new AssignLeadUseCase(leads, activities, directory, views);
+  const assignLead = new AssignLeadUseCase(leads, activities, directory, leadEvents, views);
   const changeStatus = new ChangeLeadStatusUseCase(
     access,
     leads,
@@ -90,6 +91,7 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
   const recordVisit = new RecordVisitUseCase(access, visits, activities, directory);
   const listVisits = new ListVisitsUseCase(access, visits, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
+  const reminderQueries = new ReminderQueriesUseCase(leads);
   const getLeadForProposal = new GetLeadForProposalUseCase(access);
   const recordProposalSent = new RecordProposalSentUseCase(access, leads, activities);
   const recordProposalSeen = new RecordProposalSeenUseCase(activities);
@@ -97,6 +99,8 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
   return {
     contract: {
       callStats: (from, to) => calls.statsByUser(from, to),
+      getLeadStates: (ids) => reminderQueries.states(ids),
+      findStuckLeads: (query) => reminderQueries.findStuck(query),
       getLeadForProposal: (actor, leadId) => getLeadForProposal.execute(actor, leadId),
       recordProposalSent: (actor, leadId, info) => recordProposalSent.execute(actor, leadId, info),
       recordProposalSeen: (leadId, info) => recordProposalSeen.execute(leadId, info),

@@ -124,6 +124,7 @@ export function buildIdentityContainer(): IdentityContainer {
   return {
     contract: {
       getUserSummaries: async (ids) => (await users.findByIds(ids)).map(summarise),
+      getActiveAdminIds: () => users.findActiveIdsByRole('ADMIN'),
       createCustomer: async (input) => summarise(await createCustomer.execute(input)),
       createCustomerInvite: (customerId) => createInvite.execute(customerId),
     },

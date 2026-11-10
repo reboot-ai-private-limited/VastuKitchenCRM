@@ -43,6 +43,11 @@ const TAGS = [
     name: 'Leads',
     description: 'Lead table, status pipeline, calls, visits, timeline, CSV import.',
   },
+  { name: 'Notifications', description: 'My in-app notifications (polled by web and app).' },
+  {
+    name: 'Reminders',
+    description: 'The time-based reminder rules; Admin can run them on demand.',
+  },
   { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
   {
     name: 'Proposals / Public',

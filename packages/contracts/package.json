@@ -1,0 +1,20 @@
+{
+  "name": "@vastu/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@vastu/config": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

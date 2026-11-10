@@ -1,0 +1,17 @@
+# Build context is the repo root (see apps/api/Dockerfile). node_modules is reinstalled in the
+# image, build output is regenerated, and a stray .env must never end up in a layer.
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+docs
+*.md
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+!**/.env.*.example
+.vscode
+.idea
+*.log

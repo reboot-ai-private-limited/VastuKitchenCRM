@@ -1,0 +1,41 @@
+{
+  "name": "@vastu/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "clean": "rm -rf dist",
+    "build": "pnpm clean && tsc --noEmit && node esbuild.config.mjs",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src && pnpm lint:deps",
+    "lint:deps": "depcruise src --config .dependency-cruiser.cjs --output-type err-long",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@vastu/contracts": "workspace:*",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "mongoose": "^8.9.5",
+    "pino": "^9.6.0",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.0.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@vastu/config": "workspace:*",
+    "dependency-cruiser": "^16.9.0",
+    "esbuild": "^0.24.2",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -2,6 +2,7 @@ import express from 'express';
 import type { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { env } from '@/config/env.js';
 import { buildContainers, type AppContainers } from './container.js';
 import { buildApiRouter } from './routes.js';
@@ -22,8 +23,16 @@ export function createApp(options: CreateAppOptions = {}): Express {
   // Request-id FIRST so even a request rejected by helmet/cors is traceable.
   app.use(requestIdMiddleware());
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGINS, credentials: true }));
+  // `credentials: true` lets the browser send the refresh cookie; origins are an explicit allowlist.
+  app.use(
+    cors({
+      origin: env.CORS_ORIGINS,
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Client', 'X-Request-Id'],
+    }),
+  );
   app.use(express.json({ limit: '2mb' }));
+  app.use(cookieParser());
 
   // Containers, then routers (importing a route file registers its OpenAPI paths), THEN swagger.
   const containers = buildContainers();

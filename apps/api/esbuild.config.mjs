@@ -12,7 +12,9 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 const external = Object.keys(pkg.dependencies ?? {}).filter((d) => !d.startsWith('@vastu/'));
 
 await esbuild.build({
-  entryPoints: ['src/server.ts'],
+  // Two entry points, one build: the server, and the seed script (runs in prod too, as
+  // `node dist/scripts/seed.js`, not just via tsx in dev).
+  entryPoints: ['src/server.ts', 'src/scripts/seed.ts'],
   bundle: true,
   platform: 'node',
   format: 'esm',

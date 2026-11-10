@@ -27,7 +27,55 @@ openApiRegistry.registerComponent('securitySchemes', 'bearerAuth', {
 });
 
 /** Declared in order so Swagger UI groups routes by module. Add a tag per new module. */
-const TAGS = [{ name: 'Health', description: 'Service health check.' }];
+const TAGS = [
+  { name: 'Health', description: 'Service health check.' },
+  {
+    name: 'Identity / Auth',
+    description: 'Login, refresh, logout, current user, customer invite sign-in.',
+  },
+  { name: 'Identity / Users', description: 'Staff accounts (Admin and HR).' },
+  {
+    name: 'Identity / Designations',
+    description: 'Designation master data shown in the user form.',
+  },
+  { name: 'Identity / Customers', description: 'Customer accounts and one-time invite links.' },
+];
+
+const requestMetaSchema = z.object({
+  method: z.string(),
+  url: z.string(),
+  requestId: z.string(),
+  ip: z.string().optional(),
+});
+
+/** The success envelope around `data`, so Swagger shows what the API really returns. */
+export const envelopeSchema = <T extends z.ZodTypeAny>(data: T) =>
+  z.object({
+    success: z.literal(true),
+    statusCode: z.number(),
+    request: requestMetaSchema,
+    message: z.string(),
+    data,
+  });
+
+export const errorEnvelopeSchema = z.object({
+  success: z.literal(false),
+  statusCode: z.number(),
+  code: z.string(),
+  request: requestMetaSchema,
+  message: z.string(),
+  data: z.unknown().optional(),
+});
+
+export const okResponse = <T extends z.ZodTypeAny>(description: string, data: T) => ({
+  description,
+  content: { 'application/json': { schema: envelopeSchema(data) } },
+});
+
+export const errorResponse = (description: string) => ({
+  description,
+  content: { 'application/json': { schema: errorEnvelopeSchema } },
+});
 
 export const SWAGGER_DOCS_PATH = '/api/docs';
 

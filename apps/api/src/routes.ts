@@ -5,5 +5,6 @@ import type { AppContainers } from './container.js';
 export function buildApiRouter(containers: AppContainers): Router {
   const router = Router();
   router.use('/health', containers.health.buildRouter());
+  router.use('/identity', containers.identity.buildRouter());
   return router;
 }

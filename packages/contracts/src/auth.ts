@@ -6,6 +6,7 @@ import { z } from 'zod';
  */
 export const ROLE_NAMES = [
   'ADMIN',
+  'HR',
   'SALES',
   'DESIGNER',
   'TECHNICIAN',

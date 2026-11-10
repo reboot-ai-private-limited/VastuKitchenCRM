@@ -17,6 +17,7 @@ Next.js web ─┘ (Vercel)                         └─► Cloudinary
 
 - One build artifact: `pnpm --filter @vastu/api build` → `apps/api/dist`.
 - Config only via env vars (`.env`, never committed; `.env.example` is). Includes `PORT`, `MONGO_URI`, `JWT_*`, `CLOUDINARY_*`, `CORS_ORIGINS`, reminder thresholds.
+- First-time setup on a new database: `node dist/scripts/seed.js` (or `pnpm --filter @vastu/api seed` in dev) adds the default designations and creates the first Admin, prompting for the password (never read from `.env`).
 - Health endpoint `GET /api/health` for checks.
 - **Run exactly one instance that runs cron** (see below).
 

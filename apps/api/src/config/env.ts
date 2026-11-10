@@ -18,6 +18,22 @@ const schema = z.object({
     .default('http://localhost:3001')
     .transform((value) => value.split(',').map((origin) => origin.trim())),
 
+  /** Signs access tokens. Refresh tokens are opaque random values, so they need no secret. */
+  JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+  REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  /** Customers open a link and stay signed in, so their sessions are longer. */
+  CUSTOMER_REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(90),
+  CUSTOMER_INVITE_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  BCRYPT_COST: z.coerce.number().int().min(8).max(15).default(12),
+
+  /** Refresh-cookie settings (web only). `none` is for a web app on a different site; needs HTTPS. */
+  COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
+  COOKIE_DOMAIN: z.string().min(1).optional(),
+
+  /** Where customer invite links point (the web app). */
+  WEB_BASE_URL: z.string().url().default('http://localhost:3001'),
+
   /** Run scheduled jobs in this process. True on exactly one instance. */
   ENABLE_CRON: z
     .enum(['true', 'false'])

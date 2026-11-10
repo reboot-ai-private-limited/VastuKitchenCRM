@@ -1,0 +1,24 @@
+# Data Model (draft, MongoDB collections)
+
+Keep it flat; refine during build.
+
+| Collection | Key fields |
+|---|---|
+| `users` | name, phone, email, passwordHash, role, attendanceType (`gps`/`biometric`), fixedSalary, active |
+| `leads` | name, phone, source, city, status, statusChangedAt, assignedTo, notes |
+| `callLogs` | leadId, userId, startedAt, durationSec, answered, outcome, note |
+| `visits` | leadId/projectId, userId, location{lat,lng}, note, photoUrl, at |
+| `proposals` | leadId, items[{title,desc,qty,price}], discount, total, token, sentAt, seenAt, seenCount |
+| `projects` | leadId, customerId, name, value, stage (`design`/`site`/`delivered`), designStage, designerId, closedAt |
+| `posts` | projectId, authorId, text, photos[], visibility (`client`/`internal`), createdAt |
+| `comments` | postId, authorId, text, createdAt |
+| `complaints` | customerId/projectId, description, photos[], raisedBy, assignedTo, status, resolutionNote, resolutionPhoto |
+| `attendance` | userId, date, inAt, outAt, method (`gps`/`biometric_sim`), location |
+| `salaries` | userId, month, fixed, presentDays, workingDays, payable (editable), finalised |
+| `notifications` | userId, type, refType, refId, message, readAt |
+| `activities` | userId, type, refId, at — feeds dashboard first/last activity |
+
+## Notes
+- Customers are `users` with role `customer`, linked to a project.
+- Index: `leads.phone` (unique), `proposals.token` (unique), `attendance(userId,date)`.
+- Photos stored as Cloudinary URLs; no binary data in Mongo.

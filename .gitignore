@@ -1,0 +1,27 @@
+# Private / non-English source brief (kept locally only)
+vastu_kitchen_developer_mvp_brief.txt
+
+# Dependencies & builds
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Mobile
+*.apk
+*.aab
+android/app/build/
+.expo/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log

@@ -4,7 +4,7 @@
 |---|---|---|
 | WhatsApp Cloud API needs Meta business verification + approved templates | Auto-send blocked | Use `wa.me` prefilled link for MVP ([ADR-0004](../adr/0004-whatsapp-wa-me.md)) |
 | Call-log access is Android-only and needs permission | Call tracking gaps | Sideloaded APK so no Play restrictions; manual outcome entry as fallback |
-| Cron needs a persistent server | Reminders fail on Vercel | API hosted on Render/Railway/VPS, not Vercel |
+| Cron needs a persistent server | Reminders fail on Vercel | API hosted on our VPS (PM2/Docker), not Vercel |
 | Scope creep ("Basecamp-like" everything) | Miss deadline | Follow [mvp-scope](../01-scope/mvp-scope.md); cut order in [roadmap](roadmap.md) |
 | Push notifications (FCM + RN setup) eat time | Day 9 overrun | In-app notifications are baseline; push is cut item #1 |
 | Real biometric (Hikvision) needs registration + LAN | Can't demo live | Simulated punches for MVP; real integration post-pricing |

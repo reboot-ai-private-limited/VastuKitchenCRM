@@ -21,10 +21,14 @@
 - Play Store release, iOS app
 - TODO/docs/announcements/scheduling beyond a basic note (optional, only if time remains)
 
+## Decisions (resolved)
+1. **Customer login:** magic link / OTP, no passwords.
+2. **Lead statuses:** bidirectional, any-to-any; no Qualified/Interested stage (`New → Contacted → Visit → Proposal Sent → Follow-up → Won | Lost`) — see [leads](../02-product/leads.md).
+3. **Lead sources:** simulated for the demo (manual + CSV real, website/FB/Justdial are source tags with seeded leads). Build real integrations only if the client approves after the demo.
+4. **Push notifications:** in-app first; FCM only if time allows.
+5. **API hosting:** our own VPS (persistent process for cron; also suits the later Hikvision/LAN phase). Deployable with **either PM2 or Docker** — see [deployment](../03-architecture/deployment.md).
+6. **Biometric:** simulated for the MVP; no device integration yet.
+7. **Branding:** taken from the client website https://vaastukitchen.com/ — see [branding](../00-vision/branding.md).
+
 ## Open questions
-1. Customer login: magic link / OTP (recommended) vs password?
-2. Lead pipeline statuses — confirm list (proposed in [leads](../02-product/leads.md)).
-3. Do website/FB/Justdial leads arrive via API/webhook, or only manual/CSV for the demo? (Assume manual/CSV + simulated sources.)
-4. Which hosting for the API (Render / Railway / VPS)?
-5. Branding (logo, colours, proposal template) from client?
-6. Push notifications: FCM in MVP, or in-app notifications only if time is tight?
+1. VPS details: provider, OS, domain name and SSL (needed before the APK/Vercel web can call the API over HTTPS).

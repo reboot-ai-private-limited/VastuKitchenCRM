@@ -1,0 +1,108 @@
+import type { Router } from 'express';
+import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
+import { env } from '@/config/env.js';
+import type { EventBus } from '@/shared/events/appEvents.js';
+import { LeadAccess } from './application/services/leadAccess.js';
+import { LeadViewBuilder } from './application/services/leadViews.js';
+import { AssignLeadUseCase } from './application/usecases/assignLead.usecase.js';
+import { ChangeLeadStatusUseCase } from './application/usecases/changeLeadStatus.usecase.js';
+import {
+  GetCallStatsUseCase,
+  ListCallsUseCase,
+  RecordCallUseCase,
+} from './application/usecases/calls.usecase.js';
+import { CreateLeadUseCase } from './application/usecases/createLead.usecase.js';
+import { GetLeadUseCase } from './application/usecases/getLead.usecase.js';
+import { ImportLeadsUseCase } from './application/usecases/importLeads.usecase.js';
+import { ListLeadsUseCase } from './application/usecases/listLeads.usecase.js';
+import { GetLeadTimelineUseCase } from './application/usecases/timeline.usecase.js';
+import { UpdateLeadUseCase } from './application/usecases/updateLead.usecase.js';
+import { ListVisitsUseCase, RecordVisitUseCase } from './application/usecases/visits.usecase.js';
+import { AppEventsLeadEvents } from './infrastructure/appEventsLeadEvents.adapter.js';
+import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
+import { MongoCallRepository } from './infrastructure/mongoCall.adapter.js';
+import { MongoLeadActivityRepository } from './infrastructure/mongoLeadActivity.adapter.js';
+import { MongoLeadRepository } from './infrastructure/mongoLead.adapter.js';
+import { MongoVisitRepository } from './infrastructure/mongoVisit.adapter.js';
+import {
+  makeAssignLeadController,
+  makeCallStatsController,
+  makeChangeStatusController,
+  makeCreateLeadController,
+  makeGetLeadController,
+  makeImportLeadsController,
+  makeListCallsController,
+  makeListLeadsController,
+  makeListVisitsController,
+  makeRecordCallController,
+  makeRecordVisitController,
+  makeTimelineController,
+  makeUpdateLeadController,
+} from './interface/leads.controller.js';
+import { buildLeadsRouter } from './interface/leads.route.js';
+import type { LeadsPublicContract } from './leads.public.js';
+
+export interface LeadsContainer {
+  contract: LeadsPublicContract;
+  buildRouter: () => Router;
+}
+
+export interface LeadsDeps {
+  /** Identity's public contract: the only way leads reaches users. */
+  identity: IdentityPublicContract;
+  events: EventBus;
+}
+
+export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsContainer {
+  // 1. Adapters
+  const leads = new MongoLeadRepository();
+  const calls = new MongoCallRepository();
+  const visits = new MongoVisitRepository();
+  const activities = new MongoLeadActivityRepository();
+  const directory = new IdentityUserDirectory(identity);
+  const leadEvents = new AppEventsLeadEvents(events);
+
+  // 2. Shared services and use cases, depending only on ports
+  const access = new LeadAccess(leads);
+  const views = new LeadViewBuilder(directory, env.LEAD_STUCK_DAYS);
+  const getLead = new GetLeadUseCase(access, views);
+  const createLead = new CreateLeadUseCase(leads, activities);
+  const listLeads = new ListLeadsUseCase(leads, views, env.LEAD_STUCK_DAYS);
+  const updateLead = new UpdateLeadUseCase(access, leads, views);
+  const assignLead = new AssignLeadUseCase(leads, activities, directory, views);
+  const changeStatus = new ChangeLeadStatusUseCase(
+    access,
+    leads,
+    activities,
+    directory,
+    leadEvents,
+    views,
+  );
+  const timeline = new GetLeadTimelineUseCase(access, activities, directory);
+  const recordCall = new RecordCallUseCase(access, calls, leads, activities, directory);
+  const listCalls = new ListCallsUseCase(access, calls, directory);
+  const callStats = new GetCallStatsUseCase(calls, directory);
+  const recordVisit = new RecordVisitUseCase(access, visits, activities, directory);
+  const listVisits = new ListVisitsUseCase(access, visits, directory);
+  const importLeads = new ImportLeadsUseCase(leads, activities);
+
+  return {
+    contract: { callStats: (from, to) => calls.statsByUser(from, to) },
+    buildRouter: () =>
+      buildLeadsRouter({
+        list: makeListLeadsController(listLeads),
+        create: makeCreateLeadController(createLead, getLead),
+        importLeads: makeImportLeadsController(importLeads),
+        callStats: makeCallStatsController(callStats),
+        get: makeGetLeadController(getLead),
+        update: makeUpdateLeadController(updateLead),
+        assign: makeAssignLeadController(assignLead),
+        changeStatus: makeChangeStatusController(changeStatus),
+        timeline: makeTimelineController(timeline),
+        recordCall: makeRecordCallController(recordCall),
+        listCalls: makeListCallsController(listCalls),
+        recordVisit: makeRecordVisitController(recordVisit),
+        listVisits: makeListVisitsController(listVisits),
+      }),
+  };
+}

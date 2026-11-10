@@ -3,7 +3,7 @@ import { AppError } from '@/shared/errors/AppError.js';
 import type { Designation } from '../domain/designation.entity.js';
 import type { DesignationRepositoryPort } from '../domain/designation.repository.port.js';
 import { DesignationModel, type DesignationDoc } from './designation.schema.js';
-import { isDuplicateKey } from './mongoErrors.js';
+import { isDuplicateKey } from '@/shared/db/mongoErrors.js';
 
 const toEntity = (doc: HydratedDocument<DesignationDoc>): Designation => ({
   id: doc.id as string,

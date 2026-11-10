@@ -39,6 +39,10 @@ const TAGS = [
     description: 'Designation master data shown in the user form.',
   },
   { name: 'Identity / Customers', description: 'Customer accounts and one-time invite links.' },
+  {
+    name: 'Leads',
+    description: 'Lead table, status pipeline, calls, visits, timeline, CSV import.',
+  },
 ];
 
 const requestMetaSchema = z.object({

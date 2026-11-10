@@ -34,6 +34,9 @@ const schema = z.object({
   /** Where customer invite links point (the web app). */
   WEB_BASE_URL: z.string().url().default('http://localhost:3001'),
 
+  /** A lead not Won/Lost and unchanged for this many days is "stuck". */
+  LEAD_STUCK_DAYS: z.coerce.number().int().min(1).default(2),
+
   /** Run scheduled jobs in this process. True on exactly one instance. */
   ENABLE_CRON: z
     .enum(['true', 'false'])

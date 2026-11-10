@@ -6,5 +6,6 @@ export function buildApiRouter(containers: AppContainers): Router {
   const router = Router();
   router.use('/health', containers.health.buildRouter());
   router.use('/identity', containers.identity.buildRouter());
+  router.use('/leads', containers.leads.buildRouter());
   return router;
 }

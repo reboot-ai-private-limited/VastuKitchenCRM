@@ -2,7 +2,7 @@ import { isValidObjectId, type HydratedDocument } from 'mongoose';
 import { AppError } from '@/shared/errors/AppError.js';
 import type { NewUser, User, UserListFilter } from '../domain/user.entity.js';
 import type { UserRepositoryPort } from '../domain/user.repository.port.js';
-import { escapeRegex, isDuplicateKey } from './mongoErrors.js';
+import { escapeRegex, isDuplicateKey } from '@/shared/db/mongoErrors.js';
 import { UserModel, type UserDoc } from './user.schema.js';
 
 function toEntity(doc: HydratedDocument<UserDoc>): User {

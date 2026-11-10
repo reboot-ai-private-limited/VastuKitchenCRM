@@ -8,9 +8,10 @@ Keep it flat; refine during build.
 | `designations` | name, nameKey (lowercase, unique), active |
 | `sessions` | userId, tokenHash (unique), client (`web`/`mobile`), expiresAt (TTL), revokedAt |
 | `customerInvites` | userId, tokenHash (unique), expiresAt (TTL), usedAt |
-| `leads` | name, phone, source, city, status, statusChangedAt, assignedTo, notes |
-| `callLogs` | leadId, userId, startedAt, durationSec, answered, outcome, note |
-| `visits` | leadId/projectId, userId, location{lat,lng}, note, photoUrl, at |
+| `leads` | name, phone (unique), altPhone, email, city, notes, source, status, statusChangedAt, assignedToId, lostReason, customerId, createdById |
+| `leadCalls` | leadId, userId, startedAt, durationSec, answered, outcome?, note? — unique (leadId, userId, startedAt) |
+| `leadVisits` | leadId, userId, at, latitude, longitude, note?, photoUrl? |
+| `leadActivities` | leadId, type (`CREATED`/`ASSIGNED`/`STATUS_CHANGED`/`CALL`/`VISIT`), byUserId, at, data |
 | `proposals` | leadId, items[{title,desc,qty,price}], discount, total, token, sentAt, seenAt, seenCount |
 | `projects` | leadId, customerId, name, value, stage (`design`/`site`/`delivered`), designStage, designerId, closedAt |
 | `posts` | projectId, authorId, text, photos[], visibility (`client`/`internal`), createdAt |

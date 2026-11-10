@@ -13,3 +13,4 @@ export * from './pagination.js';
 export * from './auth.js';
 export * from './health.js';
 export * from './identity.js';
+export * from './leads.js';

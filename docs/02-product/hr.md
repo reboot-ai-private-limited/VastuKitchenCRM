@@ -1,7 +1,7 @@
 # HR (Module 5) — keep shallow
 
 ## Employees
-Add/edit: name, phone, role, **attendance type** (`GPS` or `Biometric`), fixed monthly salary, active flag. Creating an employee creates their login.
+Add/edit: name, phone, role, **designation** (from the designations master list), **attendance type** (`GPS` or `Biometric`), fixed monthly salary, active flag. Creating an employee creates their login.
 
 ## Attendance
 - **Field sales — GPS:** check-in / check-out from the mobile app, stored with location + time.

@@ -20,7 +20,7 @@ A clean working demo is needed to **lock final pricing** with the client. Web pa
 - Designs (2D/3D) stay in AutoCAD/Maya; **proposals are generated inside our software**.
 
 ## Roles
-Admin/Owner · Sales (telecaller + field) · Design team · Technicians · Office staff (reception, floor) · Customer. See [auth-and-roles](../03-architecture/auth-and-roles.md).
+Admin/Owner · HR · Sales (telecaller + field) · Designer · Technician · Office staff (reception, front desk, floor) · Customer. See [auth-and-roles](../03-architecture/auth-and-roles.md).
 
 ## Modules
 1. Lead management + call tracking + visits → [leads](../02-product/leads.md)

@@ -7,7 +7,7 @@
 |---|---|
 | Leads | Central lead table; sources: website, Facebook/Instagram, Justdial, manual, bulk CSV import; status pipeline; call tracking (call log); visit log |
 | Proposals | In-app builder → PDF/web view; send via WhatsApp link; "seen" tracking; reminders (unseen 2d, seen-no-action 2d, stagnant status) |
-| Projects | Auto-create on lead won; Facebook-style feed (unlimited photos + chat-style comments); client vs internal tab; design-team board; final delivery photo → deal closed |
+| Projects | Auto-create on lead won; Facebook-style feed (unlimited photos + chat-style comments); client vs internal tab; design view (project list filtered by designer/stage, no separate board); final delivery photo → deal closed |
 | Complaints | Raise (customer / reception) with photo → admin assigns technician → technician resolves with photo |
 | HR | Add/edit employee (role, attendance type, fixed salary); attendance log (GPS for field sales, simulated biometric for others); simple salary table (fixed salary × attendance) |
 | Dashboard | Org-wide counters, staff first/last activity, calls/leads/proposals per person, pending complaints, present staff |

@@ -4,7 +4,10 @@ Keep it flat; refine during build.
 
 | Collection | Key fields |
 |---|---|
-| `users` | name, phone, email, passwordHash, role, attendanceType (`gps`/`biometric`), fixedSalary, active |
+| `users` | name, phone (unique), role (7 roles), designation (text copied from master), attendanceType (`GPS`/`BIOMETRIC`), fixedSalary, passwordHash (optional → no login), active |
+| `designations` | name, nameKey (lowercase, unique), active |
+| `sessions` | userId, tokenHash (unique), client (`web`/`mobile`), expiresAt (TTL), revokedAt |
+| `customerInvites` | userId, tokenHash (unique), expiresAt (TTL), usedAt |
 | `leads` | name, phone, source, city, status, statusChangedAt, assignedTo, notes |
 | `callLogs` | leadId, userId, startedAt, durationSec, answered, outcome, note |
 | `visits` | leadId/projectId, userId, location{lat,lng}, note, photoUrl, at |
@@ -19,6 +22,6 @@ Keep it flat; refine during build.
 | `activities` | userId, type, refId, at — feeds dashboard first/last activity |
 
 ## Notes
-- Customers are `users` with role `customer`, linked to a project.
+- Customers are `users` with role `CUSTOMER`, linked to a project by the projects module.
 - Index: `leads.phone` (unique), `proposals.token` (unique), `attendance(userId,date)`.
 - Photos stored as Cloudinary URLs; no binary data in Mongo.

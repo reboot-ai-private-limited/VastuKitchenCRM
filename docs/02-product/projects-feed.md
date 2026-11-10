@@ -13,8 +13,8 @@ Example flows to support:
 1. Designer posts render → customer comments change → owner replies → designer posts revised image.
 2. Technician posts photo of electric board issue → owner (remote) sees and instructs → fixed photo posted.
 
-## Design team board
-Separate view for the 7–8 designers: which project each designer owns and its design stage (`Not started → In design → Shared with client → Approved`). Simple columns, no heavy PM features.
+## Design view (no separate board)
+There is **no separate design-team board**. A project carries `designerId` and `designStage` (`Not started → In design → Shared with client → Approved`), and "Design" is a **filtered view of the project list** (by stage / designer). A designer sees only their assigned projects (`scopeFor`); the owner sees all and can filter by designer. Nothing is tied to a role name.
 
 ## Access
 Admin: all · Design: assigned projects · Technician: assigned projects · Customer: own project, Client Feed only.

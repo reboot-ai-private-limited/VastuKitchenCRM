@@ -14,4 +14,6 @@ Goal: let the client *feel* the product and lock pricing.
 10. **HR:** employee add, attendance log (GPS + simulated biometric), generated salary table.
 11. **Close:** final delivery photo → deal closed.
 
+The same steps, call by call in Swagger, with the seeded cast and what to point out: [api-walkthrough.md](api-walkthrough.md). Seed the data with `pnpm --filter @vastu/api seed:demo`.
+
 Rehearse once end-to-end on the deployed Vercel link and the installed APK before the meeting.

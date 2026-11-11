@@ -14,6 +14,7 @@ pnpm dev:api                       # http://localhost:4000
 - Health: `curl localhost:4000/api/health`
 - Sign in: `POST /api/identity/auth/login` with header `X-Client: web` (refresh token in an httpOnly cookie) or `X-Client: mobile` (refresh token in the body). In Swagger UI use **Authorize** with the returned `accessToken`.
 - **Swagger UI:** http://localhost:4000/api/docs (dev only)
+- **Demo data + guided tour:** `pnpm --filter @vastu/api seed:demo` on an empty database, then follow [`docs/demo/api-walkthrough.md`](docs/demo/api-walkthrough.md)
 
 ## Commands
 

@@ -103,9 +103,14 @@ openApiRegistry.registerPath({
   },
 });
 
+/**
+ * Brute-force protection: 30 FAILED attempts per IP per 15 minutes. Only failures count — a whole
+ * office signing in at 9 am from one Wi-Fi address (one IP for 50 people) must not lock itself out.
+ */
 const attemptsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {

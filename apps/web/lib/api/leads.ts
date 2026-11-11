@@ -13,6 +13,8 @@ import type {
   ChangeLeadStatusBodyDto,
   LeadStatus,
   CreateLeadBodyDto,
+  ImportLeadsBodyDto,
+  ImportResultDto,
   LeadActivityDto,
   LeadDto,
   PaginatedDto,
@@ -176,4 +178,19 @@ export function useMoveLead() {
     },
     onSettled: invalidate,
   });
+}
+
+export const IMPORT_BATCH = 500;
+
+/** One batch of at most 500 rows. The dialog sends bigger files as several batches, in order. */
+export function useImportBatch() {
+  return useMutation({
+    mutationFn: (body: ImportLeadsBodyDto) =>
+      api<ImportResultDto>('/leads/import', { method: 'POST', body }),
+  });
+}
+
+/** Call once after the last batch so lists and the dashboard pick up the new leads. */
+export function useRefreshLeads() {
+  return useInvalidate();
 }

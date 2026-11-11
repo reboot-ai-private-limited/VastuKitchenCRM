@@ -7,7 +7,17 @@ import {
   type LeadSource,
   type LeadStatus,
 } from '@vastu/contracts';
-import { Clock, Columns3, MoreHorizontal, Phone, Plus, Rows3, Search, Users } from 'lucide-react';
+import {
+  Clock,
+  Columns3,
+  FileUp,
+  MoreHorizontal,
+  Phone,
+  Plus,
+  Rows3,
+  Search,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -57,6 +67,7 @@ import {
 } from '@/lib/leads';
 import { cn } from '@/lib/utils';
 import { AddLeadSheet } from './add-lead-sheet';
+import { ImportDialog } from './import-dialog';
 import { AssignDialog, StatusDialog } from './lead-dialogs';
 import { LeadsBoard } from './leads-board';
 
@@ -71,6 +82,7 @@ export function LeadsView() {
   const can = leadPermissions(user?.role);
   const filters = useMemo(() => parseFilters(params), [params]);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
 
   const setFilters = useCallback(
@@ -132,6 +144,11 @@ export function LeadsView() {
                 </Button>
               ))}
             </div>
+            {can.importCsv && (
+              <Button variant="outline" onClick={() => setImporting(true)}>
+                <FileUp /> Import CSV
+              </Button>
+            )}
             {can.add && (
               <Button onClick={() => setAdding(true)}>
                 <Plus /> Add lead
@@ -296,6 +313,7 @@ export function LeadsView() {
       )}
 
       <AddLeadSheet open={adding} onOpenChange={setAdding} />
+      {can.importCsv && <ImportDialog open={importing} onOpenChange={setImporting} />}
       {dialog?.kind === 'status' && (
         <StatusDialog lead={dialog.lead} onClose={() => setDialog(null)} />
       )}

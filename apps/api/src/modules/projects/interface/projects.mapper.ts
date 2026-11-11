@@ -1,5 +1,12 @@
-import type { CommentDto, LeadActivityDto, PostDto, ProjectDto } from '@vastu/contracts';
+import type {
+  CommentDto,
+  LeadActivityDto,
+  PostDto,
+  ProjectDto,
+  TimelineItemDto,
+} from '@vastu/contracts';
 import type { CommentView, PostView } from '../application/services/feedViews.js';
+import type { TimelineEntry } from '../application/usecases/timeline.usecases.js';
 import type { ProjectView } from '../application/services/projectViews.js';
 import type { JourneyEntry } from '../domain/ports.js';
 
@@ -66,3 +73,20 @@ export const toJourneyDto = (e: JourneyEntry): LeadActivityDto => ({
   by: e.byUserId ? { id: e.byUserId, name: e.byName ?? 'Unknown' } : null,
   data: e.data,
 });
+
+export const toTimelineItemDto = (e: TimelineEntry): TimelineItemDto =>
+  e.kind === 'POST'
+    ? { kind: 'POST', at: e.at.toISOString(), post: toPostDto(e.post) }
+    : {
+        kind: 'ACTIVITY',
+        at: e.at.toISOString(),
+        activity: {
+          id: e.activity.id,
+          type: e.activity.type,
+          at: e.at.toISOString(),
+          actor: e.activity.actorId
+            ? { id: e.activity.actorId, name: e.actorName ?? 'Unknown' }
+            : null,
+          data: e.activity.data,
+        },
+      };

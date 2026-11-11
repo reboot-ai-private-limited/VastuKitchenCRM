@@ -48,5 +48,8 @@ After a lead is won only the risky things are locked: **Sales cannot change its 
 ## Notifications
 Everyone who may **see** an item hears about it, except the person who did it — and **Admins always** (the owner follows every project). Client items reach the customer; Team items never do. Types: `PROJECT_CREATED`, `PROJECT_ASSIGNED`, `PROJECT_POST`, `PROJECT_COMMENT`, `PROJECT_APPROVED`, `PROJECT_CLOSED`.
 
+## To-dos and the timeline
+To-dos live inside each project ([todos](todos.md)). `GET /projects/:id/timeline` merges posts and to-do activity into one stream (team sees both; the customer sees posts only).
+
 ## Next (planned)
-To-dos (lists, assignees, "when done, notify", due dates, comments, "my assignments", timeline entries) and Docs (nested folders, per-file "share with client").
+Docs (nested folders, per-file "share with client").

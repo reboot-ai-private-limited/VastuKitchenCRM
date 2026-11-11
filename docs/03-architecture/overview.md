@@ -58,8 +58,8 @@ SOLID mapping: **S** one use case per class · **O** new behaviour = new use cas
 A module may import only the `.public.ts` of a **strictly lower** tier — no sideways, upward, or circular imports. Enforced by `apps/api/.dependency-cruiser.cjs` (`pnpm lint`).
 
 ```
-T0 health, config → T1 identity → T2 notifications, activity → T3 leads, hr
-→ T4 proposals → T5 projects, reminders → T6 complaints → T7 dashboard
+T0 health, config, settings → T1 identity → T2 notifications, activity → T3 leads, hr
+→ T4 proposals → T5 projects → T6 todos, complaints → T7 reminders, dashboard
 ```
 
 Higher tiers react to lower ones via events (e.g. `LeadWon` → projects creates a project; `ProposalSeen` → notifications), registered in the composition root — never by a lower module importing a higher one. Changing a module's tier is a deliberate edit to `MODULE_TIERS`. See [ADR-0007](../adr/0007-module-tiers.md).
@@ -71,3 +71,6 @@ Higher tiers react to lower ones via events (e.g. `LeadWon` → projects creates
 ## API docs (Swagger)
 
 Interactive Swagger UI at `http://localhost:4000/api/docs` (development only, disabled in production). Each route registers itself in `shared/http/swagger.util.ts`'s registry next to the route, using the contracts schemas.
+
+## Routing rule: root-mounted routers authenticate per route
+Most modules mount at their own prefix (`/api/leads`), where a router-level `router.use(authenticate)` is safe. A module whose paths span prefixes (to-dos: `/projects/:id/todos` and `/todos/:id`) is mounted at the **root** of `/api` and sees every request, so it must authenticate **on each route**, never at router level — and it is mounted **last**. Otherwise it would answer 401 to routes that merely pass through it (the public proposal links, the Swagger docs). A regression test (`todos.route.test.ts`) guards this.

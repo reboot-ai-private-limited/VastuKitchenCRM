@@ -39,9 +39,9 @@ const MODULE_TIERS = [
   ['notifications', 'activity'], //       Tier 2 — in-app notifications / push; activity log
   ['leads', 'hr'], //                     Tier 3 — leads + calls + visits; employees, attendance, salary
   ['proposals'], //                       Tier 4 — reads leads
-  ['projects', 'reminders'], //           Tier 5 — feed/posts/comments/design board; cron rules
-  ['complaints'], //                      Tier 6 — reads projects, identity
-  ['dashboard'], //                       Tier 7 — read-only aggregates; top of the graph
+  ['projects'], //                       Tier 5 — projects, feed, timeline
+  ['todos', 'complaints'], //           Tier 6 — to-dos (reads projects); complaints (reads projects, identity)
+  ['reminders', 'dashboard'], //           Tier 7 — cron rules (read leads, proposals, to-dos); read-only aggregates; top of the graph
 ];
 
 const layeringRules = MODULE_TIERS.map((tier, index) => {

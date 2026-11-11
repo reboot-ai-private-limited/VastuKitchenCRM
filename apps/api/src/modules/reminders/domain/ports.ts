@@ -36,6 +36,23 @@ export interface LeadSourcePort {
   findStuck(window: Window & { excludeStatuses: LeadStatus[] }): Promise<LeadSnapshot[]>;
 }
 
+export interface OverdueTodo {
+  id: string;
+  title: string;
+  projectId: string;
+  projectName: string;
+  /** `YYYY-MM-DD`. */
+  dueOn: string;
+  assigneeIds: string[];
+  createdById: string;
+}
+
+/** What reminders needs from to-dos (the adapter wraps the to-dos public contract). */
+export interface TodoSourcePort {
+  /** Open, past due by the business calendar, not longer ago than `lookbackDays`. */
+  findOverdue(window: { lookbackDays: number; limit: number }): Promise<OverdueTodo[]>;
+}
+
 export interface Reminder {
   userId: string;
   type: NotificationType;

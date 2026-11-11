@@ -173,3 +173,45 @@ export type CreateCommentBodyDto = z.infer<typeof createCommentBodySchema>;
 
 /** The lead's story so far, oldest first — shown collapsed on the project (Admin and the lead's owner). */
 export const journeySchema = z.array(leadActivitySchema);
+
+/* ── project timeline (posts + team activity, one stream) ─────────────────── */
+
+/** Compact "change log" lines the team sees in the feed. Never shown to the customer. */
+export const PROJECT_ACTIVITY_TYPES = [
+  'TODO_CREATED',
+  'TODO_ASSIGNED',
+  'TODO_DUE_CHANGED',
+  'TODO_COMPLETED',
+  'TODO_REOPENED',
+] as const;
+export const projectActivityTypeSchema = z.enum(PROJECT_ACTIVITY_TYPES);
+export type ProjectActivityType = z.infer<typeof projectActivityTypeSchema>;
+
+export const projectActivitySchema = z.object({
+  id: z.string(),
+  type: projectActivityTypeSchema,
+  at: z.string(),
+  actor: person.nullable(),
+  /** Type-specific, e.g. `{ todoId, todoTitle }`. */
+  data: z.record(z.unknown()),
+});
+export type ProjectActivityDto = z.infer<typeof projectActivitySchema>;
+
+export const timelineItemSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('POST'), at: z.string(), post: postSchema }),
+  z.object({ kind: z.literal('ACTIVITY'), at: z.string(), activity: projectActivitySchema }),
+]);
+export type TimelineItemDto = z.infer<typeof timelineItemSchema>;
+
+export const listTimelineQuerySchema = z.object({
+  /** `nextCursor` from the previous page. */
+  before: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+export type ListTimelineQueryDto = z.infer<typeof listTimelineQuerySchema>;
+
+export const timelinePageSchema = z.object({
+  items: z.array(timelineItemSchema),
+  nextCursor: z.string().nullable(),
+});
+export type TimelinePageDto = z.infer<typeof timelinePageSchema>;

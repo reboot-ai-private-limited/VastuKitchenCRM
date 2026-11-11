@@ -16,15 +16,17 @@ import type {
   NotifierPort,
   ProposalSourcePort,
   Reminder,
+  TodoSourcePort,
 } from '../../domain/ports.js';
 
 /**
- * The three time rules (docs/03-architecture/notifications-and-cron.md). Safe to run any time and
+ * The four time rules (docs/03-architecture/notifications-and-cron.md). Safe to run any time and
  * any number of times: every alert carries a dedupeKey, so a repeat delivers nothing new.
  *
  *  1. unseen        — sent, never opened after N days            (once per proposal)
  *  2. no action     — opened N days ago, lead status unchanged   (once per proposal)
  *  3. stagnant      — open lead unchanged for N days             (each N-day window, max M times)
+ *  4. to-do overdue — open to-do past its due date               (once per due date)
  *     Stagnant skips PROPOSAL_SENT leads: rules 1 and 2 already cover them.
  *
  * Recipient: the lead's assignee; else the proposal's sender; else every active Admin.
@@ -33,6 +35,7 @@ export class RunRemindersUseCase {
   constructor(
     private readonly proposals: ProposalSourcePort,
     private readonly leads: LeadSourcePort,
+    private readonly todos: TodoSourcePort,
     private readonly notifier: NotifierPort,
     private readonly admins: AdminDirectoryPort,
     /** Read at the start of EVERY run, so an Admin's change applies to the next one. */
@@ -43,12 +46,13 @@ export class RunRemindersUseCase {
   async execute(): Promise<ReminderRunResultDto> {
     const now = this.now();
     const config = await this.loadConfig();
-    const result: ReminderRunResultDto = { unseen: 0, noAction: 0, stagnant: 0 };
+    const result: ReminderRunResultDto = { unseen: 0, noAction: 0, stagnant: 0, todoOverdue: 0 };
     const adminIds = lazy(() => this.admins.activeAdminIds());
 
     result.unseen = await this.unseenProposals(now, config, adminIds);
     result.noAction = await this.noActionProposals(now, config, adminIds);
     result.stagnant = await this.stagnantLeads(now, config, adminIds);
+    result.todoOverdue = await this.overdueTodos();
     return result;
   }
 
@@ -144,6 +148,27 @@ export class RunRemindersUseCase {
         ref: { kind: 'LEAD', id: lead.id },
         // One per stuck period AND window: a status change starts a new period, so it can fire again.
         dedupeKey: `lead-stagnant:${lead.id}:${lead.statusChangedAt.getTime()}:${window}`,
+      });
+    }
+    return created;
+  }
+
+  // ── rule 4 ───────────────────────────────────────────────────────────────
+  /**
+   * A to-do past its due date and not done: told to its assignees (or, with none, whoever made it),
+   * once per due date — if the due date moves and is missed again, that is a new reminder.
+   */
+  private async overdueTodos(): Promise<number> {
+    const todos = await this.todos.findOverdue({ lookbackDays: LOOKBACK_DAYS, limit: BATCH_LIMIT });
+
+    let created = 0;
+    for (const t of todos) {
+      created += await this.deliver(t.assigneeIds.length > 0 ? t.assigneeIds : [t.createdById], {
+        type: 'TODO_OVERDUE',
+        title: 'To-do overdue',
+        body: `"${t.title}" in ${t.projectName} was due ${t.dueOn}.`,
+        ref: { kind: 'TODO', id: t.id, projectId: t.projectId },
+        dedupeKey: `todo-overdue:${t.id}:${t.dueOn}`,
       });
     }
     return created;

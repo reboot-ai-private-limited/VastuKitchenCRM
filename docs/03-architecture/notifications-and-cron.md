@@ -2,7 +2,7 @@
 
 Two modules, one job each:
 - **`notifications`** (tier 2) stores and serves in-app alerts. It knows nothing about leads or proposals.
-- **`reminders`** (tier 5) applies the time rules and creates notifications. It reads leads and proposals only through their public contracts.
+- **`reminders`** (tier 7) applies the time rules and creates notifications. It reads leads, proposals and to-dos only through their public contracts.
 
 Event-driven alerts are wired at the composition root (`src/subscribers.ts`): it listens for `proposal.seen` and `lead.assigned` and calls the notifications contract. No lower module imports a higher one.
 
@@ -14,6 +14,8 @@ Endpoints (any signed-in user, always their own): `GET /api/notifications` (`unr
 | Type | Raised by | Recipient |
 |---|---|---|
 | `PROPOSAL_SEEN` | `proposal.seen` event (first open of the public link) | the person who sent it |
+| `TODO_ASSIGNED` / `TODO_DUE_CHANGED` / `TODO_COMPLETED` / `TODO_COMMENT` | the to-dos module | see [todos](../02-product/todos.md) |
+| `TODO_OVERDUE` | reminder rule 4 | the assignees (else the creator) |
 | `LEAD_ASSIGNED` | `lead.assigned` event (not when you assign to yourself) | the new assignee |
 | `PROPOSAL_UNSEEN` | reminder rule 1 | see "Recipient" |
 | `PROPOSAL_NO_ACTION` | reminder rule 2 | see "Recipient" |
@@ -33,6 +35,7 @@ All thresholds are **system settings** ([settings](settings.md)) in **days** (de
 | **Stagnant** (`LEAD_STUCK_DAYS`, 2) | open lead whose status has not changed for the threshold | every `LEAD_STUCK_DAYS`, at most `REMINDER_STAGNANT_MAX` (3) times per stuck period |
 
 - **Stagnant skips `PROPOSAL_SENT` leads:** rules 1 and 2 already cover them at the same moment, so one problem never produces two alerts.
+- **Rule 4 — to-do overdue:** an open to-do past its due date (business calendar) alerts its assignees, once **per due date** (a moved date that is missed again is a new reminder).
 - **Won/Lost leads** never trigger anything.
 - **Resets:** a status change, or sending another proposal, resets the lead's `statusChangedAt`, so the clock starts again and stagnant reminders can fire for the new period.
 - **Recipient:** the lead's assigned sales person; if unassigned, the person who sent the proposal; if neither, all active Admins. No copies to Admin otherwise (Admin sees stuck leads on the dashboard).

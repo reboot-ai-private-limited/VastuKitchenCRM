@@ -17,6 +17,10 @@ Keep it flat; refine during build.
 | `projects` | name, customerId, leadId?, wonLeadId? (unique when set: one auto project per won lead), siteAddress, value, stage (`DESIGN`/`SITE`/`CLOSED`), designStage, designerId, memberIds[], createdById, closedAt |
 | `projectposts` | projectId, authorId, visibility (`CLIENT`/`TEAM`), kind (`UPDATE`/`FINAL_DELIVERY`), text, images[{publicId,width,height,bytes}], approvedById/approvedAt, commentCount, deletedAt |
 | `projectcomments` | postId, projectId, authorId, text, deletedAt |
+| `projectactivities` | projectId, type (`TODO_*`), actorId, at, data — the team-only timeline lines |
+| `todolists` | projectId, name, archived, position, createdById |
+| `todos` | projectId, listId, title, notes, images[], assigneeIds[], notifyOnDoneIds[], dueOn (`YYYY-MM-DD`), completedById/At, createdById, commentCount, position, deletedAt |
+| `todocomments` | todoId, projectId, authorId, text, deletedAt |
 | `complaints` | customerId/projectId, description, photos[], raisedBy, assignedTo, status, resolutionNote, resolutionPhoto |
 | `attendance` | userId, date, inAt, outAt, method (`gps`/`biometric_sim`), location |
 | `salaries` | userId, month, fixed, presentDays, workingDays, payable (editable), finalised |

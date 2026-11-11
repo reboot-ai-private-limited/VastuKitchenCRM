@@ -1,6 +1,12 @@
 import { AppError } from '@/shared/errors/AppError.js';
 import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type {
+  ActivityListQuery,
+  NewProjectActivity,
+  ProjectActivity,
+} from '../../domain/activity.entity.js';
+import type {
+  ActivityRepositoryPort,
   ActorRef,
   Alert,
   AlertSenderPort,
@@ -50,6 +56,9 @@ export class FakeProjects implements ProjectRepositoryPort {
   }
   async findById(id: string) {
     return this.rows.find((p) => p.id === id) ?? null;
+  }
+  async findByIds(ids: string[]) {
+    return this.rows.filter((p) => ids.includes(p.id));
   }
   async update(id: string, patch: ProjectPatch) {
     const p = this.rows.find((x) => x.id === id);
@@ -160,6 +169,20 @@ export class FakeComments implements CommentRepositoryPort {
       if (mine.length) out.set(id, mine.slice(-n));
     }
     return out;
+  }
+}
+
+export class FakeActivities implements ActivityRepositoryPort {
+  rows: ProjectActivity[] = [];
+  private seq = 0;
+  async add(a: NewProjectActivity) {
+    this.rows.push({ ...a, id: `act${++this.seq}` });
+  }
+  async list(q: ActivityListQuery) {
+    return this.rows
+      .filter((a) => a.projectId === q.projectId && (!q.before || a.at < q.before))
+      .sort((a, b) => b.at.getTime() - a.at.getTime())
+      .slice(0, q.limit);
   }
 }
 
@@ -356,6 +379,7 @@ export function world() {
   const projects = new FakeProjects();
   const posts = new FakePosts();
   const comments = new FakeComments();
+  const activities = new FakeActivities();
   const leads = new FakeLeadsGateway();
   const proposals = new FakeProposalsGateway();
   const directory = new FakeDirectory();
@@ -367,6 +391,7 @@ export function world() {
   const projectViews = new ProjectViewBuilder(directory);
   const feedViews = new FeedViewBuilder(directory, comments, storage);
   return {
+    activities,
     settings,
     projects,
     posts,

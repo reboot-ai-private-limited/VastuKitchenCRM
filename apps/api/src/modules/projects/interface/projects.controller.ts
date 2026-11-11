@@ -1,5 +1,7 @@
 import type { Request, RequestHandler } from 'express';
 import type {
+  ListTimelineQueryDto,
+  TimelinePageDto,
   ListPostsQueryDto,
   ListProjectsQueryDto,
   PaginatedDto,
@@ -31,7 +33,14 @@ import type {
   SetMembersUseCase,
   UpdateProjectUseCase,
 } from '../application/usecases/projects.usecases.js';
-import { toCommentDto, toJourneyDto, toPostDto, toProjectDto } from './projects.mapper.js';
+import type { GetTimelineUseCase } from '../application/usecases/timeline.usecases.js';
+import {
+  toCommentDto,
+  toJourneyDto,
+  toPostDto,
+  toProjectDto,
+  toTimelineItemDto,
+} from './projects.mapper.js';
 
 function actorOf(req: Request): ActorRef {
   if (!req.user) throw AppError.unauthenticated();
@@ -194,4 +203,15 @@ export const makeDeleteComment = (uc: DeleteCommentUseCase): RequestHandler =>
   asyncHandler(async (req, res) => {
     await uc.execute(actorOf(req), p(req, 'id'), p(req, 'postId'), p(req, 'commentId'));
     sendSuccess(req, res, {}, 'Comment deleted.');
+  });
+
+export const makeTimeline = (uc: GetTimelineUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    const { items, nextCursor } = await uc.execute(
+      actorOf(req),
+      p(req, 'id'),
+      req.query as unknown as ListTimelineQueryDto,
+    );
+    const data: TimelinePageDto = { items: items.map(toTimelineItemDto), nextCursor };
+    sendSuccess(req, res, data, 'OK');
   });

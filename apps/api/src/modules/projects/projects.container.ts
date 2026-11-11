@@ -21,6 +21,10 @@ import {
   SignUploadUseCase,
 } from './application/usecases/feed.usecases.js';
 import {
+  GetTimelineUseCase,
+  ProjectContractUseCases,
+} from './application/usecases/timeline.usecases.js';
+import {
   ChangeDesignStageUseCase,
   ChangeStageUseCase,
   CloseProjectUseCase,
@@ -38,6 +42,7 @@ import {
   ProposalsGateway,
   SettingsGateway,
 } from './infrastructure/gateways.adapter.js';
+import { MongoActivityRepository } from './infrastructure/mongoActivity.adapter.js';
 import { MongoCommentRepository } from './infrastructure/mongoComment.adapter.js';
 import { MongoPostRepository } from './infrastructure/mongoPost.adapter.js';
 import { MongoProjectRepository } from './infrastructure/mongoProject.adapter.js';
@@ -65,6 +70,7 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   const projects = new MongoProjectRepository();
   const posts = new MongoPostRepository();
   const comments = new MongoCommentRepository();
+  const activities = new MongoActivityRepository();
   const leads = new LeadsGateway(deps.leads);
   const proposals = new ProposalsGateway(deps.proposals);
   const directory = new IdentityUserDirectory(deps.identity);
@@ -76,6 +82,7 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   const projectViews = new ProjectViewBuilder(directory);
   const feedViews = new FeedViewBuilder(directory, comments, deps.storage);
 
+  const contractUseCases = new ProjectContractUseCases(access, projects, activities);
   const fromWonLead = new CreateProjectFromWonLeadUseCase(
     projects,
     leads,
@@ -85,7 +92,13 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   );
 
   return {
-    contract: { createFromWonLead: (event) => fromWonLead.execute(event) },
+    contract: {
+      createFromWonLead: (event) => fromWonLead.execute(event),
+      getMembership: (actor, projectId) => contractUseCases.getMembership(actor, projectId),
+      getProjectNames: (ids) => contractUseCases.names(ids),
+      recordActivity: (projectId, activity) => contractUseCases.recordActivity(projectId, activity),
+      filterAccessible: (actor, ids) => contractUseCases.filterAccessible(actor, ids),
+    },
     buildRouter: () =>
       buildProjectsRouter({
         create: c.makeCreateProject(
@@ -106,6 +119,9 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
         ),
         journey: c.makeJourney(new GetJourneyUseCase(access, leads)),
         signUpload: c.makeSignUpload(new SignUploadUseCase(access, deps.storage)),
+        timeline: c.makeTimeline(
+          new GetTimelineUseCase(access, posts, activities, directory, feedViews),
+        ),
         listPosts: c.makeListPosts(new ListPostsUseCase(access, posts, feedViews)),
         createPost: c.makeCreatePost(
           new CreatePostUseCase(access, posts, deps.storage, alerts, directory, feedViews),

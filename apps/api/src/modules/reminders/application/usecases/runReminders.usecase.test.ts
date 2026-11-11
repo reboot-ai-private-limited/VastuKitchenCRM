@@ -5,10 +5,12 @@ import {
   FakeAdmins,
   FakeLeadSource,
   FakeNotifier,
+  FakeTodoSource,
   FakeProposalSource,
   T0,
   at,
   lead,
+  overdueTodo,
   proposal,
 } from '../testing/fakes.js';
 
@@ -16,11 +18,13 @@ function setup(config = CONFIG) {
   let now = T0;
   const proposals = new FakeProposalSource();
   const leads = new FakeLeadSource();
+  const todos = new FakeTodoSource();
   const notifier = new FakeNotifier();
   const admins = new FakeAdmins();
   const run = new RunRemindersUseCase(
     proposals,
     leads,
+    todos,
     notifier,
     admins,
     async () => config,
@@ -29,6 +33,7 @@ function setup(config = CONFIG) {
   return {
     proposals,
     leads,
+    todos,
     notifier,
     admins,
     run: (when: Date) => {
@@ -192,5 +197,44 @@ describe('rule 3 — stagnant lead', () => {
     const result = await w.run(new Date(T0.getTime() + 2 * 60_000)); // two minutes later
     expect(result.stagnant).toBe(1);
     expect(result.unseen).toBe(1);
+  });
+});
+
+describe('rule 4 — to-do overdue', () => {
+  it('alerts every assignee once per due date, however often the job runs', async () => {
+    const w = setup();
+    w.todos.rows.push(overdueTodo());
+    expect((await w.run(at(1))).todoOverdue).toBe(2);
+    expect((await w.run(at(2))).todoOverdue).toBe(0); // same to-do, same due date: no repeat
+    expect(w.notifier.to('tech1')[0]).toMatchObject({
+      type: 'TODO_OVERDUE',
+      title: 'To-do overdue',
+      ref: { kind: 'TODO', id: 't1', projectId: 'proj1' },
+      dedupeKey: 'todo-overdue:t1:2026-10-30',
+    });
+    expect(w.notifier.to('tech1')[0]?.body).toBe(
+      '"Order the chimney" in Mrs Rao\'s project was due 2026-10-30.',
+    );
+  });
+
+  it('alerts again when the due date moves and is missed again (a new due date is a new reminder)', async () => {
+    const w = setup();
+    w.todos.rows.push(overdueTodo({ assigneeIds: ['tech1'] }));
+    await w.run(at(1));
+    w.todos.rows[0] = overdueTodo({ assigneeIds: ['tech1'], dueOn: '2026-11-05' });
+    expect((await w.run(at(8))).todoOverdue).toBe(1);
+    expect(w.notifier.to('tech1')).toHaveLength(2);
+  });
+
+  it('goes to whoever made it when nobody is assigned', async () => {
+    const w = setup();
+    w.todos.rows.push(overdueTodo({ assigneeIds: [], createdById: 'designer1' }));
+    expect((await w.run(at(1))).todoOverdue).toBe(1);
+    expect(w.notifier.to('designer1')).toHaveLength(1);
+  });
+
+  it('does nothing when there is nothing overdue', async () => {
+    const w = setup();
+    expect(await w.run(at(1))).toMatchObject({ todoOverdue: 0 });
   });
 });

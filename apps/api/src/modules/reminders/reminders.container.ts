@@ -3,6 +3,7 @@ import type { IdentityPublicContract } from '@/modules/identity/identity.public.
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
+import type { TodosPublicContract } from '@/modules/todos/todos.public.js';
 import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import { RunRemindersUseCase } from './application/usecases/runReminders.usecase.js';
 import {
@@ -10,6 +11,7 @@ import {
   LeadsContractSource,
   NotificationsContractNotifier,
   ProposalsContractSource,
+  TodosContractSource,
 } from './infrastructure/contractSources.adapter.js';
 import { makeRunController } from './interface/reminders.controller.js';
 import { buildRemindersRouter } from './interface/reminders.route.js';
@@ -24,6 +26,7 @@ export interface RemindersDeps {
   /** Other modules' public contracts: the only ways reminders reaches them. */
   leads: LeadsPublicContract;
   proposals: ProposalsPublicContract;
+  todos: TodosPublicContract;
   notifications: NotificationsPublicContract;
   identity: IdentityPublicContract;
   settings: SettingsPublicContract;
@@ -33,6 +36,7 @@ export function buildRemindersContainer(deps: RemindersDeps): RemindersContainer
   const run = new RunRemindersUseCase(
     new ProposalsContractSource(deps.proposals),
     new LeadsContractSource(deps.leads),
+    new TodosContractSource(deps.todos),
     new NotificationsContractNotifier(deps.notifications),
     new IdentityAdminDirectory(deps.identity),
     async () => {

@@ -1,4 +1,5 @@
 import type { NotificationRefDto, NotificationType, RoleName } from '@vastu/contracts';
+import type { ActivityListQuery, NewProjectActivity, ProjectActivity } from './activity.entity.js';
 import type { Comment, NewComment, NewPost, Post, PostListQuery } from './post.entity.js';
 import type { NewProject, Project, ProjectListFilter, ProjectPatch } from './project.entity.js';
 
@@ -9,6 +10,7 @@ export interface ProjectRepositoryPort {
     project: NewProject & { wonLeadId: string },
   ): Promise<{ project: Project; created: boolean }>;
   findById(id: string): Promise<Project | null>;
+  findByIds(ids: string[]): Promise<Project[]>;
   update(id: string, patch: ProjectPatch): Promise<Project | null>;
   list(filter: ProjectListFilter): Promise<{ items: Project[]; total: number }>;
 }
@@ -35,6 +37,12 @@ export interface CommentRepositoryPort {
   listByPost(postId: string): Promise<Comment[]>;
   /** The latest `n` comments of each post, each list oldest first. */
   recentByPosts(postIds: string[], n: number): Promise<Map<string, Comment[]>>;
+}
+
+export interface ActivityRepositoryPort {
+  add(activity: NewProjectActivity): Promise<void>;
+  /** Newest first, strictly before `before` when given. */
+  list(query: ActivityListQuery): Promise<ProjectActivity[]>;
 }
 
 export interface ActorRef {

@@ -4,9 +4,11 @@ import type {
   LeadSnapshot,
   LeadSourcePort,
   NotifierPort,
+  OverdueTodo,
   ProposalSourcePort,
   Reminder,
   SentProposal,
+  TodoSourcePort,
   Window,
 } from '../../domain/ports.js';
 import type { ReminderConfig } from '../../domain/reminders.rules.js';
@@ -60,6 +62,13 @@ export class FakeNotifier implements NotifierPort {
   }
 }
 
+export class FakeTodoSource implements TodoSourcePort {
+  rows: OverdueTodo[] = [];
+  async findOverdue(w: { lookbackDays: number; limit: number }) {
+    return this.rows.slice(0, w.limit);
+  }
+}
+
 export class FakeAdmins implements AdminDirectoryPort {
   calls = 0;
   ids = ['admin1', 'admin2'];
@@ -100,6 +109,19 @@ export function lead(over: Partial<LeadSnapshot> = {}): LeadSnapshot {
     status: 'PROPOSAL_SENT',
     statusChangedAt: T0,
     assignedToId: 'sales1',
+    ...over,
+  };
+}
+
+export function overdueTodo(over: Partial<OverdueTodo> = {}): OverdueTodo {
+  return {
+    id: 't1',
+    title: 'Order the chimney',
+    projectId: 'proj1',
+    projectName: "Mrs Rao's project",
+    dueOn: '2026-10-30',
+    assigneeIds: ['tech1', 'designer1'],
+    createdById: 'admin1',
     ...over,
   };
 }

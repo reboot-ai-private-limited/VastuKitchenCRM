@@ -61,6 +61,11 @@ const TAGS = [
     name: 'Projects / Feed',
     description: 'Photo posts, comments, customer approval and signed uploads.',
   },
+  {
+    name: 'To-dos',
+    description:
+      'Lists, to-dos with assignees, due dates and notify-when-done, comments, and My assignments.',
+  },
   { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
   {
     name: 'Proposals / Public',

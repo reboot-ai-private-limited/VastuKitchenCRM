@@ -1,15 +1,18 @@
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
+import type { TodosPublicContract } from '@/modules/todos/todos.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
 import type {
   AdminDirectoryPort,
   LeadSnapshot,
   LeadSourcePort,
   NotifierPort,
+  OverdueTodo,
   ProposalSourcePort,
   Reminder,
   SentProposal,
+  TodoSourcePort,
   Window,
 } from '../domain/ports.js';
 import type { LeadStatus } from '@vastu/contracts';
@@ -53,5 +56,13 @@ export class IdentityAdminDirectory implements AdminDirectoryPort {
 
   activeAdminIds(): Promise<string[]> {
     return this.identity.getActiveAdminIds();
+  }
+}
+
+export class TodosContractSource implements TodoSourcePort {
+  constructor(private readonly todos: TodosPublicContract) {}
+
+  findOverdue(window: { lookbackDays: number; limit: number }): Promise<OverdueTodo[]> {
+    return this.todos.findOverdue(window);
   }
 }

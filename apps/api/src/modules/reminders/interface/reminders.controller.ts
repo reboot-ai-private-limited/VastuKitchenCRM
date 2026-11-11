@@ -6,7 +6,7 @@ import type { RunRemindersUseCase } from '../application/usecases/runReminders.u
 export function makeRunController(useCase: RunRemindersUseCase): RequestHandler {
   return asyncHandler(async (req, res) => {
     const result = await useCase.execute();
-    const total = result.unseen + result.noAction + result.stagnant;
+    const total = result.unseen + result.noAction + result.stagnant + result.todoOverdue;
     sendSuccess(req, res, result, `Reminder run finished: ${total} new alert(s).`);
   });
 }

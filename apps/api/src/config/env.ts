@@ -41,6 +41,23 @@ const schema = z.object({
   /** Every asset lives under this folder; use a different one per environment (e.g. vastu-dev). */
   CLOUDINARY_FOLDER: z.string().min(1).default('vastu'),
 
+  /**
+   * The business's own timezone (IANA name). A to-do "due on the 14th" is overdue when the 14th has
+   * ended HERE, not in UTC. Default: India.
+   */
+  BUSINESS_TIMEZONE: z
+    .string()
+    .min(1)
+    .default('Asia/Kolkata')
+    .refine((tz) => {
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: tz });
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'Not a valid timezone name'),
+
   /** Where customer invite links point (the web app). */
   WEB_BASE_URL: z.string().url().default('http://localhost:3001'),
 

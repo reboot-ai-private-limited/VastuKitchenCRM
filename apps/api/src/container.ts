@@ -5,6 +5,7 @@ import { buildNotificationsContainer } from '@/modules/notifications/notificatio
 import { buildProjectsContainer } from '@/modules/projects/projects.container.js';
 import { buildProposalsContainer } from '@/modules/proposals/proposals.container.js';
 import { buildSettingsContainer } from '@/modules/settings/settings.container.js';
+import { buildTodosContainer } from '@/modules/todos/todos.container.js';
 import { buildRemindersContainer } from '@/modules/reminders/reminders.container.js';
 import { createEventBus, type EventBus } from '@/shared/events/appEvents.js';
 import { createStorage } from '@/shared/storage/createStorage.js';
@@ -18,6 +19,7 @@ export interface AppContainers {
   leads: ReturnType<typeof buildLeadsContainer>;
   proposals: ReturnType<typeof buildProposalsContainer>;
   projects: ReturnType<typeof buildProjectsContainer>;
+  todos: ReturnType<typeof buildTodosContainer>;
   reminders: ReturnType<typeof buildRemindersContainer>;
   /** In-process bus; modules above subscribe to what modules below announce. */
   events: EventBus;
@@ -40,17 +42,25 @@ export function buildContainers(): AppContainers {
     settings: settings.contract,
     events,
   });
+  const storage = createStorage();
   const projects = buildProjectsContainer({
     leads: leads.contract,
     proposals: proposals.contract,
     identity: identity.contract,
     notifications: notifications.contract,
     settings: settings.contract,
-    storage: createStorage(),
+    storage,
+  });
+  const todos = buildTodosContainer({
+    projects: projects.contract,
+    identity: identity.contract,
+    notifications: notifications.contract,
+    storage,
   });
   const reminders = buildRemindersContainer({
     leads: leads.contract,
     proposals: proposals.contract,
+    todos: todos.contract,
     notifications: notifications.contract,
     identity: identity.contract,
     settings: settings.contract,
@@ -64,6 +74,7 @@ export function buildContainers(): AppContainers {
     leads,
     proposals,
     projects,
+    todos,
     reminders,
     events,
   };

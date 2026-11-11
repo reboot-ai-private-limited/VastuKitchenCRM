@@ -10,6 +10,8 @@ import {
   createProjectBodySchema,
   journeySchema,
   listPostsQuerySchema,
+  listTimelineQuerySchema,
+  timelinePageSchema,
   listProjectsQuerySchema,
   paginatedSchema,
   postIdParamsSchema,
@@ -148,6 +150,15 @@ doc(
 );
 doc(
   'get',
+  '/api/projects/{id}/timeline',
+  FEED,
+  'Posts and team activity in ONE stream, newest first',
+  { ...idParams, query: listTimelineQuerySchema },
+  { 200: okResponse('A page of timeline items', timelinePageSchema), 404: notFound },
+  'Each item is `{ kind: "POST", post }` or `{ kind: "ACTIVITY", activity }` (to-do created / assigned / due date changed / completed / reopened). The customer sees posts only, so their timeline is just the Client tab.',
+);
+doc(
+  'get',
   '/api/projects/{id}/posts',
   FEED,
   'The feed, newest first (`visibility` = one tab; `before` = cursor)',
@@ -225,6 +236,7 @@ export interface ProjectsControllers {
   close: RequestHandler;
   journey: RequestHandler;
   signUpload: RequestHandler;
+  timeline: RequestHandler;
   listPosts: RequestHandler;
   createPost: RequestHandler;
   deletePost: RequestHandler;
@@ -272,6 +284,11 @@ export function buildProjectsRouter(c: ProjectsControllers): Router {
   router.get('/:id/journey', id, c.journey);
 
   router.post('/:id/uploads/sign', id, c.signUpload);
+  router.get(
+    '/:id/timeline',
+    validate({ params: projectIdParamsSchema, query: listTimelineQuerySchema }),
+    c.timeline,
+  );
   router.get(
     '/:id/posts',
     validate({ params: projectIdParamsSchema, query: listPostsQuerySchema }),

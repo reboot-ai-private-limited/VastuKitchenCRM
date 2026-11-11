@@ -1,5 +1,11 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+import { RoleGate } from '@/components/common/role-gate';
+import { MyTodosView } from '@/components/todos/my-todos-view';
 
-export default function MyAssignmentsPage() {
-  return <PlaceholderPage title="My assignments" roles={['ADMIN','SALES','DESIGNER','TECHNICIAN','OFFICE']} />;
+/** "My assignments": everyone on staff except HR (matches the sidebar in lib/nav.ts). */
+export default function TodosPage() {
+  return (
+    <RoleGate roles={['ADMIN', 'SALES', 'DESIGNER', 'TECHNICIAN', 'OFFICE']}>
+      <MyTodosView />
+    </RoleGate>
+  );
 }

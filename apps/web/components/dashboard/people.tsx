@@ -1,11 +1,13 @@
 'use client';
 
 import { ArrowDown, ArrowUp, ChevronsUpDown, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { DashboardPersonDto } from '@vastu/contracts';
 import { EmptyState } from '@/components/common/empty-state';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDuration, formatTime, initials } from '@/lib/format';
+import { attendanceHref, currentMonth } from '@/lib/hr';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'name' | 'in' | 'last' | 'calls' | 'leads' | 'proposals';
@@ -170,7 +172,14 @@ export function PeopleBlock({
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{p.name}</p>
+                      <p className="truncate font-medium">
+                        <Link
+                          href={attendanceHref({ userId: p.userId, month: currentMonth() })}
+                          className="focus-visible:ring-ring rounded-sm outline-none hover:underline focus-visible:ring-2"
+                        >
+                          {p.name}
+                        </Link>
+                      </p>
                       {p.designation && (
                         <p className="text-muted-foreground truncate text-xs">{p.designation}</p>
                       )}
@@ -230,7 +239,14 @@ export function PeopleBlock({
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{p.name}</p>
+                <p className="truncate font-medium">
+                  <Link
+                    href={attendanceHref({ userId: p.userId, month: currentMonth() })}
+                    className="focus-visible:ring-ring rounded-sm outline-none hover:underline focus-visible:ring-2"
+                  >
+                    {p.name}
+                  </Link>
+                </p>
                 {p.designation && (
                   <p className="text-muted-foreground truncate text-xs">{p.designation}</p>
                 )}

@@ -1,5 +1,13 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+import { Suspense } from 'react';
+import { RoleGate } from '@/components/common/role-gate';
+import { EmployeesView } from '@/components/hr/employees-view';
 
 export default function EmployeesPage() {
-  return <PlaceholderPage title="Employees" roles={['ADMIN','HR']} />;
+  return (
+    <RoleGate roles={['ADMIN', 'HR']}>
+      <Suspense>
+        <EmployeesView />
+      </Suspense>
+    </RoleGate>
+  );
 }

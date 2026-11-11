@@ -1,0 +1,344 @@
+'use client';
+
+import { STAFF_ROLES, type StaffRole, type UserDto } from '@vastu/contracts';
+import { KeyRound, MoreHorizontal, Plus, Search, Tags, Users } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { EmptyState } from '@/components/common/empty-state';
+import { ErrorState } from '@/components/common/error-state';
+import { PageBody, PageHeader } from '@/components/common/page-header';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ApiError } from '@/lib/api/client';
+import { EMPLOYEE_PAGE_SIZE, useEmployees, useUpdateEmployee } from '@/lib/api/hr';
+import { useAuth } from '@/lib/auth';
+import { formatINR } from '@/lib/format';
+import {
+  ATTENDANCE_LABEL,
+  DEFAULT_EMPLOYEE_FILTERS,
+  ROLE_LABEL,
+  canManageUser,
+  employeeFiltersToSearch,
+  parseEmployeeFilters,
+  type EmployeeFilters,
+} from '@/lib/hr';
+import { formatPhone } from '@/lib/leads';
+import { cn } from '@/lib/utils';
+import { DeactivateDialog, PasswordDialog } from './employee-dialogs';
+import { EmployeeSheet } from './employee-sheet';
+
+const ALL = '__all__';
+
+type Dialog = { kind: 'edit' | 'password' | 'deactivate'; user: UserDto } | { kind: 'add' } | null;
+
+export function EmployeesView() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const { user: me } = useAuth();
+  const filters = useMemo(() => parseEmployeeFilters(params), [params]);
+  const [dialog, setDialog] = useState<Dialog>(null);
+
+  const setFilters = useCallback(
+    (patch: Partial<EmployeeFilters>) =>
+      router.replace(`/employees${employeeFiltersToSearch({ ...filters, page: 1, ...patch })}`, {
+        scroll: false,
+      }),
+    [filters, router],
+  );
+
+  // Typing waits a moment before it reaches the URL. The draft only counts while the URL still holds
+  // the value it was typed over, so Clear and back/forward win.
+  const [draft, setDraft] = useState<{ value: string; from: string } | null>(null);
+  const text = draft && draft.from === filters.search ? draft.value : filters.search;
+  useEffect(() => {
+    if (!draft || draft.from !== filters.search || draft.value.trim() === filters.search) return;
+    const t = setTimeout(() => setFilters({ search: draft.value.trim() }), 350);
+    return () => clearTimeout(t);
+  }, [draft, filters.search, setFilters]);
+
+  const q = useEmployees(filters);
+  const data = q.data;
+  const filtered =
+    JSON.stringify({ ...filters, page: 1 }) !== JSON.stringify(DEFAULT_EMPLOYEE_FILTERS);
+
+  return (
+    <PageBody>
+      <PageHeader
+        title="Employees"
+        description={
+          data
+            ? `${data.total} ${data.total === 1 ? 'person' : 'people'}${filtered ? ' match your filters' : ''}`
+            : undefined
+        }
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/employees/designations">
+                <Tags /> Designations
+              </Link>
+            </Button>
+            <Button onClick={() => setDialog({ kind: 'add' })}>
+              <Plus /> Add employee
+            </Button>
+          </>
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-52 flex-1 sm:max-w-xs">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            aria-label="Search employees"
+            placeholder="Search name or phone"
+            className="pl-8"
+            value={text}
+            onChange={(e) => setDraft({ value: e.target.value, from: filters.search })}
+          />
+        </div>
+        <Select
+          value={filters.role ?? ALL}
+          onValueChange={(v) => setFilters({ role: v === ALL ? null : (v as StaffRole) })}
+        >
+          <SelectTrigger aria-label="Role" className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All roles</SelectItem>
+            {STAFF_ROLES.map((r) => (
+              <SelectItem key={r} value={r}>
+                {ROLE_LABEL[r]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.active === null ? ALL : String(filters.active)}
+          onValueChange={(v) => setFilters({ active: v === ALL ? null : v === 'true' })}
+        >
+          <SelectTrigger aria-label="Active" className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Active and not</SelectItem>
+            <SelectItem value="true">Active</SelectItem>
+            <SelectItem value="false">Deactivated</SelectItem>
+          </SelectContent>
+        </Select>
+        {filtered && (
+          <Button variant="ghost" onClick={() => router.replace('/employees', { scroll: false })}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+      <div className="bg-card shadow-card overflow-hidden rounded-xl border">
+        {q.isError && !data ? (
+          <ErrorState error={q.error} onRetry={() => q.refetch()} />
+        ) : q.isPending ? (
+          <div className="space-y-3 p-4" aria-hidden>
+            {Array.from({ length: 6 }, (_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : data && data.items.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={filtered ? 'No one matches these filters' : 'No employees yet'}
+            action={
+              filtered ? (
+                <Button
+                  variant="outline"
+                  onClick={() => router.replace('/employees', { scroll: false })}
+                >
+                  Clear filters
+                </Button>
+              ) : (
+                <Button onClick={() => setDialog({ kind: 'add' })}>
+                  <Plus /> Add employee
+                </Button>
+              )
+            }
+          />
+        ) : data ? (
+          <>
+            <Table className={cn(q.isPlaceholderData && 'opacity-60 transition-opacity')}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Person</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="hidden md:table-cell">Designation</TableHead>
+                  <TableHead className="hidden lg:table-cell">Attendance</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Salary</TableHead>
+                  <TableHead>Active</TableHead>
+                  <TableHead className="w-10">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((u) => (
+                  <EmployeeRow
+                    key={u.id}
+                    u={u}
+                    isMe={u.id === me?.id}
+                    canManage={canManageUser(me?.role, u.role)}
+                    onAction={(kind) => setDialog({ kind, user: u })}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+            {data.totalPages > 1 && (
+              <div className="flex items-center justify-between gap-3 border-t px-4 py-2.5">
+                <p className="text-muted-foreground tabular text-xs">
+                  {(data.page - 1) * EMPLOYEE_PAGE_SIZE + 1}–
+                  {Math.min(data.page * EMPLOYEE_PAGE_SIZE, data.total)} of {data.total}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={data.page <= 1}
+                    onClick={() => setFilters({ page: data.page - 1 })}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={data.page >= data.totalPages}
+                    onClick={() => setFilters({ page: data.page + 1 })}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      {/* Keyed so each open starts from that person's current values, never the last form's leftovers. */}
+      {dialog?.kind === 'add' && (
+        <EmployeeSheet key="add" user={null} open onOpenChange={(o) => !o && setDialog(null)} />
+      )}
+      {dialog?.kind === 'edit' && (
+        <EmployeeSheet
+          key={dialog.user.id}
+          user={dialog.user}
+          open
+          onOpenChange={(o) => !o && setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'password' && (
+        <PasswordDialog user={dialog.user} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === 'deactivate' && (
+        <DeactivateDialog user={dialog.user} onClose={() => setDialog(null)} />
+      )}
+    </PageBody>
+  );
+}
+
+function EmployeeRow({
+  u,
+  isMe,
+  canManage,
+  onAction,
+}: {
+  u: UserDto;
+  isMe: boolean;
+  canManage: boolean;
+  onAction: (kind: 'edit' | 'password' | 'deactivate') => void;
+}) {
+  const update = useUpdateEmployee(u.id);
+  // You can't switch yourself off, and HR can't touch Admin or HR accounts.
+  const lockedSwitch = !canManage || isMe || update.isPending;
+  return (
+    <TableRow className={cn(!u.active && 'text-muted-foreground')}>
+      <TableCell>
+        <span className="font-semibold">{u.name}</span>
+        {isMe && <span className="text-muted-foreground ml-1 text-xs">(you)</span>}
+        <span className="tabular text-muted-foreground block text-xs">
+          {formatPhone(u.phone)}
+          {!u.canLogin && (
+            <span className="bg-secondary text-secondary-foreground ml-2 rounded-full px-1.5">
+              No login
+            </span>
+          )}
+        </span>
+      </TableCell>
+      <TableCell>{ROLE_LABEL[u.role]}</TableCell>
+      <TableCell className="hidden md:table-cell">{u.designation ?? '—'}</TableCell>
+      <TableCell className="hidden lg:table-cell">
+        {u.attendanceType ? ATTENDANCE_LABEL[u.attendanceType] : '—'}
+      </TableCell>
+      <TableCell className="tabular hidden text-right sm:table-cell">
+        {u.fixedSalary !== undefined ? formatINR(u.fixedSalary) : '—'}
+      </TableCell>
+      <TableCell>
+        <Switch
+          aria-label={`${u.name} is active`}
+          checked={u.active}
+          disabled={lockedSwitch}
+          onCheckedChange={(on) => {
+            if (!on) return onAction('deactivate'); // confirm first: it signs them out
+            update.mutate(
+              { active: true },
+              {
+                onSuccess: () => toast.success(`${u.name} reactivated`),
+                onError: (e) =>
+                  toast.error(e instanceof ApiError ? e.message : 'Couldn’t reactivate.'),
+              },
+            );
+          }}
+        />
+      </TableCell>
+      <TableCell>
+        {canManage && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label={`Actions for ${u.name}`}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onAction('edit')}>Edit…</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onAction('password')}>
+                <KeyRound /> {u.canLogin ? 'Reset password…' : 'Create login…'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}

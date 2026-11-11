@@ -1,5 +1,11 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+import { Suspense } from 'react';
+import { AttendanceView } from '@/components/hr/attendance-view';
 
+/** Every staff role may open this: Admin/HR get the board, everyone else their own month. The API is the gate. */
 export default function AttendancePage() {
-  return <PlaceholderPage title="Attendance" roles={['ADMIN','HR','SALES','DESIGNER','TECHNICIAN','OFFICE']} />;
+  return (
+    <Suspense>
+      <AttendanceView />
+    </Suspense>
+  );
 }

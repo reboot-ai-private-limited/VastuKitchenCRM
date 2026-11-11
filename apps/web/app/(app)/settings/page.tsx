@@ -1,5 +1,10 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+import { RoleGate } from '@/components/common/role-gate';
+import { SettingsView } from '@/components/settings/settings-view';
 
 export default function SettingsPage() {
-  return <PlaceholderPage title="Settings" roles={['ADMIN']} />;
+  return (
+    <RoleGate roles={['ADMIN']}>
+      <SettingsView />
+    </RoleGate>
+  );
 }

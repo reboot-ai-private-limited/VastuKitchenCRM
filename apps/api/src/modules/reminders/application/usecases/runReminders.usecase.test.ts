@@ -3,6 +3,7 @@ import { RunRemindersUseCase } from './runReminders.usecase.js';
 import {
   CONFIG,
   FakeAdmins,
+  FakeComplaintSource,
   FakeLeadSource,
   FakeNotifier,
   FakeTodoSource,
@@ -12,6 +13,7 @@ import {
   lead,
   overdueTodo,
   proposal,
+  staleComplaint,
 } from '../testing/fakes.js';
 
 function setup(config = CONFIG) {
@@ -19,12 +21,14 @@ function setup(config = CONFIG) {
   const proposals = new FakeProposalSource();
   const leads = new FakeLeadSource();
   const todos = new FakeTodoSource();
+  const complaints = new FakeComplaintSource();
   const notifier = new FakeNotifier();
   const admins = new FakeAdmins();
   const run = new RunRemindersUseCase(
     proposals,
     leads,
     todos,
+    complaints,
     notifier,
     admins,
     async () => config,
@@ -34,6 +38,7 @@ function setup(config = CONFIG) {
     proposals,
     leads,
     todos,
+    complaints,
     notifier,
     admins,
     run: (when: Date) => {
@@ -190,7 +195,7 @@ describe('rule 3 — stagnant lead', () => {
   });
 
   it('uses the configured values, so demos can shrink the days to minutes', async () => {
-    const w = setup({ unseenDays: 0.001, noActionDays: 0.001, stuckDays: 0.001, stagnantMax: 3 });
+    const w = setup({ unseenDays: 0.001, noActionDays: 0.001, stuckDays: 0.001, stagnantMax: 3, complaintDays: 3 });
     w.leads.rows.push(contacted());
     w.proposals.rows.push(proposal());
     w.leads.rows.push(lead({ id: 'lead1' }));
@@ -236,5 +241,40 @@ describe('rule 4 — to-do overdue', () => {
   it('does nothing when there is nothing overdue', async () => {
     const w = setup();
     expect(await w.run(at(1))).toMatchObject({ todoOverdue: 0 });
+  });
+});
+
+describe('rule 5 — complaint not resolved', () => {
+  it('tells the technician after the threshold, once, however often the job runs', async () => {
+    const w = setup();
+    w.complaints.rows.push(staleComplaint());
+
+    expect((await w.run(at(2))).complaintOverdue).toBe(0); // 2 days: too early
+    expect((await w.run(at(4))).complaintOverdue).toBe(1);
+    expect((await w.run(at(5))).complaintOverdue).toBe(0); // already told
+
+    expect(w.notifier.to('tech1')).toHaveLength(1);
+    expect(w.notifier.to('tech1')[0]).toMatchObject({
+      type: 'COMPLAINT_OVERDUE',
+      ref: { kind: 'COMPLAINT', id: 'c1', projectId: 'proj1' },
+    });
+  });
+
+  it('tells every Admin while nobody is assigned', async () => {
+    const w = setup();
+    w.complaints.rows.push(staleComplaint({ assignedToId: null }));
+    expect((await w.run(at(4))).complaintOverdue).toBe(2);
+    expect(w.notifier.to('admin1')).toHaveLength(1);
+    expect(w.notifier.to('admin2')).toHaveLength(1);
+  });
+
+  it('a reopen starts a new clock and earns a new reminder', async () => {
+    const w = setup();
+    w.complaints.rows.push(staleComplaint());
+    await w.run(at(4));
+    w.complaints.rows[0] = staleComplaint({ reopenCount: 1, activeSince: at(5) });
+    expect((await w.run(at(6))).complaintOverdue).toBe(0); // only 1 day since the reopen
+    expect((await w.run(at(9))).complaintOverdue).toBe(1);
+    expect(w.notifier.to('tech1')).toHaveLength(2);
   });
 });

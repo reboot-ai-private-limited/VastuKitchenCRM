@@ -146,6 +146,19 @@ export class ProjectContractUseCases {
     };
   }
 
+  async basics(projectId: string) {
+    const p = await this.projects.findById(projectId);
+    return p
+      ? {
+          id: p.id,
+          name: p.name,
+          memberIds: p.memberIds,
+          customerId: p.customerId,
+          stage: p.stage,
+        }
+      : null;
+  }
+
   async names(projectIds: string[]): Promise<Array<{ id: string; name: string }>> {
     if (projectIds.length === 0) return [];
     return (await this.projects.findByIds(projectIds)).map((p) => ({ id: p.id, name: p.name }));

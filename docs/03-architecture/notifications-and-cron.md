@@ -17,6 +17,8 @@ Endpoints (any signed-in user, always their own): `GET /api/notifications` (`unr
 | `TODO_ASSIGNED` / `TODO_DUE_CHANGED` / `TODO_COMPLETED` / `TODO_COMMENT` | the to-dos module | see [todos](../02-product/todos.md) |
 | `FILE_ADDED` / `FILE_SHARED` | the docs module | members (and Admins for a customer upload) / the customer — see [docs](../02-product/docs.md) |
 | `TODO_OVERDUE` | reminder rule 4 | the assignees (else the creator) |
+| `COMPLAINT_RAISED` / `_ASSIGNED` / `_RESOLVED` / `_REOPENED` / `_CLOSED` | the complaints module | see [complaints](../02-product/complaints.md) |
+| `COMPLAINT_OVERDUE` | reminder rule 5 | the technician (else every Admin) |
 | `LEAD_ASSIGNED` | `lead.assigned` event (not when you assign to yourself) | the new assignee |
 | `PROPOSAL_UNSEEN` | reminder rule 1 | see "Recipient" |
 | `PROPOSAL_NO_ACTION` | reminder rule 2 | see "Recipient" |
@@ -37,6 +39,7 @@ All thresholds are **system settings** ([settings](settings.md)) in **days** (de
 
 - **Stagnant skips `PROPOSAL_SENT` leads:** rules 1 and 2 already cover them at the same moment, so one problem never produces two alerts.
 - **Rule 4 — to-do overdue:** an open to-do past its due date (business calendar) alerts its assignees, once **per due date** (a moved date that is missed again is a new reminder).
+- **Rule 5 — complaint unresolved:** an Open or Assigned complaint older than `reminders.complaintDays` (default 3) alerts its technician, or every Admin while nobody is assigned. Once per complaint; a **reopen** starts a new clock and a new reminder.
 - **Won/Lost leads** never trigger anything.
 - **Resets:** a status change, or sending another proposal, resets the lead's `statusChangedAt`, so the clock starts again and stagnant reminders can fire for the new period.
 - **Recipient:** the lead's assigned sales person; if unassigned, the person who sent the proposal; if neither, all active Admins. No copies to Admin otherwise (Admin sees stuck leads on the dashboard).

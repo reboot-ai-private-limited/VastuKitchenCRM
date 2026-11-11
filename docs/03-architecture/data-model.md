@@ -23,7 +23,7 @@ Keep it flat; refine during build.
 | `todocomments` | todoId, projectId, authorId, text (nullable), images[], deletedAt |
 | `docfolders` | projectId, parentId (null = top level), name, nameKey (lower-case; unique per parent), createdById, deletedAt |
 | `docfiles` | projectId, folderId, kind (`IMAGE`/`FILE`), publicId, format, bytes, name, visibility (`TEAM`/`CLIENT`), uploadedById, deletedAt — unique (projectId, publicId) among live rows; a document points at the stored file, nothing is copied |
-| `complaints` | customerId/projectId, description, photos[], raisedBy, assignedTo, status, resolutionNote, resolutionPhoto |
+| `complaints` | projectId, customerId (copied from the project), description, images[], status (`OPEN`/`ASSIGNED`/`RESOLVED`/`CLOSED`), raisedById, assignedToId, resolutionNote, resolutionImages[], activeSince (created or last reopened), assignedAt/resolvedAt/closedAt, reopenCount, events[{type, at, actorId, note, assigneeId}] — the complaint's own history |
 | `attendance` | userId, date, inAt, outAt, method (`gps`/`biometric_sim`), location |
 | `salaries` | userId, month, fixed, presentDays, workingDays, payable (editable), finalised |
 | `notifications` | userId, type, refType, refId, message, readAt |

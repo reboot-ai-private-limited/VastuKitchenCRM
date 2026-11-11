@@ -1,6 +1,8 @@
 import type { LeadStatus } from '@vastu/contracts';
 import type {
   AdminDirectoryPort,
+  ComplaintSourcePort,
+  StaleComplaint,
   LeadSnapshot,
   LeadSourcePort,
   NotifierPort,
@@ -69,6 +71,26 @@ export class FakeTodoSource implements TodoSourcePort {
   }
 }
 
+export class FakeComplaintSource implements ComplaintSourcePort {
+  rows: StaleComplaint[] = [];
+  async findStale(w: { before: Date; limit: number }) {
+    return this.rows.filter((c) => c.activeSince < w.before).slice(0, w.limit);
+  }
+}
+
+export function staleComplaint(over: Partial<StaleComplaint> = {}): StaleComplaint {
+  return {
+    id: 'c1',
+    projectId: 'proj1',
+    projectName: 'Rao Kitchen',
+    description: 'Drawer slider is jammed',
+    assignedToId: 'tech1',
+    reopenCount: 0,
+    activeSince: T0,
+    ...over,
+  };
+}
+
 export class FakeAdmins implements AdminDirectoryPort {
   calls = 0;
   ids = ['admin1', 'admin2'];
@@ -83,6 +105,7 @@ export const CONFIG: ReminderConfig = {
   noActionDays: 2,
   stuckDays: 2,
   stagnantMax: 3,
+  complaintDays: 3,
 };
 
 export const DAY = 86_400_000;

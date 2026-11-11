@@ -11,6 +11,7 @@ export const SETTING_TYPES = {
   'reminders.unseenDays': 'number',
   'reminders.noActionDays': 'number',
   'reminders.stagnantMax': 'number',
+  'reminders.complaintDays': 'number',
   'docs.maxFileMb': 'number',
   'proposals.defaultTerms': 'longText',
   'company.name': 'text',

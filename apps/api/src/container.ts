@@ -5,6 +5,7 @@ import { buildNotificationsContainer } from '@/modules/notifications/notificatio
 import { buildProjectsContainer } from '@/modules/projects/projects.container.js';
 import { buildProposalsContainer } from '@/modules/proposals/proposals.container.js';
 import { buildSettingsContainer } from '@/modules/settings/settings.container.js';
+import { buildComplaintsContainer } from '@/modules/complaints/complaints.container.js';
 import { buildDocsContainer } from '@/modules/docs/docs.container.js';
 import { buildTodosContainer } from '@/modules/todos/todos.container.js';
 import { buildRemindersContainer } from '@/modules/reminders/reminders.container.js';
@@ -22,6 +23,7 @@ export interface AppContainers {
   projects: ReturnType<typeof buildProjectsContainer>;
   todos: ReturnType<typeof buildTodosContainer>;
   docs: ReturnType<typeof buildDocsContainer>;
+  complaints: ReturnType<typeof buildComplaintsContainer>;
   reminders: ReturnType<typeof buildRemindersContainer>;
   /** In-process bus; modules above subscribe to what modules below announce. */
   events: EventBus;
@@ -66,10 +68,17 @@ export function buildContainers(): AppContainers {
     settings: settings.contract,
     storage,
   });
+  const complaints = buildComplaintsContainer({
+    projects: projects.contract,
+    identity: identity.contract,
+    notifications: notifications.contract,
+    storage,
+  });
   const reminders = buildRemindersContainer({
     leads: leads.contract,
     proposals: proposals.contract,
     todos: todos.contract,
+    complaints: complaints.contract,
     notifications: notifications.contract,
     identity: identity.contract,
     settings: settings.contract,
@@ -85,6 +94,7 @@ export function buildContainers(): AppContainers {
     projects,
     todos,
     docs,
+    complaints,
     reminders,
     events,
   };

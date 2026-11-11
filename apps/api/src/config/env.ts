@@ -72,6 +72,8 @@ const schema = z.object({
   REMINDER_NO_ACTION_DAYS: z.coerce.number().positive().default(2),
   /** Stagnant reminders repeat every LEAD_STUCK_DAYS, at most this many times per stuck period. */
   REMINDER_STAGNANT_MAX: z.coerce.number().int().min(1).default(3),
+  /** A complaint still Open/Assigned after this long → "overdue" reminder (once). */
+  REMINDER_COMPLAINT_DAYS: z.coerce.number().positive().default(3),
   /** How often the reminder job runs. It is idempotent, so a shorter interval only means quicker alerts. */
   REMINDER_INTERVAL_MINUTES: z.coerce.number().positive().default(60),
 

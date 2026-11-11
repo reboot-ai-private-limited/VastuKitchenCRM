@@ -15,6 +15,8 @@ export interface ReminderConfig {
   stuckDays: number;
   /** Stagnant reminders per stuck period, at most. */
   stagnantMax: number;
+  /** A complaint still open/assigned after this many days → overdue reminder. */
+  complaintDays: number;
 }
 
 export const isClosed = (status: LeadStatus): boolean => CLOSED_LEAD_STATUSES.includes(status);

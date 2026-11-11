@@ -36,6 +36,15 @@ const REGISTRY: SettingRegistry = {
     min: 0.5,
     max: 30,
   },
+  'reminders.complaintDays': {
+    group: 'Reminders',
+    label: 'C',
+    description: 'd',
+    type: 'number',
+    default: 3,
+    min: 0.5,
+    max: 30,
+  },
   'reminders.noActionDays': {
     group: 'Reminders',
     label: 'N',
@@ -202,7 +211,7 @@ describe('listing', () => {
     const { list, update } = setup();
     await update.execute('admin1', { 'leads.stuckDays': 5, 'company.name': 'Vaastu' });
     const all = await list.execute();
-    expect(all).toHaveLength(11);
+    expect(all).toHaveLength(12);
     const byKey = Object.fromEntries(all.map((s) => [s.key, s]));
     expect(byKey['leads.stuckDays']).toMatchObject({
       value: 5,

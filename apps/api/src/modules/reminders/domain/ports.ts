@@ -53,6 +53,22 @@ export interface TodoSourcePort {
   findOverdue(window: { lookbackDays: number; limit: number }): Promise<OverdueTodo[]>;
 }
 
+export interface StaleComplaint {
+  id: string;
+  projectId: string;
+  projectName: string;
+  description: string;
+  assignedToId: string | null;
+  reopenCount: number;
+  activeSince: Date;
+}
+
+/** What reminders needs from complaints (the adapter wraps the complaints public contract). */
+export interface ComplaintSourcePort {
+  /** Open or assigned, active since before `before`, oldest first. */
+  findStale(window: { before: Date; limit: number }): Promise<StaleComplaint[]>;
+}
+
 export interface Reminder {
   userId: string;
   type: NotificationType;

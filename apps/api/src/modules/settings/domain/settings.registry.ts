@@ -59,6 +59,16 @@ export const SETTINGS: SettingRegistry = {
     max: 20,
     integer: true,
   },
+  'reminders.complaintDays': {
+    group: 'Reminders',
+    label: 'Complaint not resolved after (days)',
+    description:
+      'An Open or Assigned complaint older than this reminds the technician, or the Admins when nobody is assigned. Once per complaint.',
+    type: 'number',
+    default: env.REMINDER_COMPLAINT_DAYS,
+    min: 0.0001,
+    max: 365,
+  },
   'docs.maxFileMb': {
     group: 'Documents',
     label: 'Largest document that can be uploaded (MB)',

@@ -3,10 +3,12 @@ import type { IdentityPublicContract } from '@/modules/identity/identity.public.
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
+import type { ComplaintsPublicContract } from '@/modules/complaints/complaints.public.js';
 import type { TodosPublicContract } from '@/modules/todos/todos.public.js';
 import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import { RunRemindersUseCase } from './application/usecases/runReminders.usecase.js';
 import {
+  ComplaintsContractSource,
   IdentityAdminDirectory,
   LeadsContractSource,
   NotificationsContractNotifier,
@@ -27,6 +29,7 @@ export interface RemindersDeps {
   leads: LeadsPublicContract;
   proposals: ProposalsPublicContract;
   todos: TodosPublicContract;
+  complaints: ComplaintsPublicContract;
   notifications: NotificationsPublicContract;
   identity: IdentityPublicContract;
   settings: SettingsPublicContract;
@@ -37,16 +40,18 @@ export function buildRemindersContainer(deps: RemindersDeps): RemindersContainer
     new ProposalsContractSource(deps.proposals),
     new LeadsContractSource(deps.leads),
     new TodosContractSource(deps.todos),
+    new ComplaintsContractSource(deps.complaints),
     new NotificationsContractNotifier(deps.notifications),
     new IdentityAdminDirectory(deps.identity),
     async () => {
-      const [unseenDays, noActionDays, stuckDays, stagnantMax] = await Promise.all([
+      const [unseenDays, noActionDays, stuckDays, stagnantMax, complaintDays] = await Promise.all([
         deps.settings.get('reminders.unseenDays'),
         deps.settings.get('reminders.noActionDays'),
         deps.settings.get('leads.stuckDays'),
         deps.settings.get('reminders.stagnantMax'),
+        deps.settings.get('reminders.complaintDays'),
       ]);
-      return { unseenDays, noActionDays, stuckDays, stagnantMax };
+      return { unseenDays, noActionDays, stuckDays, stagnantMax, complaintDays };
     },
   );
 

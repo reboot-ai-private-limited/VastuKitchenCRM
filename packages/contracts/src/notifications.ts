@@ -10,6 +10,12 @@ export const NOTIFICATION_TYPES = [
   'LEAD_WON',
   'FILE_ADDED',
   'FILE_SHARED',
+  'COMPLAINT_RAISED',
+  'COMPLAINT_ASSIGNED',
+  'COMPLAINT_RESOLVED',
+  'COMPLAINT_REOPENED',
+  'COMPLAINT_CLOSED',
+  'COMPLAINT_OVERDUE',
   'TODO_ASSIGNED',
   'TODO_DUE_CHANGED',
   'TODO_COMPLETED',
@@ -26,7 +32,7 @@ export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
 
 /** What a notification points at, so the app can open the right screen. */
-export const NOTIFICATION_REF_KINDS = ['LEAD', 'PROPOSAL', 'PROJECT', 'TODO'] as const;
+export const NOTIFICATION_REF_KINDS = ['LEAD', 'PROPOSAL', 'PROJECT', 'TODO', 'COMPLAINT'] as const;
 export const notificationRefSchema = z.object({
   kind: z.enum(NOTIFICATION_REF_KINDS),
   id: z.string(),
@@ -76,5 +82,7 @@ export const reminderRunResultSchema = z.object({
   stagnant: z.number().int(),
   /** To-dos past their due date that were not yet reminded. */
   todoOverdue: z.number().int(),
+  /** Complaints still unresolved after the allowed days. */
+  complaintOverdue: z.number().int(),
 });
 export type ReminderRunResultDto = z.infer<typeof reminderRunResultSchema>;

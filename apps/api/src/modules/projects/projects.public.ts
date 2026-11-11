@@ -38,6 +38,17 @@ export interface ProjectsPublicContract {
     role: 'ADMIN' | 'MEMBER' | 'CUSTOMER';
     stage: ProjectStage;
   }>;
+  /**
+   * A project's basics WITHOUT any access check — for modules that apply their own rules (e.g.
+   * complaints: reception may raise one on any project). Null when there is no such project.
+   */
+  getProjectBasics(projectId: string): Promise<{
+    id: string;
+    name: string;
+    memberIds: string[];
+    customerId: string;
+    stage: ProjectStage;
+  } | null>;
   /** Names of these projects, for whoever asks (e.g. reminder text). Unknown ids are absent. */
   getProjectNames(projectIds: string[]): Promise<Array<{ id: string; name: string }>>;
   /** Adds a line to the project's team timeline. */

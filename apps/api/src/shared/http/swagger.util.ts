@@ -71,6 +71,11 @@ const TAGS = [
     description:
       'Project documents: nested folders, files, share with client, and Save to Docs from photos.',
   },
+  {
+    name: 'Complaints',
+    description:
+      'Post-delivery service tickets: raise with photos, assign a technician, resolve, reopen, close.',
+  },
   { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
   {
     name: 'Proposals / Public',

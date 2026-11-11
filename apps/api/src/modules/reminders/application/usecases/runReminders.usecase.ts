@@ -17,16 +17,18 @@ import type {
   ProposalSourcePort,
   Reminder,
   TodoSourcePort,
+  ComplaintSourcePort,
 } from '../../domain/ports.js';
 
 /**
- * The four time rules (docs/03-architecture/notifications-and-cron.md). Safe to run any time and
+ * The five time rules (docs/03-architecture/notifications-and-cron.md). Safe to run any time and
  * any number of times: every alert carries a dedupeKey, so a repeat delivers nothing new.
  *
  *  1. unseen        — sent, never opened after N days            (once per proposal)
  *  2. no action     — opened N days ago, lead status unchanged   (once per proposal)
  *  3. stagnant      — open lead unchanged for N days             (each N-day window, max M times)
  *  4. to-do overdue — open to-do past its due date               (once per due date)
+ *  5. complaint overdue — open/assigned complaint not resolved after N days (once per complaint, again after a reopen)
  *     Stagnant skips PROPOSAL_SENT leads: rules 1 and 2 already cover them.
  *
  * Recipient: the lead's assignee; else the proposal's sender; else every active Admin.
@@ -36,6 +38,7 @@ export class RunRemindersUseCase {
     private readonly proposals: ProposalSourcePort,
     private readonly leads: LeadSourcePort,
     private readonly todos: TodoSourcePort,
+    private readonly complaints: ComplaintSourcePort,
     private readonly notifier: NotifierPort,
     private readonly admins: AdminDirectoryPort,
     /** Read at the start of EVERY run, so an Admin's change applies to the next one. */
@@ -46,13 +49,20 @@ export class RunRemindersUseCase {
   async execute(): Promise<ReminderRunResultDto> {
     const now = this.now();
     const config = await this.loadConfig();
-    const result: ReminderRunResultDto = { unseen: 0, noAction: 0, stagnant: 0, todoOverdue: 0 };
+    const result: ReminderRunResultDto = {
+      unseen: 0,
+      noAction: 0,
+      stagnant: 0,
+      todoOverdue: 0,
+      complaintOverdue: 0,
+    };
     const adminIds = lazy(() => this.admins.activeAdminIds());
 
     result.unseen = await this.unseenProposals(now, config, adminIds);
     result.noAction = await this.noActionProposals(now, config, adminIds);
     result.stagnant = await this.stagnantLeads(now, config, adminIds);
     result.todoOverdue = await this.overdueTodos();
+    result.complaintOverdue = await this.overdueComplaints(now, config, adminIds);
     return result;
   }
 
@@ -169,6 +179,34 @@ export class RunRemindersUseCase {
         body: `"${t.title}" in ${t.projectName} was due ${t.dueOn}.`,
         ref: { kind: 'TODO', id: t.id, projectId: t.projectId },
         dedupeKey: `todo-overdue:${t.id}:${t.dueOn}`,
+      });
+    }
+    return created;
+  }
+
+  // ── rule 5 ───────────────────────────────────────────────────────────────
+  /**
+   * A complaint nobody resolved within the allowed days: told to its technician, or to every Admin
+   * while it has none. Once per complaint — a reopen starts a new clock and a new reminder.
+   */
+  private async overdueComplaints(
+    now: Date,
+    config: ReminderConfig,
+    adminIds: () => Promise<string[]>,
+  ): Promise<number> {
+    const stale = await this.complaints.findStale({
+      before: ago(now, config.complaintDays),
+      limit: BATCH_LIMIT,
+    });
+
+    let created = 0;
+    for (const c of stale) {
+      created += await this.deliver(await this.recipients(c.assignedToId, adminIds), {
+        type: 'COMPLAINT_OVERDUE',
+        title: 'Complaint still unresolved',
+        body: `${c.projectName}: "${c.description.length > 60 ? `${c.description.slice(0, 59)}…` : c.description}" has been waiting ${describeAge(now.getTime() - c.activeSince.getTime())}.`,
+        ref: { kind: 'COMPLAINT', id: c.id, projectId: c.projectId },
+        dedupeKey: `complaint-overdue:${c.id}:${c.reopenCount}`,
       });
     }
     return created;

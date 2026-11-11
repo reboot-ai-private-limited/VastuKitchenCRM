@@ -96,6 +96,7 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
       createFromWonLead: (event) => fromWonLead.execute(event),
       getMembership: (actor, projectId) => contractUseCases.getMembership(actor, projectId),
       getProjectAccess: (actor, projectId) => contractUseCases.getProjectAccess(actor, projectId),
+      getProjectBasics: (projectId) => contractUseCases.basics(projectId),
       getProjectNames: (ids) => contractUseCases.names(ids),
       recordActivity: (projectId, activity) => contractUseCases.recordActivity(projectId, activity),
       filterAccessible: (actor, ids) => contractUseCases.filterAccessible(actor, ids),

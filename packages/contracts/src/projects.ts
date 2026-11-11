@@ -201,6 +201,11 @@ export const PROJECT_ACTIVITY_TYPES = [
   'FILE_ADDED',
   'FILE_SHARED',
   'FILES_SAVED',
+  'COMPLAINT_RAISED',
+  'COMPLAINT_ASSIGNED',
+  'COMPLAINT_RESOLVED',
+  'COMPLAINT_REOPENED',
+  'COMPLAINT_CLOSED',
 ] as const;
 export const projectActivityTypeSchema = z.enum(PROJECT_ACTIVITY_TYPES);
 export type ProjectActivityType = z.infer<typeof projectActivityTypeSchema>;

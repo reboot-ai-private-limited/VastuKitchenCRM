@@ -1,10 +1,13 @@
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
+import type { ComplaintsPublicContract } from '@/modules/complaints/complaints.public.js';
 import type { TodosPublicContract } from '@/modules/todos/todos.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
 import type {
   AdminDirectoryPort,
+  ComplaintSourcePort,
+  StaleComplaint,
   LeadSnapshot,
   LeadSourcePort,
   NotifierPort,
@@ -64,5 +67,13 @@ export class TodosContractSource implements TodoSourcePort {
 
   findOverdue(window: { lookbackDays: number; limit: number }): Promise<OverdueTodo[]> {
     return this.todos.findOverdue(window);
+  }
+}
+
+export class ComplaintsContractSource implements ComplaintSourcePort {
+  constructor(private readonly complaints: ComplaintsPublicContract) {}
+
+  findStale(window: { before: Date; limit: number }): Promise<StaleComplaint[]> {
+    return this.complaints.findStale(window);
   }
 }

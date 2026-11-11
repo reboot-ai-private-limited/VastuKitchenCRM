@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApiError } from '@/lib/api/client';
 import { useLead, useLeadCalls, useLeadTimeline, useLeadVisits } from '@/lib/api/leads';
+import { useLeadProjects } from '@/lib/api/projects';
 import { useProposals } from '@/lib/api/proposals';
 import { ProposalChipBadge } from '@/components/proposals/proposals-view';
 import { useAuth } from '@/lib/auth';
@@ -25,6 +26,7 @@ export function LeadDetail({ id }: { id: string }) {
   const { user } = useAuth();
   const can = leadPermissions(user?.role);
   const lead = useLead(id);
+  const projects = useLeadProjects(id, lead.data?.status === 'WON');
   const [dialog, setDialog] = useState<'status' | 'assign' | null>(null);
   const [tab, setTab] = useState('timeline');
   // Office has no call or visit log access; those tabs are for Admin and Sales.
@@ -161,6 +163,20 @@ export function LeadDetail({ id }: { id: string }) {
             <Row label="Created">{formatDate(l.createdAt)}</Row>
             {l.lostReason && <Row label="Lost because">{l.lostReason}</Row>}
           </dl>
+          {locked && projects.data && projects.data.items.length > 0 && (
+            <div className="mt-3 space-y-1">
+              <p className="text-muted-foreground text-xs font-medium">Project</p>
+              {projects.data.items.map((pr) => (
+                <Link
+                  key={pr.id}
+                  href={`/projects/${pr.id}`}
+                  className="text-primary block truncate text-sm font-semibold underline"
+                >
+                  {pr.name}
+                </Link>
+              ))}
+            </div>
+          )}
           {l.customerId && (
             <p className="text-success bg-success-soft mt-3 rounded-md p-2 text-xs">
               Customer account created. Won leads are locked.

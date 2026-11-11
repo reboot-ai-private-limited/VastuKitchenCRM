@@ -1,5 +1,9 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+'use client';
+
+import { useParams } from 'next/navigation';
+import { ProjectDetail } from '@/components/projects/project-detail';
 
 export default function ProjectPage() {
-  return <PlaceholderPage title="Project" roles={['ADMIN','SALES','DESIGNER','TECHNICIAN','OFFICE','CUSTOMER']} />;
+  const { id } = useParams<{ id: string }>();
+  return <ProjectDetail id={id} />;
 }

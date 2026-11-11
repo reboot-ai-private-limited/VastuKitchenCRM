@@ -6,6 +6,10 @@ import { z } from 'zod';
  * variable fails the process on startup naming the variable — not as `undefined` deep in a
  * connection string an hour into a deploy.
  */
+/** `KEY=` in a `.env` file means "not set" (the example file ships that way), not an empty value. */
+const blankAsUnset = <T extends z.ZodTypeAny>(inner: T) =>
+  z.preprocess((v) => (v === '' ? undefined : v), inner);
+
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -35,9 +39,9 @@ const schema = z.object({
    * Photo/file storage (Cloudinary). Optional at boot: every other route works without it, and
    * only signing an upload fails (with a clear 503). Put the real values in `.env`, never in git.
    */
-  CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
-  CLOUDINARY_API_KEY: z.string().min(1).optional(),
-  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+  CLOUDINARY_CLOUD_NAME: blankAsUnset(z.string().min(1).optional()),
+  CLOUDINARY_API_KEY: blankAsUnset(z.string().min(1).optional()),
+  CLOUDINARY_API_SECRET: blankAsUnset(z.string().min(1).optional()),
   /** Every asset lives under this folder; use a different one per environment (e.g. vastu-dev). */
   CLOUDINARY_FOLDER: z.string().min(1).default('vastu'),
 

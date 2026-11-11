@@ -1,5 +1,13 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+import { Suspense } from 'react';
+import { RoleGate } from '@/components/common/role-gate';
+import { LeadsView } from '@/components/leads/leads-view';
 
 export default function LeadsPage() {
-  return <PlaceholderPage title="Leads" roles={['ADMIN','SALES','OFFICE']} />;
+  return (
+    <RoleGate roles={['ADMIN', 'SALES', 'OFFICE']}>
+      <Suspense>
+        <LeadsView />
+      </Suspense>
+    </RoleGate>
+  );
 }

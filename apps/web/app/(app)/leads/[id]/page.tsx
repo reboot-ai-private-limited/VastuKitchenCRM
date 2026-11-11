@@ -1,5 +1,14 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+'use client';
+
+import { useParams } from 'next/navigation';
+import { RoleGate } from '@/components/common/role-gate';
+import { LeadDetail } from '@/components/leads/lead-detail';
 
 export default function LeadPage() {
-  return <PlaceholderPage title="Lead" roles={['ADMIN','SALES','OFFICE']} />;
+  const { id } = useParams<{ id: string }>();
+  return (
+    <RoleGate roles={['ADMIN', 'SALES', 'OFFICE']}>
+      <LeadDetail id={id} />
+    </RoleGate>
+  );
 }

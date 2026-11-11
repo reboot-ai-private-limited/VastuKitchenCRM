@@ -1,4 +1,11 @@
-import { CircleCheck, ImageIcon, Inbox, MessageSquare, StickyNote, type LucideIcon } from 'lucide-react';
+import {
+  CircleCheck,
+  ImageIcon,
+  Inbox,
+  MessageSquare,
+  StickyNote,
+  type LucideIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { RecentFeedItemDto } from '@vastu/contracts';
 import { EmptyState } from '@/components/common/empty-state';
@@ -12,7 +19,13 @@ const KIND: Record<RecentFeedItemDto['kind'], { icon: LucideIcon; verb: string }
 
 export function RecentBlock({ items }: { items: RecentFeedItemDto[] }) {
   if (items.length === 0)
-    return <EmptyState icon={Inbox} title="No customer activity yet" description="Customer posts, comments and approvals appear here." />;
+    return (
+      <EmptyState
+        icon={Inbox}
+        title="No customer activity yet"
+        description="Customer posts, comments and approvals appear here."
+      />
+    );
   return (
     <ul className="divide-y">
       {items.map((x) => {
@@ -26,12 +39,22 @@ export function RecentBlock({ items }: { items: RecentFeedItemDto[] }) {
               <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
               <span className="min-w-0 flex-1">
                 <span className="block">
-                  <span className="font-medium">{x.authorName}</span> {verb} <span className="font-medium">{x.projectName}</span>
+                  <span className="font-medium">{x.authorName}</span> {verb}{' '}
+                  <span className="font-medium">{x.projectName}</span>
                 </span>
-                {x.snippet && <span className="text-muted-foreground line-clamp-2 text-xs">“{x.snippet}”</span>}
+                {x.snippet && (
+                  <span className="text-muted-foreground line-clamp-2 text-xs">“{x.snippet}”</span>
+                )}
               </span>
-              {x.hasPhotos && <ImageIcon className="text-muted-foreground size-4 shrink-0" aria-label="Has photos" />}
-              <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">{relativeAge(x.at)}</span>
+              {x.hasPhotos && (
+                <ImageIcon
+                  className="text-muted-foreground size-4 shrink-0"
+                  aria-label="Has photos"
+                />
+              )}
+              <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
+                {relativeAge(x.at)}
+              </span>
             </Link>
           </li>
         );

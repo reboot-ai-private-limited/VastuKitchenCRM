@@ -13,7 +13,8 @@ export interface DateRange {
 }
 
 export const daysIn = (r: DateRange): number =>
-  Math.round((Date.parse(`${r.to}T00:00:00Z`) - Date.parse(`${r.from}T00:00:00Z`)) / 86_400_000) + 1;
+  Math.round((Date.parse(`${r.to}T00:00:00Z`) - Date.parse(`${r.from}T00:00:00Z`)) / 86_400_000) +
+  1;
 
 export function presets(today = businessDate()): Array<{ id: string; label: string } & DateRange> {
   return [
@@ -37,7 +38,13 @@ export function clampRange(r: DateRange, changed: 'from' | 'to'): DateRange {
   return { from, to };
 }
 
-export function RangePicker({ value, onChange }: { value: DateRange; onChange: (r: DateRange) => void }) {
+export function RangePicker({
+  value,
+  onChange,
+}: {
+  value: DateRange;
+  onChange: (r: DateRange) => void;
+}) {
   const today = businessDate();
   const list = presets(today);
   const active = list.find((p) => p.from === value.from && p.to === value.to)?.id ?? 'custom';
@@ -46,7 +53,11 @@ export function RangePicker({ value, onChange }: { value: DateRange; onChange: (
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div role="group" aria-label="Period" className="bg-card shadow-card inline-flex rounded-lg border p-0.5">
+      <div
+        role="group"
+        aria-label="Period"
+        className="bg-card shadow-card inline-flex rounded-lg border p-0.5"
+      >
         {list.map((p) => (
           <Button
             key={p.id}
@@ -61,7 +72,12 @@ export function RangePicker({ value, onChange }: { value: DateRange; onChange: (
             {p.label}
           </Button>
         ))}
-        <Button size="sm" variant={active === 'custom' ? 'default' : 'ghost'} aria-pressed={active === 'custom'} onClick={() => setShowCustom(true)}>
+        <Button
+          size="sm"
+          variant={active === 'custom' ? 'default' : 'ghost'}
+          aria-pressed={active === 'custom'}
+          onClick={() => setShowCustom(true)}
+        >
           Custom
         </Button>
       </div>
@@ -76,7 +92,9 @@ export function RangePicker({ value, onChange }: { value: DateRange; onChange: (
             className="h-8 w-auto"
             max={today}
             value={value.from}
-            onChange={(e) => e.target.value && onChange(clampRange({ from: e.target.value, to: value.to }, 'from'))}
+            onChange={(e) =>
+              e.target.value && onChange(clampRange({ from: e.target.value, to: value.to }, 'from'))
+            }
           />
           <span className="text-muted-foreground">to</span>
           <label className="sr-only" htmlFor="range-to">
@@ -88,7 +106,9 @@ export function RangePicker({ value, onChange }: { value: DateRange; onChange: (
             className="h-8 w-auto"
             max={today}
             value={value.to}
-            onChange={(e) => e.target.value && onChange(clampRange({ from: value.from, to: e.target.value }, 'to'))}
+            onChange={(e) =>
+              e.target.value && onChange(clampRange({ from: value.from, to: e.target.value }, 'to'))
+            }
           />
         </div>
       )}

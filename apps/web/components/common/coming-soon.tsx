@@ -8,7 +8,11 @@ export function ComingSoon({ title }: { title: string }) {
     <PageBody>
       <PageHeader title={title} />
       <div className="bg-card shadow-card rounded-xl border">
-        <EmptyState icon={Hammer} title="This screen is next in the build" description="The data is already available in the API; the screen follows the build order." />
+        <EmptyState
+          icon={Hammer}
+          title="This screen is next in the build"
+          description="The data is already available in the API; the screen follows the build order."
+        />
       </div>
     </PageBody>
   );

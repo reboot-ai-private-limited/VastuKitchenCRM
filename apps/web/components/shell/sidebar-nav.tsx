@@ -18,7 +18,9 @@ export function SidebarNav({ role, onNavigate }: { role: RoleName; onNavigate?: 
         if (inGroup.length === 0) return null;
         return (
           <div key={group} className="space-y-1">
-            <p className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">{group}</p>
+            <p className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">
+              {group}
+            </p>
             {inGroup.map((item) => {
               const active = isActive(item.href, pathname);
               return (
@@ -29,10 +31,17 @@ export function SidebarNav({ role, onNavigate }: { role: RoleName; onNavigate?: 
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'relative flex h-10 items-center gap-3 rounded-md px-3 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                    active ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold' : 'text-sidebar-foreground hover:bg-primary-soft/60',
+                    active
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                      : 'text-sidebar-foreground hover:bg-primary-soft/60',
                   )}
                 >
-                  {active && <span aria-hidden className="bg-primary absolute inset-y-2 left-0 w-0.5 rounded-full" />}
+                  {active && (
+                    <span
+                      aria-hidden
+                      className="bg-primary absolute inset-y-2 left-0 w-0.5 rounded-full"
+                    />
+                  )}
                   <item.icon className="size-4 shrink-0" aria-hidden />
                   {item.label}
                 </Link>

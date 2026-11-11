@@ -18,7 +18,8 @@ export function BottomTabs({ role }: { role: RoleName }) {
   const needsMore = items.length > 5;
   const tabs = needsMore ? items.slice(0, 4) : items;
 
-  const slot = 'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
+  const slot =
+    'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
   return (
     <>
       <nav
@@ -40,7 +41,11 @@ export function BottomTabs({ role }: { role: RoleName }) {
           );
         })}
         {needsMore && (
-          <button type="button" onClick={() => setMore(true)} className={cn(slot, 'text-muted-foreground')}>
+          <button
+            type="button"
+            onClick={() => setMore(true)}
+            className={cn(slot, 'text-muted-foreground')}
+          >
             <Ellipsis className="size-5" aria-hidden />
             More
           </button>

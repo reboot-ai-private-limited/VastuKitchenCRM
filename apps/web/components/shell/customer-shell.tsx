@@ -30,7 +30,10 @@ export function CustomerShell({ user, children }: { user: UserDto; children: Rea
       <main id="main" className="mx-auto max-w-3xl p-4 pb-24">
         {children}
       </main>
-      <nav aria-label="Main" className="bg-background/95 fixed inset-x-0 bottom-0 z-40 flex border-t pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <nav
+        aria-label="Main"
+        className="bg-background/95 fixed inset-x-0 bottom-0 z-40 flex border-t pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      >
         {TABS.map((t) => {
           const active = isActive(t.href, pathname);
           return (
@@ -38,7 +41,10 @@ export function CustomerShell({ user, children }: { user: UserDto; children: Rea
               key={t.href}
               href={t.href}
               aria-current={active ? 'page' : undefined}
-              className={cn('flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px]', active ? 'text-primary font-medium' : 'text-muted-foreground')}
+              className={cn(
+                'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px]',
+                active ? 'text-primary font-medium' : 'text-muted-foreground',
+              )}
             >
               <t.icon className="size-5" aria-hidden />
               {t.label}

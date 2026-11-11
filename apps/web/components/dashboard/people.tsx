@@ -27,7 +27,11 @@ const value = (p: DashboardPersonDto, key: SortKey): number | string => {
   }
 };
 
-export function sortPeople(people: DashboardPersonDto[], key: SortKey, dir: 'asc' | 'desc'): DashboardPersonDto[] {
+export function sortPeople(
+  people: DashboardPersonDto[],
+  key: SortKey,
+  dir: 'asc' | 'desc',
+): DashboardPersonDto[] {
   const sign = dir === 'asc' ? 1 : -1;
   return [...people].sort((a, b) => {
     const x = value(a, key);
@@ -40,7 +44,8 @@ export function sortPeople(people: DashboardPersonDto[], key: SortKey, dir: 'asc
   });
 }
 
-const timeRange = (a: string | null, b: string | null) => (a && b ? `${formatTime(a)} – ${formatTime(b)}` : a ? `${formatTime(a)} –` : '—');
+const timeRange = (a: string | null, b: string | null) =>
+  a && b ? `${formatTime(a)} – ${formatTime(b)}` : a ? `${formatTime(a)} –` : '—';
 
 function Attendance({ p, multiDay }: { p: DashboardPersonDto; multiDay: boolean }) {
   const a = p.attendance;
@@ -55,12 +60,35 @@ function Attendance({ p, multiDay }: { p: DashboardPersonDto; multiDay: boolean 
   return <span className="tabular">{timeRange(a.inAt, a.outAt)}</span>;
 }
 
-function SortHeader({ label, k, sort, onSort, align = 'left' }: { label: string; k: SortKey; sort: { key: SortKey; dir: 'asc' | 'desc' }; onSort: (k: SortKey) => void; align?: 'left' | 'right' }) {
+function SortHeader({
+  label,
+  k,
+  sort,
+  onSort,
+  align = 'left',
+}: {
+  label: string;
+  k: SortKey;
+  sort: { key: SortKey; dir: 'asc' | 'desc' };
+  onSort: (k: SortKey) => void;
+  align?: 'left' | 'right';
+}) {
   const active = sort.key === k;
   const Icon = !active ? ChevronsUpDown : sort.dir === 'asc' ? ArrowUp : ArrowDown;
   return (
-    <th scope="col" aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={cn('px-3 py-2 font-medium', align === 'right' && 'text-right')}>
-      <button type="button" onClick={() => onSort(k)} className={cn('hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded focus-visible:ring-2 focus-visible:outline-none', align === 'right' && 'flex-row-reverse')}>
+    <th
+      scope="col"
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={cn('px-3 py-2 font-medium', align === 'right' && 'text-right')}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={cn(
+          'hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded focus-visible:ring-2 focus-visible:outline-none',
+          align === 'right' && 'flex-row-reverse',
+        )}
+      >
         {label}
         <Icon className="size-3" aria-hidden />
       </button>
@@ -68,13 +96,35 @@ function SortHeader({ label, k, sort, onSort, align = 'left' }: { label: string;
   );
 }
 
-export function PeopleBlock({ people, multiDay, attendanceOnly }: { people: DashboardPersonDto[]; multiDay: boolean; attendanceOnly: boolean }) {
-  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' });
+export function PeopleBlock({
+  people,
+  multiDay,
+  attendanceOnly,
+}: {
+  people: DashboardPersonDto[];
+  multiDay: boolean;
+  attendanceOnly: boolean;
+}) {
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
+    key: 'name',
+    dir: 'asc',
+  });
   const rows = useMemo(() => sortPeople(people, sort.key, sort.dir), [people, sort]);
-  const onSort = (key: SortKey) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'name' || key === 'in' ? 'asc' : 'desc' }));
+  const onSort = (key: SortKey) =>
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'name' || key === 'in' ? 'asc' : 'desc' },
+    );
 
   if (people.length === 0)
-    return <EmptyState icon={Users} title="No one on attendance yet" description="Add employees and set how their attendance is tracked." />;
+    return (
+      <EmptyState
+        icon={Users}
+        title="No one on attendance yet"
+        description="Add employees and set how their attendance is tracked."
+      />
+    );
 
   return (
     <>
@@ -84,13 +134,24 @@ export function PeopleBlock({ people, multiDay, attendanceOnly }: { people: Dash
           <thead className="bg-muted text-muted-foreground text-xs">
             <tr>
               <SortHeader label="Person" k="name" sort={sort} onSort={onSort} />
-              <SortHeader label={multiDay ? 'Attendance' : 'In – out'} k="in" sort={sort} onSort={onSort} />
+              <SortHeader
+                label={multiDay ? 'Attendance' : 'In – out'}
+                k="in"
+                sort={sort}
+                onSort={onSort}
+              />
               {!attendanceOnly && (
                 <>
                   <SortHeader label="First – last activity" k="last" sort={sort} onSort={onSort} />
                   <SortHeader label="Calls" k="calls" sort={sort} onSort={onSort} align="right" />
                   <SortHeader label="Leads" k="leads" sort={sort} onSort={onSort} align="right" />
-                  <SortHeader label="Proposals" k="proposals" sort={sort} onSort={onSort} align="right" />
+                  <SortHeader
+                    label="Proposals"
+                    k="proposals"
+                    sort={sort}
+                    onSort={onSort}
+                    align="right"
+                  />
                   <th scope="col" className="px-3 py-2 text-right font-medium">
                     Feed
                   </th>
@@ -104,11 +165,15 @@ export function PeopleBlock({ people, multiDay, attendanceOnly }: { people: Dash
                 <td className="px-3 py-1.5">
                   <div className="flex items-center gap-2.5">
                     <Avatar className="size-8">
-                      <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">{initials(p.name)}</AvatarFallback>
+                      <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">
+                        {initials(p.name)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <p className="truncate font-medium">{p.name}</p>
-                      {p.designation && <p className="text-muted-foreground truncate text-xs">{p.designation}</p>}
+                      {p.designation && (
+                        <p className="text-muted-foreground truncate text-xs">{p.designation}</p>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -117,17 +182,35 @@ export function PeopleBlock({ people, multiDay, attendanceOnly }: { people: Dash
                 </td>
                 {!attendanceOnly && p.activity && (
                   <>
-                    <td className="tabular px-3 py-1.5">{timeRange(p.activity.firstAt, p.activity.lastAt)}</td>
-                    <td className="tabular px-3 py-1.5 text-right" title={p.activity.talkSeconds ? `Talk time ${formatDuration(p.activity.talkSeconds)}` : undefined}>
+                    <td className="tabular px-3 py-1.5">
+                      {timeRange(p.activity.firstAt, p.activity.lastAt)}
+                    </td>
+                    <td
+                      className="tabular px-3 py-1.5 text-right"
+                      title={
+                        p.activity.talkSeconds
+                          ? `Talk time ${formatDuration(p.activity.talkSeconds)}`
+                          : undefined
+                      }
+                    >
                       {p.activity.calls}
-                      {p.activity.calls > 0 && <span className="text-muted-foreground"> ({p.activity.answeredCalls})</span>}
+                      {p.activity.calls > 0 && (
+                        <span className="text-muted-foreground"> ({p.activity.answeredCalls})</span>
+                      )}
                     </td>
                     <td className="tabular px-3 py-1.5 text-right">{p.activity.leadsHandled}</td>
                     <td className="tabular px-3 py-1.5 text-right">
                       {p.activity.proposalsGenerated}
-                      {p.activity.proposalsSent > 0 && <span className="text-muted-foreground"> ({p.activity.proposalsSent} sent)</span>}
+                      {p.activity.proposalsSent > 0 && (
+                        <span className="text-muted-foreground">
+                          {' '}
+                          ({p.activity.proposalsSent} sent)
+                        </span>
+                      )}
                     </td>
-                    <td className="tabular px-3 py-1.5 text-right">{p.activity.posts + p.activity.comments}</td>
+                    <td className="tabular px-3 py-1.5 text-right">
+                      {p.activity.posts + p.activity.comments}
+                    </td>
                   </>
                 )}
               </tr>
@@ -142,17 +225,22 @@ export function PeopleBlock({ people, multiDay, attendanceOnly }: { people: Dash
           <li key={p.userId} className="space-y-1.5 px-4 py-3">
             <div className="flex items-center gap-2.5">
               <Avatar className="size-8">
-                <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">{initials(p.name)}</AvatarFallback>
+                <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">
+                  {initials(p.name)}
+                </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{p.name}</p>
-                {p.designation && <p className="text-muted-foreground truncate text-xs">{p.designation}</p>}
+                {p.designation && (
+                  <p className="text-muted-foreground truncate text-xs">{p.designation}</p>
+                )}
               </div>
               <Attendance p={p} multiDay={multiDay} />
             </div>
             {!attendanceOnly && p.activity && (
               <p className="text-muted-foreground tabular text-xs">
-                Calls {p.activity.calls} ({p.activity.answeredCalls}) · Leads {p.activity.leadsHandled} · Proposals {p.activity.proposalsGenerated}
+                Calls {p.activity.calls} ({p.activity.answeredCalls}) · Leads{' '}
+                {p.activity.leadsHandled} · Proposals {p.activity.proposalsGenerated}
                 {p.activity.lastAt && ` · Last ${formatTime(p.activity.lastAt)}`}
               </p>
             )}

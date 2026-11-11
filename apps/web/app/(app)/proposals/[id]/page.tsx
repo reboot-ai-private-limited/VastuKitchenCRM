@@ -1,5 +1,14 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+'use client';
+
+import { useParams } from 'next/navigation';
+import { RoleGate } from '@/components/common/role-gate';
+import { ProposalScreen } from '@/components/proposals/proposal-screen';
 
 export default function ProposalPage() {
-  return <PlaceholderPage title="Proposal" roles={['ADMIN','SALES']} />;
+  const { id } = useParams<{ id: string }>();
+  return (
+    <RoleGate roles={['ADMIN', 'SALES']}>
+      <ProposalScreen id={id} />
+    </RoleGate>
+  );
 }

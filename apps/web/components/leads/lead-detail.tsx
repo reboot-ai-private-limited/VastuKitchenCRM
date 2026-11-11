@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Clock, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { ArrowLeft, Clock, FileText, MapPin, MessageCircle, Phone, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { EmptyState } from '@/components/common/empty-state';
@@ -13,9 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApiError } from '@/lib/api/client';
 import { useLead, useLeadCalls, useLeadTimeline, useLeadVisits } from '@/lib/api/leads';
+import { useProposals } from '@/lib/api/proposals';
+import { ProposalChipBadge } from '@/components/proposals/proposals-view';
 import { useAuth } from '@/lib/auth';
 import { describeActivity } from '@/lib/lead-activity';
-import { formatDate, formatDuration, formatTime, relativeAge } from '@/lib/format';
+import { formatDate, formatDuration, formatINR, formatTime, relativeAge } from '@/lib/format';
 import { SOURCE_LABEL, formatPhone, leadPermissions, telUrl, whatsappUrl } from '@/lib/leads';
 import { AssignDialog, StatusDialog } from './lead-dialogs';
 
@@ -27,6 +29,7 @@ export function LeadDetail({ id }: { id: string }) {
   const [tab, setTab] = useState('timeline');
   // Office has no call or visit log access; those tabs are for Admin and Sales.
   const seesLogs = user?.role === 'ADMIN' || user?.role === 'SALES';
+  const proposals = seesLogs;
 
   if (lead.isError && lead.error instanceof ApiError && lead.error.isNotFound)
     return <NotFoundView />;
@@ -80,6 +83,13 @@ export function LeadDetail({ id }: { id: string }) {
                 Assign
               </Button>
             )}
+            {proposals && (
+              <Button asChild>
+                <Link href={`/proposals/new?leadId=${l.id}`}>
+                  <Plus /> Proposal
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" asChild>
               <a href={telUrl(l.phone)}>
                 <Phone /> Call
@@ -98,6 +108,7 @@ export function LeadDetail({ id }: { id: string }) {
         <Tabs value={tab} onValueChange={setTab} className="min-w-0">
           <TabsList>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            {proposals && <TabsTrigger value="proposals">Proposals</TabsTrigger>}
             {seesLogs && <TabsTrigger value="calls">Calls</TabsTrigger>}
             {seesLogs && <TabsTrigger value="visits">Visits</TabsTrigger>}
             <TabsTrigger value="details">Details</TabsTrigger>
@@ -107,6 +118,13 @@ export function LeadDetail({ id }: { id: string }) {
               <Timeline id={id} />
             </Panel>
           </TabsContent>
+          {proposals && (
+            <TabsContent value="proposals">
+              <Panel>
+                <LeadProposals leadId={id} active={tab === 'proposals'} />
+              </Panel>
+            </TabsContent>
+          )}
           {seesLogs && (
             <TabsContent value="calls">
               <Panel>
@@ -288,3 +306,48 @@ const ListSkeleton = () => (
     ))}
   </div>
 );
+
+function LeadProposals({ leadId, active }: { leadId: string; active: boolean }) {
+  const q = useProposals({ page: 1, status: null, leadId });
+  if (!active && !q.data) return null;
+  if (q.isPending) return <ListSkeleton />;
+  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
+  if (q.data.items.length === 0) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="No proposals yet"
+        action={
+          <Button asChild>
+            <Link href={`/proposals/new?leadId=${leadId}`}>
+              <Plus /> New proposal
+            </Link>
+          </Button>
+        }
+      />
+    );
+  }
+  return (
+    <ul className="divide-y">
+      {q.data.items.map((p) => (
+        <li key={p.id}>
+          <Link
+            href={`/proposals/${p.id}`}
+            className="hover:bg-primary-soft/50 flex items-center gap-3 px-4 py-3"
+          >
+            <span className="tabular font-semibold">{p.number}</span>
+            <ProposalChipBadge p={p} />
+            <span className="tabular ml-auto font-medium">{formatINR(p.total)}</span>
+            <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
+              {p.firstSeenAt
+                ? `Seen ${relativeAge(p.firstSeenAt)}`
+                : p.sentAt
+                  ? 'Not seen yet'
+                  : 'Draft'}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}

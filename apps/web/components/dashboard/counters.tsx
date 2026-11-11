@@ -17,12 +17,23 @@ export function StaffCard({ staff, loading }: { staff: Staff | null; loading?: b
   );
 }
 
-export function Counters({ counters, staff }: { counters: DashboardCountersDto; staff: Staff | null }) {
+export function Counters({
+  counters,
+  staff,
+}: {
+  counters: DashboardCountersDto;
+  staff: Staff | null;
+}) {
   const c = counters;
   return (
     <>
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard label="Open leads" value={c.leads.open} sub={`${c.leads.newInRange} new in this period`} href="/leads" />
+        <StatCard
+          label="Open leads"
+          value={c.leads.open}
+          sub={`${c.leads.newInRange} new in this period`}
+          href="/leads"
+        />
         <StatCard
           label="Running projects"
           value={c.projects.running}
@@ -42,10 +53,22 @@ export function Counters({ counters, staff }: { counters: DashboardCountersDto; 
           label="Pipeline"
           value={formatINRShort(c.value.pipeline)}
           title={formatINR(c.value.pipeline)}
-          sub={c.value.pipelineCapped ? 'Open leads (first 2,000)' : 'Open leads, latest sent proposal'}
+          sub={
+            c.value.pipelineCapped ? 'Open leads (first 2,000)' : 'Open leads, latest sent proposal'
+          }
         />
-        <StatCard label="Won in this period" value={formatINRShort(c.value.wonInRange)} title={formatINR(c.value.wonInRange)} sub="By latest sent proposal" />
-        <StatCard label="New leads in this period" value={c.leads.newInRange} href="/leads" className="col-span-2 sm:col-span-1" />
+        <StatCard
+          label="Won in this period"
+          value={formatINRShort(c.value.wonInRange)}
+          title={formatINR(c.value.wonInRange)}
+          sub="By latest sent proposal"
+        />
+        <StatCard
+          label="New leads in this period"
+          value={c.leads.newInRange}
+          href="/leads"
+          className="col-span-2 sm:col-span-1"
+        />
       </div>
     </>
   );

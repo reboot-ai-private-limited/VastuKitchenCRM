@@ -16,7 +16,15 @@ import { RangePicker, type DateRange } from './range-picker';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+function Card({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="bg-card shadow-card overflow-hidden rounded-xl border">
       <div className="flex flex-wrap items-baseline gap-x-2 border-b px-4 py-3">
@@ -57,7 +65,9 @@ export function DashboardView() {
   const setRange = useCallback(
     (r: DateRange) => {
       const today = businessDate();
-      router.replace(r.from === today && r.to === today ? '/' : `/?from=${r.from}&to=${r.to}`, { scroll: false });
+      router.replace(r.from === today && r.to === today ? '/' : `/?from=${r.from}&to=${r.to}`, {
+        scroll: false,
+      });
     },
     [router],
   );
@@ -66,14 +76,21 @@ export function DashboardView() {
   const query = useDashboard(range);
   const d = query.data;
   const multiDay = range.from !== range.to;
-  const label = multiDay ? `${formatDay(range.from)} – ${formatDay(range.to)}` : formatDay(range.from);
+  const label = multiDay
+    ? `${formatDay(range.from)} – ${formatDay(range.to)}`
+    : formatDay(range.from);
 
   const retry = () => void query.refetch();
-  const failed = (name: 'counters' | 'people' | 'attention' | 'recent') => d?.errors.includes(name) ?? false;
+  const failed = (name: 'counters' | 'people' | 'attention' | 'recent') =>
+    d?.errors.includes(name) ?? false;
 
   return (
     <PageBody>
-      <PageHeader title="Dashboard" description={isHr ? `Attendance · ${label}` : label} actions={<RangePicker value={range} onChange={setRange} />} />
+      <PageHeader
+        title="Dashboard"
+        description={isHr ? `Attendance · ${label}` : label}
+        actions={<RangePicker value={range} onChange={setRange} />}
+      />
 
       {query.isError && !d ? (
         <div className="bg-card shadow-card rounded-xl border">
@@ -108,7 +125,13 @@ export function DashboardView() {
                 )}
               </Card>
               <Card title="Recent customer activity">
-                {query.isPending ? <CardSkeleton rows={4} /> : failed('recent') || !d?.recent ? <ErrorState title="Couldn’t load recent activity" onRetry={retry} /> : <RecentBlock items={d.recent} />}
+                {query.isPending ? (
+                  <CardSkeleton rows={4} />
+                ) : failed('recent') || !d?.recent ? (
+                  <ErrorState title="Couldn’t load recent activity" onRetry={retry} />
+                ) : (
+                  <RecentBlock items={d.recent} />
+                )}
               </Card>
             </div>
           )}

@@ -23,7 +23,13 @@ export function AppShell({ user, children }: { user: UserDto; children: ReactNod
         Skip to content
       </a>
       <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-3 backdrop-blur lg:px-4">
-        <Button variant="ghost" size="icon" className="hidden md:inline-flex lg:hidden" aria-label="Open menu" onClick={() => setDrawer(true)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden md:inline-flex lg:hidden"
+          aria-label="Open menu"
+          onClick={() => setDrawer(true)}
+        >
           <Menu />
         </Button>
         <Logo />

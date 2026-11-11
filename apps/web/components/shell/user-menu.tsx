@@ -30,9 +30,15 @@ export function UserMenu({ user }: { user: UserDto }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="gap-2 px-1.5" aria-label={`Account menu for ${user.name}`}>
+        <Button
+          variant="ghost"
+          className="gap-2 px-1.5"
+          aria-label={`Account menu for ${user.name}`}
+        >
           <Avatar className="size-8">
-            <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">{initials(user.name)}</AvatarFallback>
+            <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">
+              {initials(user.name)}
+            </AvatarFallback>
           </Avatar>
           <span className="hidden max-w-32 truncate text-left sm:block">{user.name}</span>
         </Button>

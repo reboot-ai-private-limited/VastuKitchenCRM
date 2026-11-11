@@ -48,10 +48,11 @@ export const useLeads = (f: LeadFilters, enabled = true) =>
     enabled,
   });
 
-export const useLead = (id: string) =>
+export const useLead = (id: string, enabled = true) =>
   useQuery({
     queryKey: ['leads', 'detail', id],
     queryFn: ({ signal }) => api<LeadDto>(`/leads/${id}`, { signal }),
+    enabled,
   });
 
 export const useLeadTimeline = (id: string) =>

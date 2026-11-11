@@ -31,15 +31,24 @@ export function StatCard({
           {value}
         </p>
       )}
-      {loading ? <Skeleton className="mt-2 h-3.5 w-28" /> : sub && <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>}
+      {loading ? (
+        <Skeleton className="mt-2 h-3.5 w-28" />
+      ) : (
+        sub && <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>
+      )}
     </>
   );
-  const base = 'bg-card shadow-card relative block overflow-hidden rounded-xl border p-4 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-primary before:to-primary/20';
+  const base =
+    'bg-card shadow-card relative block overflow-hidden rounded-xl border p-4 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-primary before:to-primary/20';
   if (href && !loading) {
     return (
       <Link
         href={href}
-        className={cn(base, 'hover:shadow-card-hover focus-visible:ring-ring transition-all hover:-translate-y-px focus-visible:ring-2 focus-visible:outline-none', className)}
+        className={cn(
+          base,
+          'hover:shadow-card-hover focus-visible:ring-ring transition-all hover:-translate-y-px focus-visible:ring-2 focus-visible:outline-none',
+          className,
+        )}
       >
         {body}
       </Link>

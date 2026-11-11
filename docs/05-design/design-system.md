@@ -50,7 +50,10 @@ Used for badges, alerts and status. Each has `fg` / `bg` (soft) / `border` so a 
 | Lost | Danger |
 | Stuck (flag, additive) | small Warning clock icon next to the status |
 
-Project `stage`: DESIGN = Violet, SITE = Info, CLOSED = Neutral. Complaint: OPEN = Danger, IN PROGRESS = Warning, RESOLVED = Success, CLOSED = Neutral. Proposal: DRAFT = Neutral, SENT = Info, SEEN = Accent, NO ACTION = Warning.
+Project `stage`: DESIGN = Violet, SITE = Info, CLOSED = Neutral. Complaint (API statuses): OPEN = Danger, ASSIGNED = Warning, RESOLVED = Success, CLOSED = Neutral; a *reopened* complaint is ASSIGNED with a small "Reopened ×N" chip.
+Proposal: DRAFT = Neutral, SENT = Info, SEEN = Accent, NO ACTION = Warning. The API only stores `DRAFT`/`SENT`; SEEN and NO ACTION are **derived** ([api-map §4](api-map.md#4-proposals)).
+Attendance day: PRESENT = Success, ABSENT = Danger, OFF (weekly off) = Neutral, FUTURE = no badge, `missingOut` = Warning icon, `corrected` = small pencil icon. Todo: open = none, done = Success check, overdue = Danger.
+Alert severity (dashboard): proposal unseen / no action = Warning, stagnant lead = Warning, overdue complaint / to-do = Danger.
 
 ### Chart palette (only counters/small bars in MVP)
 Teal `#0E8F78`, ink-blue `#2A78D6`, amber `#E0A02B`, terracotta `#D4694A`, grey `#9A8B7E`. Load the `dataviz` skill before writing any real chart.
@@ -66,7 +69,7 @@ Teal `#0E8F78`, ink-blue `#2A78D6`, amber `#E0A02B`, terracotta `#D4694A`, grey 
 | Caption/meta | Jost | `text-xs` 12px, muted |
 | Display (proposal **only**) | **Playfair Display** | 28-40px / 600 |
 
-Numbers (money, counts, phones) use `tabular-nums`. Money is always `₹` with Indian grouping (`₹12,50,000`, lakhs/crores; helper `formatINR`). Dates: `12 Nov 2026`, time `3:40 PM` (IST, see the time helper in `apps/api/src/shared/time`).
+Numbers (money, counts, phones) use `tabular-nums`. Money is always `₹` with Indian grouping (`₹12,50,000`; helper `formatINR`) and, in tight places such as counter cards, a short form (`₹90 L`, `₹1.5 Cr`; helper `formatINRShort`). The API sends whole rupees. Dates: `12 Nov 2026`, time `3:40 PM` (IST, see the time helper in `apps/api/src/shared/time`).
 
 ## 3. Spacing, radius, elevation
 - 4px base grid. Page padding `p-4 lg:p-6`; vertical rhythm between blocks `space-y-5`; card padding `p-4`; form field gap `space-y-4`.
@@ -99,13 +102,21 @@ Base = shadcn/ui (Radix), already available in the reference project: accordion,
 | `NotificationBell` | Count badge + popover list + "mark all read" |
 | `ProposalPreview` | Paper-like A4 preview used in builder and public link |
 | `CommandMenu` | ⌘K: jump to lead by name/phone, to pages |
-| `AttendanceCalendar` | Month grid, dot per day (present/absent/leave), tap for detail |
+| `AttendanceCalendar` | Month grid from `GET /attendance/…`: a dot per day (Present / Absent / Off / Future), amber ring for missing out, pencil for corrected; tap for the day's times and note. **No leave state** (the product has none). |
+| `AttentionCard` | Dashboard "Needs attention": title + count badge (`total`, "50+" when `capped`), oldest 10 rows (title, detail, age, deep link from `ref`) |
+| `TodoList` / `TodoRow` | Basecamp-style: checkbox, title, assignee avatars, due chip (overdue = Danger), comment count; "3/8 done" header; inline add |
+| `DocsBrowser` | Folder tree (left, depth ≤ 5) + file list (right); breadcrumb; per-file "Shared with client" switch; photo files show thumbnails. Customer variant = flat list, no tree |
+| `SaveToDocsButton` | On every photo in posts, comments and to-dos; multi-select up to 20; shows "Saved" when `created: false` |
+| `ActionButtons` (pattern) | Renders buttons **only from the API's `can{}` block** (complaints); a `409` toast "Someone else just updated this" then refetch |
+| `WeeklyOffEditor` | Builds the `hr.weeklyOff` string: weekday rows, each "every" or 1st–5th chips; live preview "Off: every Sunday; 1st & 3rd Saturday" and a month mini-calendar; shows the server's hint on `400` |
+| `InviteLinkDialog` | After `POST …/invite`: link, Copy, Send on WhatsApp, expiry. Warns that a new link replaces nothing but must be shared |
+| `SalaryTable` | Month picker, rows with computed vs payable (inline edit + note), badges Edited / Finalized, totals, Generate / Finalize / Export CSV |
 
 ### Buttons
 Primary (teal solid, one per view), Secondary (white + border), Ghost (toolbar/icons), Destructive (red, only inside confirm dialogs or clearly destructive rows), Link. Sizes `sm` 32px (tables, toolbars), `default` 40px, `lg` 44px (mobile primary actions). Icon-only buttons need `aria-label` + tooltip. Loading state: spinner replaces icon, button stays same width, disabled.
 
 ### Forms
-Label above input, helper text below, error text in `--destructive` with an icon, never colour alone. Required marked with `*`. Validate with the zod schema from `packages/contracts` (same messages as the API). Server errors map to fields; unmapped ones go to a banner above the form. Sticky `FormBar` (Cancel / Save) on long forms. Unsaved-changes guard on navigation. Phone fields: 10 digits, +91 prefix shown, not typed.
+Label above input, helper text below, error text in `--destructive` with an icon, never colour alone. Required marked with `*`. Validate with the zod schema from `packages/contracts` (same rules as the API) for instant feedback; **the API's `400` is still authoritative**: its `data[].path` maps to fields, unmapped ones go to a banner above the form. Sticky `FormBar` (Cancel / Save) on long forms. Unsaved-changes guard on navigation. Phone fields: 10 digits, +91 prefix shown, not typed.
 
 ### Tables
 Header row `muted` bg, row hover `primary-soft/40`, selected `primary-soft`. Row height 48px (compact 40px toggle later). Sticky header on scroll. First column = identity (name + sub-line), last = actions menu (kebab). Click row opens detail. Numeric columns right-aligned. **Below `md` every table becomes a stack of cards** (title, 2-3 key fields, status badge, chevron).
@@ -117,9 +128,11 @@ Header row `muted` bg, row hover `primary-soft/40`, selected `primary-soft`. Row
 4. **Forbidden / not found**: calm message; follow the API rule that unauthorised = "not found".
 5. **Offline / slow**: toast "Connection lost, retrying" on failed requests.
 
-Feedback: success toast (sonner, bottom-right, 3s) for saves; destructive actions need an alert-dialog naming the object. Optimistic updates only for status moves and likes/reads; roll back with a toast on failure.
+Feedback: success toast (sonner, bottom-right, 3s) for saves; destructive actions need an alert-dialog naming the object. Optimistic updates only for lead status moves, to-do check/uncheck and notification reads; roll back with a toast on failure. Everything else waits for the server.
 
 ## 6. Iconography & imagery
+(Photo uploads go straight to storage with a signed ticket; show per-file progress and a retry. Without storage credentials the ticket call is `503`: show "Photo uploads are not set up yet".)
+
 lucide-react, 16px in nav/buttons, 20px in empty states, stroke 1.75. Photos are first-class (project feed): lazy-load, Cloudinary transformed thumbnails (`w_400,q_auto,f_auto`), blurred placeholder, fixed aspect boxes to prevent layout shift. Avatars show initials on `primary-soft` when no photo.
 
 ## 7. Motion

@@ -7,21 +7,22 @@ Source of truth for brand values is [branding](../00-vision/branding.md). Everyt
 ### Light (default)
 | Token | Value | Use |
 |---|---|---|
-| `--background` | `#F6F3EE` | Page background (warm) |
+| `--background` | `#FFFFFF` | Page background (white canvas) |
 | `--card` / `--popover` | `#FFFFFF` | Cards, tables, sheets, menus |
-| `--foreground` | `#2D241D` | Body text (ink) |
+| `--foreground` | `#0F1C1A` | Body text (cool ink) |
 | `--heading` | `#000000` | Page titles only (optional) |
 | `--primary` | `#0E8F78` | Primary buttons, links, active nav, focus ring |
 | `--primary-hover` | `#0B7563` | Hover/pressed |
 | `--primary-foreground` | `#FFFFFF` | Text on primary |
-| `--primary-soft` | `#E6F4F1` | Active nav background, selected row, soft badges |
-| `--secondary` / `--muted` | `#EFEAE3` | Subtle fills, table header, skeletons |
-| `--muted-foreground` | `#7A6C60` | Secondary text (darker than brand `#9A8B7E` to pass contrast; use `#9A8B7E` only for placeholders / disabled) |
-| `--border` / `--input` | `#E6DFD7` | Dividers, input borders |
+| `--primary-soft` | `#E4F5F0` | Active nav background, selected row, soft badges |
+| `--secondary` / `--muted` | `#F0F5F4` | Subtle fills, table header, skeletons |
+| `--muted-foreground` | `#566865` | Secondary text (darker than brand `#9A8B7E` to pass contrast; use `#9A8B7E` only for placeholders / disabled) |
+| `--border` | `#DCE6E3` | Dividers, card borders |
+| `--input` | `#CBD8D4` | Input borders (slightly stronger) |
 | `--ring` | `#0E8F78` | Focus ring (2px, offset 2px) |
 | `--destructive` | `#C0392B` | Delete, errors |
-| `--sidebar` | `#FBF9F6` | Sidebar background |
-| `--sidebar-accent` | `#E6F4F1` | Active nav item |
+| `--sidebar` | `#F5FAF8` | Sidebar background |
+| `--sidebar-accent` | `#DCF1EA` | Active nav item |
 
 ### Dark (optional, phase 2; the toggle exists in the reference shell)
 Background `#171310`, card `#211C18`, foreground `#F2ECE4`, border `#352E28`, primary `#2BB59B` (lightened for contrast), primary-soft `#12352F`. Define under `.dark`. Ship light first.
@@ -35,8 +36,8 @@ Used for badges, alerts and status. Each has `fg` / `bg` (soft) / `border` so a 
 | Success | `#1E7A46` | `#E7F5EC` | Won, present, resolved, approved |
 | Warning | `#9A6200` | `#FDF3DC` | Stuck, pending, seen-no-action |
 | Danger | `#B3261E` | `#FBE9E7` | Lost, overdue, error |
-| Neutral | `#5C5148` | `#EFEAE3` | Closed, inactive, draft |
-| Accent | `#0B7563` | `#E6F4F1` | Brand highlight, selected |
+| Neutral | `#4A5B58` | `#EDF2F1` | Closed, inactive, draft |
+| Accent | `#0B7563` | `#E4F5F0` | Brand highlight, selected |
 
 ### Lead status colours (see [leads](../02-product/leads.md))
 | Status | Badge |
@@ -61,12 +62,12 @@ Teal `#0E8F78`, ink-blue `#2A78D6`, amber `#E0A02B`, terracotta `#D4694A`, grey 
 ## 2. Typography
 | Role | Font | Size / weight |
 |---|---|---|
-| UI (everything) | **Jost** (via `next/font/google`, variable) | base 14px (`text-sm`), line-height 1.5 |
-| Page title | Jost | `text-xl` 20px / 600, tracking-tight |
-| Section/card title | Jost | `text-sm` 14px / 600 |
-| Table header | Jost | `text-xs` 12px / 500, muted-foreground, uppercase off |
-| Counter value | Jost, `tabular-nums` | `text-2xl` 24px / 600 |
-| Caption/meta | Jost | `text-xs` 12px, muted |
+| UI (everything) | **Plus Jakarta Sans** (via `next/font/google`, variable) | base 14px (`text-sm`), line-height 1.5 |
+| Page title | Plus Jakarta Sans | `text-xl` 20px / 600, tracking-tight |
+| Section/card title | Plus Jakarta Sans | `text-sm` 14px / 600 |
+| Table header | Plus Jakarta Sans | `text-xs` 12px / 600, muted-foreground, tinted header row, uppercase off |
+| Counter value | Plus Jakarta Sans, `tabular-nums` | `text-2xl` 24px / 600 |
+| Caption/meta | Plus Jakarta Sans | `text-xs` 12px, muted |
 | Display (proposal **only**) | **Playfair Display** | 28-40px / 600 |
 
 Numbers (money, counts, phones) use `tabular-nums`. Money is always `₹` with Indian grouping (`₹12,50,000`; helper `formatINR`) and, in tight places such as counter cards, a short form (`₹90 L`, `₹1.5 Cr`; helper `formatINRShort`). The API sends whole rupees. Dates: `12 Nov 2026`, time `3:40 PM` (IST, see the time helper in `apps/api/src/shared/time`).
@@ -74,7 +75,7 @@ Numbers (money, counts, phones) use `tabular-nums`. Money is always `₹` with I
 ## 3. Spacing, radius, elevation
 - 4px base grid. Page padding `p-4 lg:p-6`; vertical rhythm between blocks `space-y-5`; card padding `p-4`; form field gap `space-y-4`.
 - Radius: `--radius: 0.625rem` (10px). Inputs/buttons `md`, cards `lg`, sheets/dialogs `xl`, avatars/pills full.
-- Elevation: borders over shadows. Cards = `border` + no shadow. Popovers/dialogs = `shadow-md`. Sticky header = bottom border + blur.
+- Elevation: white canvas, so depth comes from a cool border plus a soft shadow. Cards, stat cards, tables panels and kanban cards = `border` + `shadow-card` (hover on clickable ones: `shadow-card-hover`, teal-tinted). Stat cards carry a thin teal top accent. Kanban lanes are `muted` tinted columns holding white cards. Popovers = `shadow-lg`, dialogs = `shadow-xl`. Sticky header = bottom border + blur.
 - Min touch target 40px (44px on mobile bottom bar).
 - Content max width: forms 720px, detail pages 1100px, tables/dashboard fluid.
 

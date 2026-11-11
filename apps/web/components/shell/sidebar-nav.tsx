@@ -29,7 +29,7 @@ export function SidebarNav({ role, onNavigate }: { role: RoleName; onNavigate?: 
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'relative flex h-10 items-center gap-3 rounded-md px-3 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                    active ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'text-sidebar-foreground hover:bg-muted',
+                    active ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold' : 'text-sidebar-foreground hover:bg-primary-soft/60',
                   )}
                 >
                   {active && <span aria-hidden className="bg-primary absolute inset-y-2 left-0 w-0.5 rounded-full" />}

@@ -6,7 +6,7 @@ export function Logo({ className, compact = false }: { className?: string; compa
     <span className={cn('inline-flex items-center gap-2.5 font-semibold tracking-tight', className)}>
       <span
         aria-hidden
-        className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-lg text-base"
+        className="from-primary to-primary-hover text-primary-foreground grid size-8 place-items-center rounded-lg bg-gradient-to-br text-base shadow-sm"
       >
         V
       </span>

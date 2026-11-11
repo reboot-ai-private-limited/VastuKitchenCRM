@@ -18,7 +18,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <section className="bg-card overflow-hidden rounded-lg border">
+    <section className="bg-card shadow-card overflow-hidden rounded-xl border">
       <div className="flex flex-wrap items-baseline gap-x-2 border-b px-4 py-3">
         <h2 className="text-sm font-semibold">{title}</h2>
         {subtitle && <span className="text-muted-foreground text-xs">{subtitle}</span>}
@@ -76,7 +76,7 @@ export function DashboardView() {
       <PageHeader title="Dashboard" description={isHr ? `Attendance · ${label}` : label} actions={<RangePicker value={range} onChange={setRange} />} />
 
       {query.isError && !d ? (
-        <div className="bg-card rounded-lg border">
+        <div className="bg-card shadow-card rounded-xl border">
           <ErrorState error={query.error} onRetry={retry} title="Couldn’t load the dashboard" />
         </div>
       ) : (
@@ -91,7 +91,7 @@ export function DashboardView() {
           ) : d?.counters ? (
             <Counters counters={d.counters} staff={d.staff} />
           ) : (
-            <div className="bg-card rounded-lg border">
+            <div className="bg-card shadow-card rounded-xl border">
               <ErrorState title="Couldn’t load the counters" onRetry={retry} />
             </div>
           )}

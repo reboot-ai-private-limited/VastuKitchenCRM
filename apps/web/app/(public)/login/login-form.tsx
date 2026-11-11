@@ -62,7 +62,7 @@ export function LoginForm() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center p-4">
+    <main className="grid min-h-dvh place-items-center bg-[radial-gradient(60rem_30rem_at_50%_-10%,var(--primary-soft),transparent)] p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
           <Logo />
@@ -70,7 +70,7 @@ export function LoginForm() {
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          className="bg-card space-y-4 rounded-xl border p-6"
+          className="bg-card shadow-card space-y-4 rounded-2xl border p-6"
           aria-describedby={banner ? 'login-error' : undefined}
         >
           <div className="space-y-1">

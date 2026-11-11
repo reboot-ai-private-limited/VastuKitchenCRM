@@ -14,14 +14,14 @@ Official spelling on the site and logo: **Vaastu Kitchen** ("Vaastu", double a).
 |---|---|---|
 | Brand teal (accent) | `#0E8F78` | Primary buttons, links, active states (the site's dominant accent) |
 | Logo teal | ~`#40B89F` | Logo only |
-| Ink | `#2D241D` | Body text (warm near-black) |
+| Ink | `#0F1C1A` | Body text (cool near-black; CRM refresh) |
 | Black | `#000000` | Headings, logo |
-| Warm background | `#F6F3EE` | Page / card backgrounds |
-| Border | `#E6DFD7` | Dividers, input borders |
+| Warm background | `#F6F3EE` | Marketing site only. The CRM uses a white canvas (see design system) |
+| Border | `#DCE6E3` | CRM dividers and card borders (site: `#E6DFD7`) |
 | Muted | `#9A8B7E` | Secondary text |
 
 ## Fonts
-Site uses **Jost** (body/UI) and **Playfair Display** (display headings). For the CRM: Jost for all UI; Playfair Display only on proposals (premium feel).
+Site uses **Jost** (body/UI) and **Playfair Display** (display headings). For the CRM: **Plus Jakarta Sans** for all UI (Jost is the marketing site only); Playfair Display only on proposals (premium feel).
 
 ## Tone
 Premium, precise, trustworthy — clean white/warm-neutral surfaces, one teal accent, generous whitespace. Matches the goal of the cleanest, simplest UI.

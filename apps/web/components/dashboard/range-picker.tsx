@@ -46,7 +46,7 @@ export function RangePicker({ value, onChange }: { value: DateRange; onChange: (
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div role="group" aria-label="Period" className="bg-card inline-flex rounded-lg border p-0.5">
+      <div role="group" aria-label="Period" className="bg-card shadow-card inline-flex rounded-lg border p-0.5">
         {list.map((p) => (
           <Button
             key={p.id}

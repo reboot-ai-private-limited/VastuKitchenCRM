@@ -6,7 +6,7 @@
 
 /* Tailwind utilities read these CSS variables. Never hardcode hex in components: use tokens. */
 @theme inline {
-  --font-sans: var(--font-jost), "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), ui-serif, Georgia, serif;
 
   --color-background: var(--background);
@@ -54,6 +54,10 @@
   --color-orange: var(--orange);
   --color-orange-soft: var(--orange-soft);
 
+  /* Elevation: a hairline-friendly soft lift, teal-tinted on hover for a richer feel. */
+  --shadow-card: 0 1px 2px rgb(15 40 35 / 0.05), 0 6px 16px -6px rgb(15 40 35 / 0.1);
+  --shadow-card-hover: 0 2px 4px rgb(15 40 35 / 0.06), 0 12px 28px -8px rgb(14 143 120 / 0.22);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -66,36 +70,36 @@
 :root {
   --radius: 0.625rem;
 
-  --background: #f6f3ee;
-  --foreground: #2d241d;
+  --background: #ffffff;
+  --foreground: #0f1c1a;
   --card: #ffffff;
-  --card-foreground: #2d241d;
+  --card-foreground: #0f1c1a;
   --popover: #ffffff;
-  --popover-foreground: #2d241d;
+  --popover-foreground: #0f1c1a;
 
   --primary: #0e8f78;
   --primary-hover: #0b7563;
-  --primary-soft: #e6f4f1;
+  --primary-soft: #e4f5f0;
   --primary-foreground: #ffffff;
-  --secondary: #efeae3;
-  --secondary-foreground: #2d241d;
-  --muted: #efeae3;
+  --secondary: #f0f5f4;
+  --secondary-foreground: #0f1c1a;
+  --muted: #f0f5f4;
   /* Darker than the brand's #9a8b7e so body-size secondary text passes AA contrast. */
-  --muted-foreground: #7a6c60;
-  --accent: #e6f4f1;
+  --muted-foreground: #566865;
+  --accent: #e4f5f0;
   --accent-foreground: #0b7563;
   --destructive: #c0392b;
-  --border: #e6dfd7;
-  --input: #e6dfd7;
+  --border: #dce6e3;
+  --input: #cbd8d4;
   --ring: #0e8f78;
 
-  --sidebar: #fbf9f6;
-  --sidebar-foreground: #2d241d;
+  --sidebar: #f5faf8;
+  --sidebar-foreground: #0f1c1a;
   --sidebar-primary: #0e8f78;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e6f4f1;
+  --sidebar-accent: #dcf1ea;
   --sidebar-accent-foreground: #0b7563;
-  --sidebar-border: #e6dfd7;
+  --sidebar-border: #dce6e3;
   --sidebar-ring: #0e8f78;
 
   --info: #1d5fa8;
@@ -106,8 +110,8 @@
   --warning-soft: #fdf3dc;
   --danger: #b3261e;
   --danger-soft: #fbe9e7;
-  --neutral: #5c5148;
-  --neutral-soft: #efeae3;
+  --neutral: #4a5b58;
+  --neutral-soft: #edf2f1;
   --violet: #5b3fa6;
   --violet-soft: #efeafb;
   --orange: #a24a10;
@@ -120,6 +124,11 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
   }
   body {
     @apply bg-background text-foreground font-sans text-sm antialiased;

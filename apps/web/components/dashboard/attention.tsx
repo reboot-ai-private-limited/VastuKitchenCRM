@@ -82,7 +82,7 @@ function Block({ title, icon: Icon, severity, block }: { title: string; icon: Lu
 export function AttentionCard({ attention }: { attention: DashboardAttentionDto }) {
   const total = BLOCKS.reduce((n, b) => n + attention[b.key].total, 0);
   return (
-    <div className="bg-card overflow-hidden rounded-lg border">
+    <div className="bg-card shadow-card overflow-hidden rounded-xl border">
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <BellRing className="text-muted-foreground size-4" aria-hidden />
         <h2 className="text-sm font-semibold">Needs attention</h2>

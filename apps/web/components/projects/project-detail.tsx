@@ -1,8 +1,18 @@
 'use client';
 
 import { DESIGN_STAGES, type DesignStage, type ProjectDto } from '@vastu/contracts';
-import { ArrowLeft, CheckCircle2, MapPin, Pencil, RotateCcw, UserPlus, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  LifeBuoy,
+  MapPin,
+  Pencil,
+  RotateCcw,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ErrorState } from '@/components/common/error-state';
@@ -26,17 +36,35 @@ import { useAuth } from '@/lib/auth';
 import { formatDate, formatINR, initials, relativeAge } from '@/lib/format';
 import { describeActivity } from '@/lib/lead-activity';
 import { DESIGN_STAGE_LABEL, projectPermissions } from '@/lib/projects';
+import { RaiseDialog } from '@/components/complaints/raise-dialog';
+import { DocsTab } from '@/components/docs/docs-tab';
+import { TodosTab } from '@/components/todos/todos-tab';
+import { canRaiseComplaint } from '@/lib/complaints';
 import { ActivityTab } from './activity-tab';
 import { DesignStageChip } from './design-stage-chip';
 import { Feed } from './feed';
 import { CloseDialog, EditProjectDialog, InviteDialog, MembersDialog } from './project-dialogs';
 
-type Dialog = 'edit' | 'members' | 'close' | 'invite' | null;
+type Dialog = 'edit' | 'members' | 'close' | 'invite' | 'complaint' | null;
+const TABS = ['feed', 'todos', 'docs', 'activity'] as const;
 
 export function ProjectDetail({ id }: { id: string }) {
   const { user } = useAuth();
   const q = useProject(id);
-  const [tab, setTab] = useState('feed');
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  // The tab and an open to-do live in the URL, so notifications and the My to-dos page can deep-link.
+  const wanted = params.get('tab');
+  const todoParam = params.get('todo');
+  const setParams = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) next.set(k, v);
+      else next.delete(k);
+    }
+    router.replace(`${pathname}${next.size ? `?${next}` : ''}`, { scroll: false });
+  };
   const [dialog, setDialog] = useState<Dialog>(null);
   const [finalDelivery, setFinalDelivery] = useState(false);
 
@@ -52,6 +80,9 @@ export function ProjectDetail({ id }: { id: string }) {
 
   const p = q.data;
   const can = projectPermissions(user?.role, user?.id, p);
+  const allowed = TABS.filter((t) => (t === 'todos' || t === 'activity' ? can.seesTeam : true));
+  const tab = (allowed as readonly string[]).includes(wanted ?? '') ? (wanted as string) : 'feed';
+  const setTab = (t: string) => setParams({ tab: t === 'feed' ? null : t, todo: null });
   const closed = p.stage === 'CLOSED';
 
   return (
@@ -92,6 +123,11 @@ export function ProjectDetail({ id }: { id: string }) {
                 <Users /> Team
               </Button>
             )}
+            {canRaiseComplaint(user?.role) && !can.summaryOnly && (
+              <Button variant="outline" onClick={() => setDialog('complaint')}>
+                <LifeBuoy /> Raise complaint
+              </Button>
+            )}
             {can.invite && !can.isCustomer && (
               <Button variant="outline" onClick={() => setDialog('invite')}>
                 <UserPlus /> Invite customer
@@ -120,6 +156,8 @@ export function ProjectDetail({ id }: { id: string }) {
           <Tabs value={tab} onValueChange={setTab} className="min-w-0">
             <TabsList>
               <TabsTrigger value="feed">Feed</TabsTrigger>
+              {can.seesTeam && <TabsTrigger value="todos">To-dos</TabsTrigger>}
+              <TabsTrigger value="docs">Docs</TabsTrigger>
               {can.seesTeam && <TabsTrigger value="activity">Activity</TabsTrigger>}
             </TabsList>
             <TabsContent value="feed" className="mt-4">
@@ -130,6 +168,25 @@ export function ProjectDetail({ id }: { id: string }) {
                 isCustomer={can.isCustomer}
                 finalDeliveryRequested={finalDelivery}
                 onFinalDeliveryDone={() => setFinalDelivery(false)}
+              />
+            </TabsContent>
+            {can.seesTeam && (
+              <TabsContent value="todos" className="mt-4">
+                <TodosTab
+                  projectId={p.id}
+                  closed={closed}
+                  members={p.members}
+                  todoId={todoParam}
+                  onTodoChange={(id) => setParams({ tab: 'todos', todo: id })}
+                />
+              </TabsContent>
+            )}
+            <TabsContent value="docs" className="mt-4">
+              <DocsTab
+                projectId={p.id}
+                closed={closed}
+                isAdmin={can.isAdmin}
+                isCustomer={can.isCustomer}
               />
             </TabsContent>
             {can.seesTeam && (
@@ -146,6 +203,11 @@ export function ProjectDetail({ id }: { id: string }) {
 
       {dialog === 'edit' && <EditProjectDialog project={p} onClose={() => setDialog(null)} />}
       {dialog === 'members' && <MembersDialog project={p} onClose={() => setDialog(null)} />}
+      <RaiseDialog
+        open={dialog === 'complaint'}
+        onOpenChange={(o) => setDialog(o ? 'complaint' : null)}
+        defaultProjectId={p.id}
+      />
       {dialog === 'invite' && <InviteDialog project={p} onClose={() => setDialog(null)} />}
       {dialog === 'close' && (
         <CloseDialog

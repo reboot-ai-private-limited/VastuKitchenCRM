@@ -1,7 +1,7 @@
 'use client';
 
 import type { CommentDto, PostDto } from '@vastu/contracts';
-import { BadgeCheck, MessageCircle, Send, Trash2 } from 'lucide-react';
+import { BadgeCheck, FolderInput, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -27,6 +27,7 @@ import {
 import { formatDate, formatTime, initials, relativeAge } from '@/lib/format';
 import { MAX_IMAGES_PER_COMMENT } from '@/lib/upload';
 import { cn } from '@/lib/utils';
+import { SaveToDocsDialog } from '@/components/docs/save-to-docs-dialog';
 import { PhotoAttach, PhotoGrid } from './photos';
 
 const fail = (e: unknown, fallback: string) =>
@@ -36,11 +37,14 @@ export function PostCard({
   projectId,
   post,
   closed,
+  isCustomer = false,
 }: {
   projectId: string;
   post: PostDto;
   closed: boolean;
+  isCustomer?: boolean;
 }) {
+  const [saving, setSaving] = useState(false);
   const approve = useApprovePost(projectId);
   const del = useDeletePost(projectId);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -102,8 +106,21 @@ export function PostCard({
 
       {post.text && <p className="mt-3 text-sm whitespace-pre-line">{post.text}</p>}
       {post.images.length > 0 && (
-        <div className="mt-3">
+        <div className="mt-3 space-y-1.5">
           <PhotoGrid images={post.images} />
+          <Button variant="ghost" size="sm" onClick={() => setSaving(true)}>
+            <FolderInput /> Save to Docs
+          </Button>
+          {saving && (
+            <SaveToDocsDialog
+              projectId={projectId}
+              photos={post.images.map((i) => ({ publicId: i.publicId, thumbUrl: i.thumbUrl }))}
+              sourceVisibility={post.visibility}
+              isCustomer={isCustomer}
+              open
+              onOpenChange={setSaving}
+            />
+          )}
         </div>
       )}
 

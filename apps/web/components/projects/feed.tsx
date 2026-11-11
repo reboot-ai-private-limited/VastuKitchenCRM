@@ -115,7 +115,13 @@ export function Feed({
       ) : (
         <>
           {posts.map((p) => (
-            <PostCard key={p.id} projectId={projectId} post={p} closed={closed} />
+            <PostCard
+              key={p.id}
+              projectId={projectId}
+              post={p}
+              closed={closed}
+              isCustomer={isCustomer}
+            />
           ))}
           {q.hasNextPage && (
             <Button

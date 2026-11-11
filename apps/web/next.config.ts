@@ -29,6 +29,12 @@ const nextConfig: NextConfig = {
   },
   images: { remotePatterns: [{ protocol: 'https', hostname: 'res.cloudinary.com' }] },
   turbopack: { root: path.resolve(import.meta.dirname, '../..') },
+  // The shared contracts are written for Node's ESM rules (`import './http.js'` means http.ts).
+  // Turbopack cannot map that yet, so this app builds with webpack (`next dev/build --webpack`).
+  webpack(config) {
+    config.resolve.extensionAlias = { '.js': ['.ts', '.tsx', '.js'], '.mjs': ['.mts', '.mjs'] };
+    return config;
+  },
 };
 
 export default nextConfig;

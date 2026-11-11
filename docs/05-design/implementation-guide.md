@@ -6,7 +6,7 @@ Read first: [design-system](design-system.md) · [layout-and-navigation](layout-
 Next.js (App Router) · React 19 · TypeScript strict · Tailwind v4 · shadcn/ui (`radix-nova`, neutral base, CSS variables) · lucide-react · **TanStack Query** (all authenticated data) · @tanstack/react-table · sonner · next-themes (dark later) · react-hook-form + `@hookform/resolvers/zod` · dnd-kit (Board) · date-fns. Deploy on Vercel; the web app talks to the Express API over REST with the zod contracts from `packages/contracts` ([overview](../03-architecture/overview.md)).
 
 - **No server actions with direct DB access** (the reference project does that): all data goes through the API.
-- **`packages/contracts` ships TypeScript source with no build step** (`exports: ./src/index.ts`): add it to `transpilePackages` in `next.config`. Import schemas and DTO types from it; no hand-written DTOs. Add `apps/web` to `pnpm-workspace`/turbo; `pnpm check` must stay green.
+- **`packages/contracts` ships TypeScript source with no build step** (`exports: ./src/index.ts`): add it to `transpilePackages` in `next.config`. It is written for Node ESM (`import './http.js'` means `http.ts`), which **Turbopack cannot resolve yet**, so `apps/web` runs `next dev --webpack` / `next build --webpack` with `resolve.extensionAlias` (already configured). Import schemas and DTO types from it; no hand-written DTOs. Add `apps/web` to `pnpm-workspace`/turbo; `pnpm check` must stay green.
 - The reference project warns "This is NOT the Next.js you know" (its `AGENTS.md`): it runs a newer Next. Read the docs under the installed `node_modules/next/dist/docs/` before writing routing/caching code.
 
 ## Architecture decisions (agreed defaults)
@@ -24,7 +24,7 @@ Next.js (App Router) · React 19 · TypeScript strict · Tailwind v4 · shadcn/u
   - **Never auto-retry a refresh call** on a network error or timeout: the server may already have rotated the token, and the retry would be a replay. Treat a failed refresh as "signed out": go to `/login` with a calm "Please sign in again".
   - *Recommended backend tweak (not done; decide before the web build):* a ~10-second grace window in which the just-rotated token is accepted once and returns the same successor, so a lost response or a second tab doesn't cost a full sign-out. Until then the client rules above are the protection.
   - Refresh proactively shortly before the access token expires (decode `exp`), not only on `401`.
-- **Middleware** (edge): if there is no session cookie, redirect protected paths to `/login`. It does not call the API.
+- **Redirect hint:** the real refresh cookie (`vk_refresh`) is httpOnly and scoped to `/api/identity/auth`, so Next's `proxy.ts` (the Next 16 name for middleware) cannot see it on page requests. The app therefore sets a readable `vk_session=1` hint cookie after sign-in (and clears it on sign-out or a failed refresh); with no hint, `proxy.ts` redirects protected paths to `/login`. It is a convenience, not security, and never calls the API.
 - **Roles:** `GET /identity/auth/me` returns `role`; the nav, landing page and button visibility derive from it. Never trust it for security.
 - Staff passwords are reset by Admin/HR; there is no forgot-password flow.
 
@@ -36,6 +36,9 @@ Next.js (App Router) · React 19 · TypeScript strict · Tailwind v4 · shadcn/u
 - **Uploads:** a shared `uploadWithTicket(kind, signCall, file, onProgress)` helper: sign → `XMLHttpRequest`/`fetch` POST to the ticket `url` (fields first, file last) → return `{ publicId, bytes, width?, height? }`. Handle `503` ("not set up").
 - **CSV export** (`export.csv`) needs the bearer header: fetch → `Blob` → download.
 - **Time:** never use the browser's local zone for business dates; use the `YYYY-MM-DD` / `YYYY-MM` strings from the API and format in IST (`Asia/Kolkata`).
+
+## Production note (proxy and IP limits)
+Behind a Vercel rewrite every user reaches the API from the proxy, so the API's per-IP login limit (30 failed attempts / 15 min) would be shared by everyone. Before deploying, make the API see the real client IP (forward Vercel's `x-forwarded-for` through the VPS proxy and set `trust proxy` to match).
 
 ## Demo flag
 `NEXT_PUBLIC_DEMO=1` shows the demo-only controls (Generate demo attendance). Off in production builds.

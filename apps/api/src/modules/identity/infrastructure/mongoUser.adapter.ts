@@ -86,6 +86,10 @@ export class MongoUserRepository implements UserRepositoryPort {
     return docs.map((d) => d.id as string);
   }
 
+  async findStaff(): Promise<User[]> {
+    return (await UserModel.find({ role: { $ne: 'CUSTOMER' } }).sort({ name: 1 })).map(toEntity);
+  }
+
   async hasActiveAdmin(): Promise<boolean> {
     return (await UserModel.exists({ role: 'ADMIN', active: true })) !== null;
   }

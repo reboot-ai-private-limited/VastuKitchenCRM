@@ -20,6 +20,19 @@ export interface User {
 
 export type NewUser = Omit<User, 'id' | 'createdAt'>;
 
+/** A staff member as HR needs them: how they are tracked and what they are paid. */
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: RoleName;
+  designation: string | null;
+  /** Null when never set (e.g. the owner's account). */
+  attendanceType: AttendanceType | null;
+  /** Rupees per month. */
+  fixedSalary: number;
+  active: boolean;
+}
+
 /** The small shape other modules get through the public contract. */
 export interface UserSummary {
   id: string;

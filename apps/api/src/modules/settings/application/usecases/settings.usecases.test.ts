@@ -45,6 +45,15 @@ const REGISTRY: SettingRegistry = {
     min: 0.5,
     max: 30,
   },
+  'hr.weeklyOff': {
+    group: 'HR',
+    label: 'Off',
+    description: 'd',
+    type: 'text',
+    default: 'SUN',
+    maxLength: 100,
+    check: (text) => (text.startsWith('SUN') ? null : 'Must start with SUN'),
+  },
   'reminders.noActionDays': {
     group: 'Reminders',
     label: 'N',
@@ -211,7 +220,7 @@ describe('listing', () => {
     const { list, update } = setup();
     await update.execute('admin1', { 'leads.stuckDays': 5, 'company.name': 'Vaastu' });
     const all = await list.execute();
-    expect(all).toHaveLength(12);
+    expect(all).toHaveLength(13);
     const byKey = Object.fromEntries(all.map((s) => [s.key, s]));
     expect(byKey['leads.stuckDays']).toMatchObject({
       value: 5,
@@ -287,5 +296,18 @@ describe('resetting', () => {
     expect(await reader.get('leads.stuckDays')).toBe(2);
     await expect(reset.execute('leads.stuckDays')).resolves.toBeDefined();
     await expect(reset.execute('nope')).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe('a text setting with its own rule (check)', () => {
+  it("rejects a value the rule refuses, with the rule's message, and keeps the default", async () => {
+    const { reader, update } = setup();
+    const err = await update.execute('admin1', { 'hr.weeklyOff': 'MON' }).catch((e: unknown) => e);
+    expect(detail(err)).toEqual([
+      { path: ['values', 'hr.weeklyOff'], message: 'Must start with SUN' },
+    ]);
+    expect(await reader.get('hr.weeklyOff')).toBe('SUN');
+    await update.execute('admin1', { 'hr.weeklyOff': 'SUN; SAT:1,3' });
+    expect(await reader.get('hr.weeklyOff')).toBe('SUN; SAT:1,3');
   });
 });

@@ -13,6 +13,7 @@ export const SETTING_TYPES = {
   'reminders.stagnantMax': 'number',
   'reminders.complaintDays': 'number',
   'docs.maxFileMb': 'number',
+  'hr.weeklyOff': 'text',
   'proposals.defaultTerms': 'longText',
   'company.name': 'text',
   'company.tagline': 'text',
@@ -38,6 +39,7 @@ export const SETTING_GROUPS = [
   'Reminders',
   'Proposals',
   'Documents',
+  'HR',
   'Company',
 ] as const;
 

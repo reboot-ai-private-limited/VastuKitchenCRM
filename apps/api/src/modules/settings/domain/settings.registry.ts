@@ -1,5 +1,6 @@
 import { COMPANY_PROFILE, DEFAULT_PROPOSAL_TERMS } from '@/config/company.js';
 import { env } from '@/config/env.js';
+import { parseWeeklyOff } from '@/shared/time/weeklyOff.js';
 import type { SettingRegistry } from './setting.entity.js';
 
 /**
@@ -68,6 +69,19 @@ export const SETTINGS: SettingRegistry = {
     default: env.REMINDER_COMPLAINT_DAYS,
     min: 0.0001,
     max: 365,
+  },
+  'hr.weeklyOff': {
+    group: 'HR',
+    label: 'Weekly off',
+    description:
+      'Days off, used to count working days for salary. "SUN" = every Sunday; "SAT:1,3" = 1st and 3rd Saturday; "THU:2" = 2nd Thursday. Separate rules with ";", e.g. "SUN; SAT:1,3".',
+    type: 'text',
+    default: 'SUN',
+    maxLength: 100,
+    check: (text) => {
+      const parsed = parseWeeklyOff(text);
+      return parsed.ok ? null : parsed.problem;
+    },
   },
   'docs.maxFileMb': {
     group: 'Documents',

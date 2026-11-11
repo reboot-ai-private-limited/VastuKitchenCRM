@@ -14,6 +14,8 @@ export interface UserRepositoryPort {
   list(filter: UserListFilter): Promise<{ items: User[]; total: number }>;
   /** Rewrites the copied designation text on every user that holds `from`. Returns how many. */
   renameDesignation(from: string, to: string): Promise<number>;
+  /** Everyone except customers (staff, active or not), for HR's attendance and salary. */
+  findStaff(): Promise<User[]>;
   hasActiveAdmin(): Promise<boolean>;
   /** Ids of active users with this role (e.g. every active Admin, for alerts that need someone). */
   findActiveIdsByRole(role: RoleName): Promise<string[]>;

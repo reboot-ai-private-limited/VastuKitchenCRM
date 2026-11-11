@@ -19,7 +19,8 @@ export function problemWith(def: SettingDefinition, raw: unknown): string | null
       const text = raw.trim();
       if (text.length === 0) return 'Must not be empty';
       const max = def.maxLength ?? (def.type === 'text' ? 200 : 5000);
-      return text.length > max ? `At most ${max} characters` : null;
+      if (text.length > max) return `At most ${max} characters`;
+      return def.check ? def.check(text) : null;
     }
   }
 }

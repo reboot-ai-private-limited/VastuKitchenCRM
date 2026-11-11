@@ -128,6 +128,16 @@ export function buildIdentityContainer(): IdentityContainer {
   return {
     contract: {
       getUserSummaries: async (ids) => (await users.findByIds(ids)).map(summarise),
+      getStaff: async () =>
+        (await users.findStaff()).map((u) => ({
+          id: u.id,
+          name: u.name,
+          role: u.role,
+          designation: u.designation,
+          attendanceType: u.attendanceType,
+          fixedSalary: u.fixedSalary,
+          active: u.active,
+        })),
       getActiveAdminIds: () => users.findActiveIdsByRole('ADMIN'),
       createCustomer: async (input) => summarise(await createCustomer.execute(input)),
       createCustomerInvite: (customerId) => createInvite.execute(customerId),

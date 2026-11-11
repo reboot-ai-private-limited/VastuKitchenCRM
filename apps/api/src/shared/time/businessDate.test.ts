@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, todayIn } from './businessDate.js';
+import { addDays, atLocalTime, todayIn } from './businessDate.js';
 
 describe('business dates', () => {
   it('uses the business timezone, not UTC', () => {
@@ -19,5 +19,24 @@ describe('business dates', () => {
 
   it('compares as plain strings', () => {
     expect('2026-11-09' < '2026-11-14').toBe(true);
+  });
+});
+
+describe('atLocalTime', () => {
+  it('turns local clock time in the business timezone into the right instant', () => {
+    // Siliguri is UTC+5:30 all year.
+    expect(atLocalTime('Asia/Kolkata', '2026-11-03', '09:05').toISOString()).toBe(
+      '2026-11-03T03:35:00.000Z',
+    );
+    expect(atLocalTime('Asia/Kolkata', '2026-11-03', '00:10').toISOString()).toBe(
+      '2026-11-02T18:40:00.000Z',
+    );
+    expect(atLocalTime('UTC', '2026-11-03', '18:00').toISOString()).toBe(
+      '2026-11-03T18:00:00.000Z',
+    );
+    // and it round-trips with todayIn
+    expect(todayIn('Asia/Kolkata', atLocalTime('Asia/Kolkata', '2026-11-03', '23:59'))).toBe(
+      '2026-11-03',
+    );
   });
 });

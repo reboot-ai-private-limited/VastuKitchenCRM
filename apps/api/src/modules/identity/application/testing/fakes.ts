@@ -55,6 +55,9 @@ export class FakeUsers implements UserRepositoryPort {
   async findActiveIdsByRole(role: RoleName) {
     return this.rows.filter((u) => u.role === role && u.active).map((u) => u.id);
   }
+  async findStaff() {
+    return this.rows.filter((u) => u.role !== 'CUSTOMER');
+  }
   async hasActiveAdmin() {
     return this.rows.some((u) => u.role === 'ADMIN' && u.active);
   }

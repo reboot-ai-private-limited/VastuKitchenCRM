@@ -29,7 +29,7 @@ Role is **what you can do**. Two per-person attributes are separate:
 | Attendance (all staff) | ✅ | ✅ | – | – | – | – | – |
 | Salary | ✅ | ✅ | – | – | – | – | – |
 | Designations master | ✅ | ✅ | read | read | read | read | – |
-| Own attendance | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | – |
+| Own attendance (GPS check-in, own calendar) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | – |
 
 "Assigned" = records assigned to me. `scopeFor(user)` returns `all` for ADMIN and `assigned` for SALES/DESIGNER/TECHNICIAN; list/get use cases call it, so scoping lives in one place.
 

@@ -76,6 +76,16 @@ const TAGS = [
     description:
       'Post-delivery service tickets: raise with photos, assign a technician, resolve, reopen, close.',
   },
+  {
+    name: 'HR / Attendance',
+    description:
+      'GPS check-in and check-out, simulated biometric punches, corrections, daily board and monthly calendars.',
+  },
+  {
+    name: 'HR / Salary',
+    description:
+      'Monthly salary sheet worked out from attendance: generate, adjust, finalize, CSV.',
+  },
   { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
   {
     name: 'Proposals / Public',

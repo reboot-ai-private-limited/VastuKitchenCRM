@@ -51,7 +51,8 @@ export class BootstrapAdminUseCase {
       phone: input.phone,
       role: 'ADMIN',
       designation: 'Owner',
-      attendanceType: 'BIOMETRIC',
+      // The owner is not on attendance or payroll; an Admin can be set to GPS/Biometric later.
+      attendanceType: null,
       fixedSalary: 0,
       passwordHash: await this.hasher.hash(input.password),
       active: true,

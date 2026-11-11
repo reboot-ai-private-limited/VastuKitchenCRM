@@ -1,7 +1,7 @@
 import type { SettingKey } from '@vastu/contracts';
 
 export interface SettingDefinition {
-  group: 'Projects' | 'Leads' | 'Reminders' | 'Proposals' | 'Documents' | 'Company';
+  group: 'Projects' | 'Leads' | 'Reminders' | 'Proposals' | 'Documents' | 'HR' | 'Company';
   label: string;
   description: string;
   type: 'boolean' | 'number' | 'text' | 'longText';
@@ -13,6 +13,8 @@ export interface SettingDefinition {
   integer?: boolean;
   /** Text only. */
   maxLength?: number;
+  /** Text only: extra rules beyond length. Returns what is wrong, or null when fine. */
+  check?: (text: string) => string | null;
 }
 
 export type SettingRegistry = Record<SettingKey, SettingDefinition>;

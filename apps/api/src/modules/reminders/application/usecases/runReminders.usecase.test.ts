@@ -195,7 +195,13 @@ describe('rule 3 — stagnant lead', () => {
   });
 
   it('uses the configured values, so demos can shrink the days to minutes', async () => {
-    const w = setup({ unseenDays: 0.001, noActionDays: 0.001, stuckDays: 0.001, stagnantMax: 3, complaintDays: 3 });
+    const w = setup({
+      unseenDays: 0.001,
+      noActionDays: 0.001,
+      stuckDays: 0.001,
+      stagnantMax: 3,
+      complaintDays: 3,
+    });
     w.leads.rows.push(contacted());
     w.proposals.rows.push(proposal());
     w.leads.rows.push(lead({ id: 'lead1' }));

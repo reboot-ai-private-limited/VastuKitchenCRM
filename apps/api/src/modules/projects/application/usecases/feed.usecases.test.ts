@@ -42,6 +42,7 @@ function setup() {
       w.alerts,
       w.directory,
       w.feedViews,
+      w.storage,
     ),
     comments: new ListCommentsUseCase(w.access, w.posts, w.comments, w.feedViews),
     delComment: new DeleteCommentUseCase(w.access, w.posts, w.comments),
@@ -364,5 +365,45 @@ describe('upload tickets', () => {
     await expect(sign.execute(cust2, p.id)).rejects.toMatchObject({ statusCode: 404 });
     w.projects.rows[0]!.stage = 'CLOSED';
     await expect(sign.execute(designer, p.id)).rejects.toMatchObject({ statusCode: 409 });
+  });
+});
+
+describe('photos on comments', () => {
+  it('lets a reply be just a photo (or text and photos), shown with its URLs', async () => {
+    const { w, post, comment, list } = setup();
+    const p = await seedProject(w);
+    const v = await post.execute(designer, p.id, body({ text: 'Render', visibility: 'CLIENT' }));
+    const reply = await comment.execute(cust1, p.id, v.post.id, { images: [photo(p.id, 'c1')] });
+    expect(reply.comment.text).toBeNull();
+    expect(reply.images).toEqual([
+      expect.objectContaining({
+        url: `https://img.test/vastu-test/projects/${p.id}/c1`,
+        thumbUrl: expect.stringContaining('thumb'),
+      }),
+    ]);
+    await comment.execute(designer, p.id, v.post.id, {
+      text: 'Like this?',
+      images: [photo(p.id, 'c2'), photo(p.id, 'c2')],
+    });
+    const shown = (await list.execute(cust1, p.id, q)).items[0]!;
+    expect(shown.recentComments.map((c) => [c.comment.text, c.images.length])).toEqual([
+      [null, 1],
+      ['Like this?', 1],
+    ]); // repeat kept once
+  });
+
+  it("accepts only this project's photos, and alerts describe a photo-only comment", async () => {
+    const { w, post, comment } = setup();
+    const a = await seedProject(w);
+    const b = await seedProject(w, { name: 'B' });
+    const v = await post.execute(designer, a.id, body({ text: 'Render', visibility: 'CLIENT' }));
+    await expect(
+      comment.execute(cust1, a.id, v.post.id, { images: [photo(b.id)] }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    w.sender.sent.length = 0;
+    await comment.execute(cust1, a.id, v.post.id, {
+      images: [photo(a.id, 'c1'), photo(a.id, 'c2')],
+    });
+    expect(w.sender.ofType('PROJECT_COMMENT')[0]?.alert.body).toBe('Mrs Rao: sent 2 photos');
   });
 });

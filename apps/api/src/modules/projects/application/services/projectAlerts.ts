@@ -98,7 +98,7 @@ export class ProjectAlerts {
       {
         type: 'PROJECT_COMMENT',
         title: `New comment in ${project.name}`,
-        body: `${authorName}: ${preview(comment.text, 0)}`,
+        body: `${authorName}: ${preview(comment.text, comment.images.length)}`,
         ref: { kind: 'PROJECT', id: project.id, postId: post.id },
       },
     );

@@ -16,5 +16,6 @@ export function buildApiRouter(containers: AppContainers): Router {
   // To-dos own full paths (/projects/:id/todos, /todos/:id …), so this router is mounted at the root
   // of /api — and LAST, so it can never sit in front of another module's routes.
   router.use('/', containers.todos.buildRouter());
+  router.use('/', containers.docs.buildRouter());
   return router;
 }

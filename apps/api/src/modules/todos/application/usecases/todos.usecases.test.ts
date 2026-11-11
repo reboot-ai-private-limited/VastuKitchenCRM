@@ -71,8 +71,15 @@ function setup() {
     reopen: new ReopenTodoUseCase(w.access, w.todos, w.projects, w.views),
     del: new DeleteTodoUseCase(w.access, w.todos),
     listTodos: new ListTodosUseCase(w.access, w.todos, w.views),
-    comment: new CreateTodoCommentUseCase(w.access, w.comments, w.todos, w.directory, w.alerts),
-    comments: new ListTodoCommentsUseCase(w.access, w.comments, w.directory),
+    comment: new CreateTodoCommentUseCase(
+      w.access,
+      w.comments,
+      w.todos,
+      w.directory,
+      w.alerts,
+      w.storage,
+    ),
+    comments: new ListTodoCommentsUseCase(w.access, w.comments, w.directory, w.storage),
     delComment: new DeleteTodoCommentUseCase(w.access, w.comments, w.todos),
     mine: new MyTodosUseCase(w.todos, w.lists, w.projects, w.views, today, now),
     overdue: new FindOverdueTodosUseCase(w.todos, w.projects, today, now),
@@ -493,5 +500,24 @@ describe('overdue to-dos for the reminders module', () => {
         createdById: 'admin1',
       },
     ]);
+  });
+});
+
+describe('photos on to-do comments', () => {
+  it('lets a comment be just a photo, from this project only', async () => {
+    const { w, list, create, comment, comments } = await withList();
+    const v = await create.execute(designer, list.id, input({ assigneeIds: ['tech1'] }));
+    w.sender.sent.length = 0;
+
+    const c = await comment.execute(tech, v.todo.id, {
+      images: [{ publicId: 'vastu-test/projects/proj1/site1' }],
+    });
+    expect(c.comment.text).toBeNull();
+    expect(c.images[0]?.url).toBe('https://img.test/vastu-test/projects/proj1/site1');
+    expect(w.sender.ofType('TODO_COMMENT')[0]?.alert.body).toBe('Tarun: sent a photo');
+    expect((await comments.execute(designer, v.todo.id))[0]?.images).toHaveLength(1);
+    await expect(
+      comment.execute(tech, v.todo.id, { images: [{ publicId: 'vastu-test/projects/proj2/x' }] }),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });

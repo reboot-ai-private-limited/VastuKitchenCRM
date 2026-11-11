@@ -59,7 +59,7 @@ A module may import only the `.public.ts` of a **strictly lower** tier — no si
 
 ```
 T0 health, config, settings → T1 identity → T2 notifications, activity → T3 leads, hr
-→ T4 proposals → T5 projects → T6 todos, complaints → T7 reminders, dashboard
+→ T4 proposals → T5 projects → T6 todos, docs, complaints → T7 reminders, dashboard
 ```
 
 Higher tiers react to lower ones via events (e.g. `LeadWon` → projects creates a project; `ProposalSeen` → notifications), registered in the composition root — never by a lower module importing a higher one. Changing a module's tier is a deliberate edit to `MODULE_TIERS`. See [ADR-0007](../adr/0007-module-tiers.md).

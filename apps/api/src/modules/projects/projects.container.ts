@@ -95,6 +95,7 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
     contract: {
       createFromWonLead: (event) => fromWonLead.execute(event),
       getMembership: (actor, projectId) => contractUseCases.getMembership(actor, projectId),
+      getProjectAccess: (actor, projectId) => contractUseCases.getProjectAccess(actor, projectId),
       getProjectNames: (ids) => contractUseCases.names(ids),
       recordActivity: (projectId, activity) => contractUseCases.recordActivity(projectId, activity),
       filterAccessible: (actor, ids) => contractUseCases.filterAccessible(actor, ids),
@@ -134,7 +135,15 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
           new ListCommentsUseCase(access, posts, comments, feedViews),
         ),
         createComment: c.makeCreateComment(
-          new CreateCommentUseCase(access, posts, comments, alerts, directory, feedViews),
+          new CreateCommentUseCase(
+            access,
+            posts,
+            comments,
+            alerts,
+            directory,
+            feedViews,
+            deps.storage,
+          ),
         ),
         deleteComment: c.makeDeleteComment(new DeleteCommentUseCase(access, posts, comments)),
       }),

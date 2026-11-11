@@ -250,6 +250,22 @@ export class FakeStorage implements StoragePort {
       expiresAt: '',
     };
   }
+  signFileUpload(folder: string) {
+    return {
+      url: 'u',
+      method: 'POST' as const,
+      fileField: 'file',
+      fields: { folder },
+      expiresAt: '',
+    };
+  }
+  fileUrls(publicId: string, kind: 'IMAGE' | 'FILE') {
+    return {
+      url: `https://file.test/${publicId}`,
+      thumbUrl: kind === 'IMAGE' ? `https://file.test/t/${publicId}` : null,
+      downloadUrl: `https://file.test/dl/${publicId}`,
+    };
+  }
   imageUrls(publicId: string) {
     return { url: `https://img.test/${publicId}`, thumbUrl: `https://img.test/t/${publicId}` };
   }

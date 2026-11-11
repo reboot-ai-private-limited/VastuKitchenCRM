@@ -104,9 +104,11 @@ export function buildTodosContainer(deps: TodosDeps): TodosContainer {
         ),
         reopen: c.makeReopenTodo(new ReopenTodoUseCase(access, todos, projects, views)),
         deleteTodo: c.makeDeleteTodo(new DeleteTodoUseCase(access, todos)),
-        listComments: c.makeListComments(new ListTodoCommentsUseCase(access, comments, directory)),
+        listComments: c.makeListComments(
+          new ListTodoCommentsUseCase(access, comments, directory, deps.storage),
+        ),
         createComment: c.makeCreateComment(
-          new CreateTodoCommentUseCase(access, comments, todos, directory, alerts),
+          new CreateTodoCommentUseCase(access, comments, todos, directory, alerts, deps.storage),
         ),
         deleteComment: c.makeDeleteComment(new DeleteTodoCommentUseCase(access, comments, todos)),
       }),

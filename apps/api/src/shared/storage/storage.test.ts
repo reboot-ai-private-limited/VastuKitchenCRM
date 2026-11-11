@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { CloudinaryStorage, UnconfiguredStorage, signParams } from './cloudinaryStorage.adapter.js';
-import { isInFolder, projectFolder } from './folders.js';
+import { isInFolder, projectFilesFolder, projectFolder } from './folders.js';
 
 const storage = new CloudinaryStorage({
   cloudName: 'demo',
@@ -63,5 +63,43 @@ describe('folder rules', () => {
     expect(isInFolder(`${folder}/sub/abc`, folder)).toBe(false); //            nested
     expect(isInFolder(`${folder}/`, folder)).toBe(false); //                   empty name
     expect(isInFolder(`${folder}abc`, folder)).toBe(false); //                 prefix trick
+  });
+});
+
+describe('document uploads', () => {
+  it('signs a ticket for ANY file type (auto resource type), with no format list', () => {
+    const t = storage.signFileUpload('vastu-dev/projects/p1/files', NOW);
+    const ts = String(Math.floor(NOW.getTime() / 1000));
+    expect(t.url).toBe('https://api.cloudinary.com/v1_1/demo/auto/upload');
+    expect(t.fields['allowed_formats']).toBeUndefined();
+    expect(t.fields['signature']).toBe(
+      signParams({ folder: 'vastu-dev/projects/p1/files', timestamp: ts }, 'shh'),
+    );
+    expect(JSON.stringify(t)).not.toContain('shh');
+  });
+
+  it('builds view / preview / download URLs, with a preview for images only', () => {
+    const img = storage.fileUrls('vastu-dev/projects/p1/a1', 'IMAGE');
+    expect(img.url).toContain('/image/upload/f_auto,q_auto/');
+    expect(img.thumbUrl).toContain('w_480');
+    expect(img.downloadUrl).toContain('/image/upload/fl_attachment/');
+    const pdf = storage.fileUrls('vastu-dev/projects/p1/files/plan.pdf', 'FILE');
+    expect(pdf.url).toBe(
+      'https://res.cloudinary.com/demo/raw/upload/vastu-dev/projects/p1/files/plan.pdf',
+    );
+    expect(pdf.thumbUrl).toBeNull();
+    expect(pdf.downloadUrl).toContain('/raw/upload/fl_attachment/');
+  });
+
+  it('keeps the photo folder and the documents folder apart', () => {
+    const photos = projectFolder('vastu-dev', 'p1');
+    const files = projectFilesFolder('vastu-dev', 'p1');
+    expect(isInFolder(`${files}/doc.pdf`, files)).toBe(true);
+    expect(isInFolder(`${files}/doc.pdf`, photos)).toBe(false); // a document id is not a photo id
+    expect(isInFolder(`${photos}/a1`, files)).toBe(false); //     and a photo id is not a document id
+  });
+
+  it('refuses to sign file uploads when storage is not configured', () => {
+    expect(() => new UnconfiguredStorage('vastu').signFileUpload()).toThrowError(/not set up/);
   });
 });

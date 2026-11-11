@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { leadActivitySchema } from './leads.js';
-import { MAX_IMAGES_PER_POST, imageInputSchema, imageSchema } from './uploads.js';
+import {
+  MAX_IMAGES_PER_COMMENT,
+  MAX_IMAGES_PER_POST,
+  imageInputSchema,
+  imageSchema,
+} from './uploads.js';
 
 /* ── vocabularies ─────────────────────────────────────────────────────────── */
 
@@ -100,7 +105,8 @@ export const commentSchema = z.object({
   id: z.string(),
   postId: z.string(),
   author: person.extend({ isCustomer: z.boolean() }),
-  text: z.string(),
+  text: z.string().nullable(),
+  images: z.array(imageSchema),
   createdAt: z.string(),
   /** The author or an Admin. */
   canDelete: z.boolean(),
@@ -168,7 +174,16 @@ export const postIdParamsSchema = z.object({
 });
 export const commentIdParamsSchema = postIdParamsSchema.extend({ commentId: z.string().min(1) });
 
-export const createCommentBodySchema = z.object({ text: z.string().trim().min(1).max(2000) });
+/** Text, photos, or both — a reply is often just a photo. */
+export const createCommentBodySchema = z
+  .object({
+    text: z.string().trim().min(1).max(2000).optional(),
+    images: z.array(imageInputSchema).max(MAX_IMAGES_PER_COMMENT).optional(),
+  })
+  .refine((v) => v.text !== undefined || (v.images?.length ?? 0) > 0, {
+    message: 'Write something or add a photo',
+    path: ['text'],
+  });
 export type CreateCommentBodyDto = z.infer<typeof createCommentBodySchema>;
 
 /** The lead's story so far, oldest first — shown collapsed on the project (Admin and the lead's owner). */
@@ -183,6 +198,9 @@ export const PROJECT_ACTIVITY_TYPES = [
   'TODO_DUE_CHANGED',
   'TODO_COMPLETED',
   'TODO_REOPENED',
+  'FILE_ADDED',
+  'FILE_SHARED',
+  'FILES_SAVED',
 ] as const;
 export const projectActivityTypeSchema = z.enum(PROJECT_ACTIVITY_TYPES);
 export type ProjectActivityType = z.infer<typeof projectActivityTypeSchema>;

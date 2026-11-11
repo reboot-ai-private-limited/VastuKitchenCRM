@@ -10,6 +10,7 @@ Values the Admin can change **without a developer or a redeploy**. The `settings
 | `reminders.unseenDays` | days | `REMINDER_UNSEEN_DAYS` (2) | reminders: proposal not opened |
 | `reminders.noActionDays` | days | `REMINDER_NO_ACTION_DAYS` (2) | reminders: opened, no action |
 | `reminders.stagnantMax` | whole number | `REMINDER_STAGNANT_MAX` (3) | reminders: repeats per stuck period |
+| `docs.maxFileMb` | MB | 10 | docs: largest uploaded document (1–100) |
 | `proposals.defaultTerms` | long text | placeholder terms | proposals: terms on a **new** proposal |
 | `company.name` / `.tagline` / `.address` / `.phone` | text | the client's website details | proposals: header, public page, WhatsApp message |
 

@@ -33,7 +33,9 @@ export interface Comment {
   postId: string;
   projectId: string;
   authorId: string;
-  text: string;
+  /** Text, photos, or both. */
+  text: string | null;
+  images: StoredImage[];
   createdAt: Date;
 }
 

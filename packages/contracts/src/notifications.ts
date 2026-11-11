@@ -8,6 +8,8 @@ export const NOTIFICATION_TYPES = [
   'LEAD_STAGNANT',
   'LEAD_ASSIGNED',
   'LEAD_WON',
+  'FILE_ADDED',
+  'FILE_SHARED',
   'TODO_ASSIGNED',
   'TODO_DUE_CHANGED',
   'TODO_COMPLETED',
@@ -32,6 +34,8 @@ export const notificationRefSchema = z.object({
   postId: z.string().optional(),
   /** For a to-do: the project it belongs to, so the app can open it in context. */
   projectId: z.string().optional(),
+  /** For a document: the file to open. */
+  fileId: z.string().optional(),
 });
 export type NotificationRefDto = z.infer<typeof notificationRefSchema>;
 

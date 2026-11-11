@@ -43,6 +43,7 @@ export const toTodoCommentDto = (v: TodoCommentView): TodoCommentDto => ({
   todoId: v.comment.todoId,
   author: { id: v.comment.authorId, name: v.authorName },
   text: v.comment.text,
+  images: v.images,
   createdAt: v.comment.createdAt.toISOString(),
   canDelete: v.canDelete,
 });

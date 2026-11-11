@@ -15,6 +15,7 @@ Endpoints (any signed-in user, always their own): `GET /api/notifications` (`unr
 |---|---|---|
 | `PROPOSAL_SEEN` | `proposal.seen` event (first open of the public link) | the person who sent it |
 | `TODO_ASSIGNED` / `TODO_DUE_CHANGED` / `TODO_COMPLETED` / `TODO_COMMENT` | the to-dos module | see [todos](../02-product/todos.md) |
+| `FILE_ADDED` / `FILE_SHARED` | the docs module | members (and Admins for a customer upload) / the customer — see [docs](../02-product/docs.md) |
 | `TODO_OVERDUE` | reminder rule 4 | the assignees (else the creator) |
 | `LEAD_ASSIGNED` | `lead.assigned` event (not when you assign to yourself) | the new assignee |
 | `PROPOSAL_UNSEEN` | reminder rule 1 | see "Recipient" |

@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { MAX_IMAGES_PER_POST, imageInputSchema, imageSchema } from './uploads.js';
+import {
+  MAX_IMAGES_PER_COMMENT,
+  MAX_IMAGES_PER_POST,
+  imageInputSchema,
+  imageSchema,
+} from './uploads.js';
 
 const person = z.object({ id: z.string(), name: z.string() });
 
@@ -120,13 +125,22 @@ export const todoCommentSchema = z.object({
   id: z.string(),
   todoId: z.string(),
   author: person,
-  text: z.string(),
+  text: z.string().nullable(),
+  images: z.array(imageSchema),
   createdAt: z.string(),
   canDelete: z.boolean(),
 });
 export type TodoCommentDto = z.infer<typeof todoCommentSchema>;
 
-export const createTodoCommentBodySchema = z.object({ text: z.string().trim().min(1).max(2000) });
+export const createTodoCommentBodySchema = z
+  .object({
+    text: z.string().trim().min(1).max(2000).optional(),
+    images: z.array(imageInputSchema).max(MAX_IMAGES_PER_COMMENT).optional(),
+  })
+  .refine((v) => v.text !== undefined || (v.images?.length ?? 0) > 0, {
+    message: 'Write something or add a photo',
+    path: ['text'],
+  });
 export type CreateTodoCommentBodyDto = z.infer<typeof createTodoCommentBodySchema>;
 
 /* ── my assignments ───────────────────────────────────────────────────────── */

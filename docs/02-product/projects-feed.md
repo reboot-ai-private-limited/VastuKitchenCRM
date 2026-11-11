@@ -30,6 +30,7 @@ Posts hold **text and/or multiple photos**. **Comments are chat-style, one threa
 
 - **The customer can post and comment** — always on the Client tab — and **approve** a design: an **Approve** button on a team post with photos, once, recorded with who and when.
 - A **Final Delivery** post needs a photo and is always visible to the customer.
+- **Comments can be photo-only** (up to 5 photos, text optional). Any photo can be saved into [Docs](docs.md).
 - Posts and comments can be deleted by their author or the Admin.
 
 Example flows:

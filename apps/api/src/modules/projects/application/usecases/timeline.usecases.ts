@@ -130,6 +130,22 @@ export class ProjectContractUseCases {
     });
   }
 
+  async getProjectAccess(actor: ActorRef, projectId: string) {
+    const { project, viewer } = await this.access.loadAsMember(projectId, actor);
+    return {
+      id: project.id,
+      name: project.name,
+      memberIds: project.memberIds,
+      customerId: project.customerId,
+      role: viewer.isAdmin
+        ? ('ADMIN' as const)
+        : viewer.isCustomer
+          ? ('CUSTOMER' as const)
+          : ('MEMBER' as const),
+      stage: project.stage,
+    };
+  }
+
   async names(projectIds: string[]): Promise<Array<{ id: string; name: string }>> {
     if (projectIds.length === 0) return [];
     return (await this.projects.findByIds(projectIds)).map((p) => ({ id: p.id, name: p.name }));

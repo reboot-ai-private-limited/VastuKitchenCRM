@@ -55,6 +55,16 @@ const REGISTRY: SettingRegistry = {
     max: 20,
     integer: true,
   },
+  'docs.maxFileMb': {
+    group: 'Documents',
+    label: 'D',
+    description: 'd',
+    type: 'number',
+    default: 10,
+    min: 1,
+    max: 100,
+    integer: true,
+  },
   'proposals.defaultTerms': {
     group: 'Proposals',
     label: 'T',
@@ -192,7 +202,7 @@ describe('listing', () => {
     const { list, update } = setup();
     await update.execute('admin1', { 'leads.stuckDays': 5, 'company.name': 'Vaastu' });
     const all = await list.execute();
-    expect(all).toHaveLength(10);
+    expect(all).toHaveLength(11);
     const byKey = Object.fromEntries(all.map((s) => [s.key, s]));
     expect(byKey['leads.stuckDays']).toMatchObject({
       value: 5,

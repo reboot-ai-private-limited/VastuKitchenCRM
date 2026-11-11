@@ -66,6 +66,11 @@ const TAGS = [
     description:
       'Lists, to-dos with assignees, due dates and notify-when-done, comments, and My assignments.',
   },
+  {
+    name: 'Docs',
+    description:
+      'Project documents: nested folders, files, share with client, and Save to Docs from photos.',
+  },
   { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
   {
     name: 'Proposals / Public',

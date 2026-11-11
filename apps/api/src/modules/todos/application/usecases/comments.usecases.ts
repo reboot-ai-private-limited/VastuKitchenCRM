@@ -1,5 +1,7 @@
 import type { CreateTodoCommentBodyDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
+import { projectImages } from '@/shared/storage/attachImages.js';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type {
   ActorRef,
   TodoCommentRepositoryPort,
@@ -14,6 +16,22 @@ export interface TodoCommentView {
   comment: TodoComment;
   authorName: string;
   canDelete: boolean;
+  images: Array<{
+    publicId: string;
+    url: string;
+    thumbUrl: string;
+    width: number | null;
+    height: number | null;
+  }>;
+}
+
+function imagesOf(storage: StoragePort, c: TodoComment): TodoCommentView['images'] {
+  return c.images.map((img) => ({
+    publicId: img.publicId,
+    ...storage.imageUrls(img.publicId),
+    width: img.width,
+    height: img.height,
+  }));
 }
 
 export class CreateTodoCommentUseCase {
@@ -23,6 +41,7 @@ export class CreateTodoCommentUseCase {
     private readonly todos: TodoRepositoryPort,
     private readonly directory: UserDirectoryPort,
     private readonly alerts: TodoAlerts,
+    private readonly storage: StoragePort,
   ) {}
 
   async execute(
@@ -38,13 +57,19 @@ export class CreateTodoCommentUseCase {
       todoId,
       projectId: todo.projectId,
       authorId: actor.id,
-      text: input.text,
+      text: input.text ?? null,
+      images: projectImages(this.storage, todo.projectId, input.images),
     });
     await this.todos.adjustCommentCount(todoId, 1);
 
     const authorName = (await this.directory.find([actor.id]))[0]?.name ?? 'Someone';
     await this.alerts.commented(todo, comment, earlier, authorName);
-    return { comment, authorName, canDelete: isAdmin || comment.authorId === actor.id };
+    return {
+      comment,
+      authorName,
+      canDelete: isAdmin || comment.authorId === actor.id,
+      images: imagesOf(this.storage, comment),
+    };
   }
 }
 
@@ -53,6 +78,7 @@ export class ListTodoCommentsUseCase {
     private readonly access: TodoAccessService,
     private readonly comments: TodoCommentRepositoryPort,
     private readonly directory: UserDirectoryPort,
+    private readonly storage: StoragePort,
   ) {}
 
   async execute(actor: ActorRef, todoId: string): Promise<TodoCommentView[]> {
@@ -65,6 +91,7 @@ export class ListTodoCommentsUseCase {
       comment,
       authorName: users.get(comment.authorId)?.name ?? 'Someone',
       canDelete: isAdmin || comment.authorId === actor.id,
+      images: imagesOf(this.storage, comment),
     }));
   }
 }

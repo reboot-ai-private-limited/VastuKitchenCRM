@@ -70,7 +70,7 @@ export class TodoAlerts {
       {
         type: 'TODO_COMMENT',
         title: `New comment on "${todo.title}"`,
-        body: `${authorName}: ${preview(comment.text)}`,
+        body: `${authorName}: ${comment.text ? preview(comment.text) : comment.images.length === 1 ? 'sent a photo' : `sent ${comment.images.length} photos`}`,
         ref: this.ref(todo),
       },
     );

@@ -59,6 +59,17 @@ export const SETTINGS: SettingRegistry = {
     max: 20,
     integer: true,
   },
+  'docs.maxFileMb': {
+    group: 'Documents',
+    label: 'Largest document that can be uploaded (MB)',
+    description:
+      "Files above this size are refused. Cloudinary's free plan allows about 10 MB; raise it only if your storage plan does.",
+    type: 'number',
+    default: 10,
+    min: 1,
+    max: 100,
+    integer: true,
+  },
   'proposals.defaultTerms': {
     group: 'Proposals',
     label: 'Default terms on a new proposal',

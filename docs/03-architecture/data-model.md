@@ -16,11 +16,13 @@ Keep it flat; refine during build.
 | `counters` | _id (`proposal-<year>`), seq — atomic number sequence |
 | `projects` | name, customerId, leadId?, wonLeadId? (unique when set: one auto project per won lead), siteAddress, value, stage (`DESIGN`/`SITE`/`CLOSED`), designStage, designerId, memberIds[], createdById, closedAt |
 | `projectposts` | projectId, authorId, visibility (`CLIENT`/`TEAM`), kind (`UPDATE`/`FINAL_DELIVERY`), text, images[{publicId,width,height,bytes}], approvedById/approvedAt, commentCount, deletedAt |
-| `projectcomments` | postId, projectId, authorId, text, deletedAt |
+| `projectcomments` | postId, projectId, authorId, text (nullable), images[], deletedAt |
 | `projectactivities` | projectId, type (`TODO_*`), actorId, at, data — the team-only timeline lines |
 | `todolists` | projectId, name, archived, position, createdById |
 | `todos` | projectId, listId, title, notes, images[], assigneeIds[], notifyOnDoneIds[], dueOn (`YYYY-MM-DD`), completedById/At, createdById, commentCount, position, deletedAt |
-| `todocomments` | todoId, projectId, authorId, text, deletedAt |
+| `todocomments` | todoId, projectId, authorId, text (nullable), images[], deletedAt |
+| `docfolders` | projectId, parentId (null = top level), name, nameKey (lower-case; unique per parent), createdById, deletedAt |
+| `docfiles` | projectId, folderId, kind (`IMAGE`/`FILE`), publicId, format, bytes, name, visibility (`TEAM`/`CLIENT`), uploadedById, deletedAt — unique (projectId, publicId) among live rows; a document points at the stored file, nothing is copied |
 | `complaints` | customerId/projectId, description, photos[], raisedBy, assignedTo, status, resolutionNote, resolutionPhoto |
 | `attendance` | userId, date, inAt, outAt, method (`gps`/`biometric_sim`), location |
 | `salaries` | userId, month, fixed, presentDays, workingDays, payable (editable), finalised |

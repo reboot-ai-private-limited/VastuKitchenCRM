@@ -49,7 +49,9 @@ export interface TodoComment {
   todoId: string;
   projectId: string;
   authorId: string;
-  text: string;
+  /** Text, photos, or both. */
+  text: string | null;
+  images: StoredImage[];
   createdAt: Date;
 }
 export type NewTodoComment = Omit<TodoComment, 'id' | 'createdAt'>;

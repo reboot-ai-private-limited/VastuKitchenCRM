@@ -23,6 +23,21 @@ export interface ProjectsPublicContract {
     memberIds: string[];
     stage: ProjectStage;
   }>;
+  /**
+   * What `actor` is on this project — `ADMIN`, `MEMBER` or `CUSTOMER` — with its members and
+   * customer. NOT FOUND for anyone else. (Unlike `getMembership`, the customer is allowed.)
+   */
+  getProjectAccess(
+    actor: { id: string; role: RoleName },
+    projectId: string,
+  ): Promise<{
+    id: string;
+    name: string;
+    memberIds: string[];
+    customerId: string;
+    role: 'ADMIN' | 'MEMBER' | 'CUSTOMER';
+    stage: ProjectStage;
+  }>;
   /** Names of these projects, for whoever asks (e.g. reminder text). Unknown ids are absent. */
   getProjectNames(projectIds: string[]): Promise<Array<{ id: string; name: string }>>;
   /** Adds a line to the project's team timeline. */

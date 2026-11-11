@@ -91,7 +91,13 @@ export interface TodoCommentDoc {
   todoId: Types.ObjectId;
   projectId: Types.ObjectId;
   authorId: Types.ObjectId;
-  text: string;
+  text: string | null;
+  images: Array<{
+    publicId: string;
+    width: number | null;
+    height: number | null;
+    bytes: number | null;
+  }>;
   deletedAt: Date | null;
   createdAt: Date;
 }
@@ -101,7 +107,8 @@ const commentSchema = new Schema<TodoCommentDoc>(
     todoId: { type: Schema.Types.ObjectId, required: true },
     projectId: { type: Schema.Types.ObjectId, required: true },
     authorId: { type: Schema.Types.ObjectId, required: true },
-    text: { type: String, required: true },
+    text: { type: String, default: null },
+    images: { type: [imageSchema], default: [] },
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true },

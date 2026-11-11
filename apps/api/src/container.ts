@@ -5,6 +5,7 @@ import { buildNotificationsContainer } from '@/modules/notifications/notificatio
 import { buildProjectsContainer } from '@/modules/projects/projects.container.js';
 import { buildProposalsContainer } from '@/modules/proposals/proposals.container.js';
 import { buildSettingsContainer } from '@/modules/settings/settings.container.js';
+import { buildDocsContainer } from '@/modules/docs/docs.container.js';
 import { buildTodosContainer } from '@/modules/todos/todos.container.js';
 import { buildRemindersContainer } from '@/modules/reminders/reminders.container.js';
 import { createEventBus, type EventBus } from '@/shared/events/appEvents.js';
@@ -20,6 +21,7 @@ export interface AppContainers {
   proposals: ReturnType<typeof buildProposalsContainer>;
   projects: ReturnType<typeof buildProjectsContainer>;
   todos: ReturnType<typeof buildTodosContainer>;
+  docs: ReturnType<typeof buildDocsContainer>;
   reminders: ReturnType<typeof buildRemindersContainer>;
   /** In-process bus; modules above subscribe to what modules below announce. */
   events: EventBus;
@@ -57,6 +59,13 @@ export function buildContainers(): AppContainers {
     notifications: notifications.contract,
     storage,
   });
+  const docs = buildDocsContainer({
+    projects: projects.contract,
+    identity: identity.contract,
+    notifications: notifications.contract,
+    settings: settings.contract,
+    storage,
+  });
   const reminders = buildRemindersContainer({
     leads: leads.contract,
     proposals: proposals.contract,
@@ -75,6 +84,7 @@ export function buildContainers(): AppContainers {
     proposals,
     projects,
     todos,
+    docs,
     reminders,
     events,
   };

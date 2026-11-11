@@ -1,7 +1,7 @@
 import type { SettingKey } from '@vastu/contracts';
 
 export interface SettingDefinition {
-  group: 'Projects' | 'Leads' | 'Reminders' | 'Proposals' | 'Company';
+  group: 'Projects' | 'Leads' | 'Reminders' | 'Proposals' | 'Documents' | 'Company';
   label: string;
   description: string;
   type: 'boolean' | 'number' | 'text' | 'longText';

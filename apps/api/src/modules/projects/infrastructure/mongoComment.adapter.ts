@@ -9,6 +9,12 @@ const toComment = (doc: HydratedDocument<ProjectCommentDoc>): Comment => ({
   projectId: doc.projectId.toString(),
   authorId: doc.authorId.toString(),
   text: doc.text,
+  images: doc.images.map((i) => ({
+    publicId: i.publicId,
+    width: i.width,
+    height: i.height,
+    bytes: i.bytes,
+  })),
   createdAt: doc.createdAt,
 });
 
@@ -70,6 +76,12 @@ export class MongoCommentRepository implements CommentRepositoryPort {
             projectId: d.projectId.toString(),
             authorId: d.authorId.toString(),
             text: d.text,
+            images: (d.images ?? []).map((i) => ({
+              publicId: i.publicId,
+              width: i.width,
+              height: i.height,
+              bytes: i.bytes,
+            })),
             createdAt: d.createdAt,
           }))
           // Oldest first, the order a chat is read in.

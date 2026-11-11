@@ -64,6 +64,12 @@ const toComment = (d: HydratedDocument<TodoCommentDoc>): TodoComment => ({
   projectId: d.projectId.toString(),
   authorId: d.authorId.toString(),
   text: d.text,
+  images: d.images.map((i) => ({
+    publicId: i.publicId,
+    width: i.width,
+    height: i.height,
+    bytes: i.bytes,
+  })),
   createdAt: d.createdAt,
 });
 

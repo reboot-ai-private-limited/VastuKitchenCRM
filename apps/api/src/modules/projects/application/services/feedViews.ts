@@ -12,6 +12,13 @@ export interface CommentView {
   comment: Comment;
   authorName: string;
   authorIsCustomer: boolean;
+  images: Array<{
+    publicId: string;
+    url: string;
+    thumbUrl: string;
+    width: number | null;
+    height: number | null;
+  }>;
   canDelete: boolean;
 }
 
@@ -104,6 +111,12 @@ export class FeedViewBuilder {
       comment: c,
       authorName: users.get(c.authorId)?.name ?? 'Someone',
       authorIsCustomer: c.authorId === project.customerId,
+      images: c.images.map((img) => ({
+        publicId: img.publicId,
+        ...this.storage.imageUrls(img.publicId),
+        width: img.width,
+        height: img.height,
+      })),
       canDelete: viewer.isAdmin || c.authorId === viewer.actor.id,
     };
   }

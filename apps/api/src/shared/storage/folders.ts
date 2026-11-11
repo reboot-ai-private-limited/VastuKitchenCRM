@@ -6,6 +6,15 @@ export function projectFolder(root: string, projectId: string): string {
   return `${root}/projects/${projectId}`;
 }
 
+/**
+ * Where a project's DOCUMENTS are uploaded. A sibling of the photo folder, not inside it as far as
+ * `isInFolder` is concerned (that only accepts direct children), so a photo id can never pass for
+ * a document upload, nor the other way round.
+ */
+export function projectFilesFolder(root: string, projectId: string): string {
+  return `${root}/projects/${projectId}/files`;
+}
+
 /** True only for an id directly inside `folder` (no climbing out with `..`, no nested tricks). */
 export function isInFolder(publicId: string, folder: string): boolean {
   if (!publicId.startsWith(`${folder}/`)) return false;

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { ImageDto, UploadTicketDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
-import type { StoragePort } from './storage.port.js';
+import type { FileUrls, StoragePort } from './storage.port.js';
 
 /** The ticket stays valid for Cloudinary's own signature window (one hour); we say 55 minutes. */
 const TICKET_MINUTES = 55;
@@ -52,6 +52,44 @@ export class CloudinaryStorage implements StoragePort {
     };
   }
 
+  /**
+   * Any file type: `auto` lets Cloudinary decide (images become images, everything else is stored
+   * as a raw file). There is no `allowed_formats` here — a raw file's extension is part of its
+   * id, so the API checks the extension itself when the file is registered.
+   */
+  signFileUpload(folder: string, now: Date = new Date()): UploadTicketDto {
+    const timestamp = String(Math.floor(now.getTime() / 1000));
+    const signed = { folder, timestamp };
+    return {
+      url: `https://api.cloudinary.com/v1_1/${this.config.cloudName}/auto/upload`,
+      method: 'POST',
+      fileField: 'file',
+      fields: {
+        ...signed,
+        api_key: this.config.apiKey,
+        signature: signParams(signed, this.config.apiSecret),
+      },
+      expiresAt: new Date(now.getTime() + TICKET_MINUTES * 60_000).toISOString(),
+    };
+  }
+
+  /**
+   * `fl_attachment` makes Cloudinary answer with a download header. It is documented for images;
+   * for raw files it is UNVERIFIED here — `pnpm check:storage` prints the real headers.
+   */
+  fileUrls(publicId: string, kind: 'IMAGE' | 'FILE'): FileUrls {
+    const root = `https://res.cloudinary.com/${this.config.cloudName}`;
+    if (kind === 'IMAGE') {
+      const images = this.imageUrls(publicId);
+      return { ...images, downloadUrl: `${root}/image/upload/fl_attachment/${publicId}` };
+    }
+    return {
+      url: `${root}/raw/upload/${publicId}`,
+      thumbUrl: null,
+      downloadUrl: `${root}/raw/upload/fl_attachment/${publicId}`,
+    };
+  }
+
   imageUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'> {
     const base = `https://res.cloudinary.com/${this.config.cloudName}/image/upload`;
     // f_auto/q_auto: the right format and quality per device. Thumbs are capped at 480px wide.
@@ -74,5 +112,15 @@ export class UnconfiguredStorage implements StoragePort {
 
   imageUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'> {
     return { url: publicId, thumbUrl: publicId };
+  }
+
+  signFileUpload(): never {
+    throw AppError.unavailable(
+      'File uploads are not set up yet. Ask an admin to configure storage.',
+    );
+  }
+
+  fileUrls(publicId: string): FileUrls {
+    return { url: publicId, thumbUrl: null, downloadUrl: publicId };
   }
 }

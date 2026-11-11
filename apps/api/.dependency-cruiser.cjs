@@ -40,7 +40,7 @@ const MODULE_TIERS = [
   ['leads', 'hr'], //                     Tier 3 — leads + calls + visits; employees, attendance, salary
   ['proposals'], //                       Tier 4 — reads leads
   ['projects'], //                       Tier 5 — projects, feed, timeline
-  ['todos', 'complaints'], //           Tier 6 — to-dos (reads projects); complaints (reads projects, identity)
+  ['todos', 'docs', 'complaints'], //   Tier 6 — to-dos, docs (read projects); complaints (reads projects, identity)
   ['reminders', 'dashboard'], //           Tier 7 — cron rules (read leads, proposals, to-dos); read-only aggregates; top of the graph
 ];
 

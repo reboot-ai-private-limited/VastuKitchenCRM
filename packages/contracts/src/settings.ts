@@ -11,6 +11,7 @@ export const SETTING_TYPES = {
   'reminders.unseenDays': 'number',
   'reminders.noActionDays': 'number',
   'reminders.stagnantMax': 'number',
+  'docs.maxFileMb': 'number',
   'proposals.defaultTerms': 'longText',
   'company.name': 'text',
   'company.tagline': 'text',
@@ -30,7 +31,14 @@ interface TypeMap {
 /** The value type of one setting: `SettingValue<'leads.stuckDays'>` is `number`. */
 export type SettingValue<K extends SettingKey> = TypeMap[(typeof SETTING_TYPES)[K]];
 
-export const SETTING_GROUPS = ['Projects', 'Leads', 'Reminders', 'Proposals', 'Company'] as const;
+export const SETTING_GROUPS = [
+  'Projects',
+  'Leads',
+  'Reminders',
+  'Proposals',
+  'Documents',
+  'Company',
+] as const;
 
 const settingValueSchema = z.union([z.boolean(), z.number(), z.string()]);
 

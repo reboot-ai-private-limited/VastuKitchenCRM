@@ -19,6 +19,8 @@ export const uploadTicketSchema = z.object({
 export type UploadTicketDto = z.infer<typeof uploadTicketSchema>;
 
 export const MAX_IMAGES_PER_POST = 20;
+/** Photos on one comment (in the feed or on a to-do). */
+export const MAX_IMAGES_PER_COMMENT = 5;
 
 /** An uploaded image, as the app reports it after the upload (the provider's response). */
 export const imageInputSchema = z.object({

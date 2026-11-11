@@ -35,6 +35,7 @@ export const toCommentDto = (v: CommentView): CommentDto => ({
   postId: v.comment.postId,
   author: { id: v.comment.authorId, name: v.authorName, isCustomer: v.authorIsCustomer },
   text: v.comment.text,
+  images: v.images,
   createdAt: v.comment.createdAt.toISOString(),
   canDelete: v.canDelete,
 });

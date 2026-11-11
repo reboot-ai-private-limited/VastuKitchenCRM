@@ -7,6 +7,7 @@ import type {
 } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import { isInFolder, projectFolder } from '@/shared/storage/folders.js';
+import { projectImages } from '@/shared/storage/attachImages.js';
 import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type {
   ActorRef,
@@ -195,6 +196,7 @@ export class CreateCommentUseCase {
     private readonly alerts: ProjectAlerts,
     private readonly directory: UserDirectoryPort,
     private readonly views: FeedViewBuilder,
+    private readonly storage: StoragePort,
   ) {}
 
   async execute(
@@ -210,7 +212,8 @@ export class CreateCommentUseCase {
       postId,
       projectId,
       authorId: actor.id,
-      text: input.text,
+      text: input.text ?? null,
+      images: projectImages(this.storage, project.id, input.images),
     });
     await this.posts.adjustCommentCount(postId, 1);
 

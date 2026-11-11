@@ -1,5 +1,9 @@
-import { PlaceholderPage } from '@/components/common/placeholder-page';
+'use client';
+
+import { useParams } from 'next/navigation';
+import { ComplaintDetail } from '@/components/complaints/complaint-detail';
 
 export default function ComplaintPage() {
-  return <PlaceholderPage title="Complaint" roles={['ADMIN','SALES','DESIGNER','TECHNICIAN','OFFICE','CUSTOMER']} />;
+  const { id } = useParams<{ id: string }>();
+  return <ComplaintDetail id={id} />;
 }

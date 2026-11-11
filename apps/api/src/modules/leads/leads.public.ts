@@ -17,6 +17,20 @@ export interface LeadJourneyEntry {
   data: Record<string, unknown>;
 }
 
+/** How many leads are in each status, and how many were created in a period. */
+export interface LeadDashboardCounts {
+  byStatus: Record<LeadStatus, number>;
+  createdInRange: number;
+}
+
+export interface LeadUserActivity {
+  userId: string;
+  actions: number;
+  leadsHandled: number;
+  firstAt: Date;
+  lastAt: Date;
+}
+
 export interface LeadActor {
   id: string;
   role: RoleName;
@@ -41,6 +55,14 @@ export interface LeadsPublicContract {
     to: Date,
   ): Promise<Array<{ userId: string; calls: number; answered: number; talkSeconds: number }>>;
 
+  /** Read-only, for the dashboard: leads per status and how many were created in `[from, to)`. */
+  dashboardCounts(from: Date, to: Date): Promise<LeadDashboardCounts>;
+  /** Read-only, for the dashboard: what each person did on leads in `[from, to)`. */
+  activitySummary(from: Date, to: Date): Promise<LeadUserActivity[]>;
+  /** Ids of leads not yet Won/Lost (newest first, at most `limit`) — to value the pipeline. */
+  openLeadIds(limit: number): Promise<string[]>;
+  /** Ids of leads won (status last changed) in `[from, to)`, at most `limit`. */
+  wonLeadIds(from: Date, to: Date, limit: number): Promise<string[]>;
   /** Current status/assignee of these leads (unknown ids are absent). For reminders. */
   getLeadStates(ids: string[]): Promise<LeadState[]>;
   /**

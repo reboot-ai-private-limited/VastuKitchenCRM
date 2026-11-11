@@ -112,6 +112,10 @@ export class MongoAttendanceRepository implements AttendanceRepositoryPort {
     return (await AttendanceModel.find({ date: monthRange(month) })).map(toRecord);
   }
 
+  async forRange(from: string, to: string) {
+    return (await AttendanceModel.find({ date: { $gte: from, $lte: to } })).map(toRecord);
+  }
+
   async insertMissing(records: NewAttendance[]): Promise<number> {
     if (records.length === 0) return 0;
     const res = await AttendanceModel.bulkWrite(

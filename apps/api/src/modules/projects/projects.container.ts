@@ -44,6 +44,7 @@ import {
 } from './infrastructure/gateways.adapter.js';
 import { MongoActivityRepository } from './infrastructure/mongoActivity.adapter.js';
 import { MongoCommentRepository } from './infrastructure/mongoComment.adapter.js';
+import { MongoProjectInsights } from './infrastructure/mongoInsights.adapter.js';
 import { MongoPostRepository } from './infrastructure/mongoPost.adapter.js';
 import { MongoProjectRepository } from './infrastructure/mongoProject.adapter.js';
 import * as c from './interface/projects.controller.js';
@@ -71,6 +72,7 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   const posts = new MongoPostRepository();
   const comments = new MongoCommentRepository();
   const activities = new MongoActivityRepository();
+  const insights = new MongoProjectInsights();
   const leads = new LeadsGateway(deps.leads);
   const proposals = new ProposalsGateway(deps.proposals);
   const directory = new IdentityUserDirectory(deps.identity);
@@ -94,6 +96,9 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   return {
     contract: {
       createFromWonLead: (event) => fromWonLead.execute(event),
+      countByStage: () => insights.countByStage(),
+      feedActivitySummary: (from, to) => insights.feedActivityByUser(from, to),
+      recentCustomerActivity: (limit) => insights.recentCustomerActivity(limit),
       getMembership: (actor, projectId) => contractUseCases.getMembership(actor, projectId),
       getProjectAccess: (actor, projectId) => contractUseCases.getProjectAccess(actor, projectId),
       getProjectBasics: (projectId) => contractUseCases.basics(projectId),

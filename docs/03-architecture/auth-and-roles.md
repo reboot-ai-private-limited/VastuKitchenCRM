@@ -20,7 +20,7 @@ Role is **what you can do**. Two per-person attributes are separate:
 ## Access matrix (MVP)
 | Area | ADMIN | HR | SALES | DESIGNER | TECHNICIAN | OFFICE | CUSTOMER |
 |---|---|---|---|---|---|---|---|
-| Dashboard | full | HR counters | – | – | – | – | – |
+| Dashboard | full | attendance only | – | – | – | – | – |
 | Leads, calls, visits | all | – | assigned | – | – | add/view | – |
 | Proposals | all | – | own | – | – | – | view (link) |
 | Projects & feed | all | – | summary + lead journey (own leads) | member | member | member | own (client tab) |

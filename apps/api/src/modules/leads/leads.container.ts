@@ -30,6 +30,7 @@ import { UpdateLeadUseCase } from './application/usecases/updateLead.usecase.js'
 import { ListVisitsUseCase, RecordVisitUseCase } from './application/usecases/visits.usecase.js';
 import { AppEventsLeadEvents } from './infrastructure/appEventsLeadEvents.adapter.js';
 import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
+import { MongoLeadInsights } from './infrastructure/mongoInsights.adapter.js';
 import { MongoCallRepository } from './infrastructure/mongoCall.adapter.js';
 import { MongoLeadActivityRepository } from './infrastructure/mongoLeadActivity.adapter.js';
 import { MongoLeadRepository } from './infrastructure/mongoLead.adapter.js';
@@ -95,6 +96,7 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
   const recordCall = new RecordCallUseCase(access, calls, leads, activities, directory);
   const listCalls = new ListCallsUseCase(access, calls, directory);
   const callStats = new GetCallStatsUseCase(calls, directory);
+  const insights = new MongoLeadInsights();
   const recordVisit = new RecordVisitUseCase(access, visits, activities, directory);
   const listVisits = new ListVisitsUseCase(access, visits, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
@@ -108,6 +110,13 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
   return {
     contract: {
       callStats: (from, to) => calls.statsByUser(from, to),
+      dashboardCounts: async (from, to) => ({
+        byStatus: await insights.countsByStatus(),
+        createdInRange: await insights.createdBetween(from, to),
+      }),
+      activitySummary: (from, to) => insights.activityByUser(from, to),
+      openLeadIds: (limit) => insights.openLeadIds(limit),
+      wonLeadIds: (from, to, limit) => insights.wonLeadIds(from, to, limit),
       getLeadStates: (ids) => reminderQueries.states(ids),
       findStuckLeads: (query) => reminderQueries.findStuck(query),
       getLeadForProposal: (actor, leadId) => getLeadForProposal.execute(actor, leadId),

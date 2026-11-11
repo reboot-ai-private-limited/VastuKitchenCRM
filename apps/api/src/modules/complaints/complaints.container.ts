@@ -61,6 +61,7 @@ export function buildComplaintsContainer(deps: ComplaintsDeps): ComplaintsContai
 
   return {
     contract: {
+      countByStatus: () => complaints.counts({}),
       async findStale({ before, limit }) {
         const found = await stale.execute(before, limit);
         const names = new Map(

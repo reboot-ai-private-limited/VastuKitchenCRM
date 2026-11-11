@@ -6,6 +6,7 @@ import { buildProjectsContainer } from '@/modules/projects/projects.container.js
 import { buildProposalsContainer } from '@/modules/proposals/proposals.container.js';
 import { buildSettingsContainer } from '@/modules/settings/settings.container.js';
 import { buildComplaintsContainer } from '@/modules/complaints/complaints.container.js';
+import { buildDashboardContainer } from '@/modules/dashboard/dashboard.container.js';
 import { buildHrContainer } from '@/modules/hr/hr.container.js';
 import { buildDocsContainer } from '@/modules/docs/docs.container.js';
 import { buildTodosContainer } from '@/modules/todos/todos.container.js';
@@ -26,6 +27,7 @@ export interface AppContainers {
   docs: ReturnType<typeof buildDocsContainer>;
   complaints: ReturnType<typeof buildComplaintsContainer>;
   hr: ReturnType<typeof buildHrContainer>;
+  dashboard: ReturnType<typeof buildDashboardContainer>;
   reminders: ReturnType<typeof buildRemindersContainer>;
   /** In-process bus; modules above subscribe to what modules below announce. */
   events: EventBus;
@@ -87,6 +89,17 @@ export function buildContainers(): AppContainers {
     settings: settings.contract,
   });
 
+  const dashboard = buildDashboardContainer({
+    leads: leads.contract,
+    proposals: proposals.contract,
+    projects: projects.contract,
+    complaints: complaints.contract,
+    todos: todos.contract,
+    hr: hr.contract,
+    identity: identity.contract,
+    settings: settings.contract,
+  });
+
   return {
     health: buildHealthContainer(),
     settings,
@@ -99,6 +112,7 @@ export function buildContainers(): AppContainers {
     docs,
     complaints,
     hr,
+    dashboard,
     reminders,
     events,
   };

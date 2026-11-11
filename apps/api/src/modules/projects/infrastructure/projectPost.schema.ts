@@ -48,6 +48,9 @@ const schema = new Schema<ProjectPostDoc>(
 // The feed query: one project, some tabs, newest first.
 schema.index({ projectId: 1, visibility: 1, createdAt: -1 });
 schema.index({ projectId: 1, kind: 1 });
+// The dashboard's "what did this person post / what did customers post" questions.
+schema.index({ authorId: 1, createdAt: -1 });
+schema.index({ approvedById: 1, approvedAt: -1 });
 
 export const ProjectPostModel: Model<ProjectPostDoc> =
   (mongoose.models['ProjectPost'] as Model<ProjectPostDoc>) ??

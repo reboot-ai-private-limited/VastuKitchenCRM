@@ -31,6 +31,7 @@ import { CryptoPublicToken } from './infrastructure/cryptoPublicToken.adapter.js
 import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
 import { LeadsGateway } from './infrastructure/leadsGateway.adapter.js';
 import { MongoNumberSequence } from './infrastructure/mongoNumberSequence.adapter.js';
+import { MongoProposalInsights } from './infrastructure/mongoInsights.adapter.js';
 import { MongoProposalRepository } from './infrastructure/mongoProposal.adapter.js';
 import {
   makeCreateController,
@@ -93,10 +94,14 @@ export function buildProposalsContainer({
   const getPublic = new GetPublicProposalUseCase(proposals, directory, proposalSettings);
   const recordSeen = new RecordProposalSeenUseCase(proposals, gateway, proposalEvents);
 
+  const insights = new MongoProposalInsights();
+
   return {
     contract: {
       findUnseenSent: (window) => reminderQueries.unseen(window),
       findSeen: (window) => reminderQueries.seen(window),
+      activitySummary: (from, to) => insights.activityByUser(from, to),
+      latestSentTotals: (leadIds) => insights.latestSentTotals(leadIds),
       getLatestSentTotal: async (leadId) =>
         (await proposals.findLatestSentByLead(leadId))?.total ?? null,
     },

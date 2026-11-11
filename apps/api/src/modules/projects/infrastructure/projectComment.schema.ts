@@ -37,6 +37,7 @@ const schema = new Schema<ProjectCommentDoc>(
   { timestamps: true },
 );
 schema.index({ postId: 1, createdAt: 1 });
+schema.index({ authorId: 1, createdAt: -1 });
 
 export const ProjectCommentModel: Model<ProjectCommentDoc> =
   (mongoose.models['ProjectComment'] as Model<ProjectCommentDoc>) ??

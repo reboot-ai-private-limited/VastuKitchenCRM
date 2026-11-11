@@ -1,7 +1,32 @@
 import type { ProjectActivityType, ProjectStage, RoleName } from '@vastu/contracts';
 
 /** The only thing another module may import from `projects/`. */
+export interface ProjectUserFeedActivity {
+  userId: string;
+  posts: number;
+  comments: number;
+  firstAt: Date;
+  lastAt: Date;
+}
+
+/** Something a customer did on a project that the team may need to answer. */
+export interface CustomerFeedItem {
+  kind: 'POST' | 'COMMENT' | 'APPROVAL';
+  at: Date;
+  projectId: string;
+  postId: string;
+  authorId: string;
+  snippet: string | null;
+  hasPhotos: boolean;
+}
+
 export interface ProjectsPublicContract {
+  /** Read-only, for the dashboard: how many projects are in each stage. */
+  countByStage(): Promise<Record<ProjectStage, number>>;
+  /** Read-only, for the dashboard: posts and comments each person wrote in `[from, to)`. */
+  feedActivitySummary(from: Date, to: Date): Promise<ProjectUserFeedActivity[]>;
+  /** Read-only, for the dashboard: the latest customer posts, comments and approvals, newest first. */
+  recentCustomerActivity(limit: number): Promise<CustomerFeedItem[]>;
   /**
    * Creates the project for a lead that was just won. IDEMPOTENT: one project per won lead, so a
    * replayed `lead.won` event creates nothing. Called by the composition root's subscriber.

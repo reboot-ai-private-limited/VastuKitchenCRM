@@ -108,6 +108,9 @@ export class FakeAttendance implements AttendanceRepositoryPort {
   async forMonth(month: string) {
     return this.rows.filter((r) => r.date.startsWith(month)).map((r) => structuredClone(r));
   }
+  async forRange(from: string, to: string) {
+    return this.rows.filter((r) => r.date >= from && r.date <= to).map((r) => structuredClone(r));
+  }
   async insertMissing(records: NewAttendance[]) {
     let n = 0;
     for (const r of records) {

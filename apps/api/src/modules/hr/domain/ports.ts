@@ -28,6 +28,8 @@ export interface AttendanceRepositoryPort {
   forDate(date: string): Promise<AttendanceRecord[]>;
   forUserMonth(userId: string, month: string): Promise<AttendanceRecord[]>;
   forMonth(month: string): Promise<AttendanceRecord[]>;
+  /** Every record with `from <= date <= to` (`YYYY-MM-DD`). */
+  forRange(from: string, to: string): Promise<AttendanceRecord[]>;
   /** Inserts only the days that do not exist yet; returns how many were created. */
   insertMissing(records: NewAttendance[]): Promise<number>;
 }

@@ -77,6 +77,11 @@ const TAGS = [
       'Post-delivery service tickets: raise with photos, assign a technician, resolve, reopen, close.',
   },
   {
+    name: 'Dashboard',
+    description:
+      'The owner’s one screen: counters, staff activity, what needs attention. Read-only. HR sees attendance only.',
+  },
+  {
     name: 'HR / Attendance',
     description:
       'GPS check-in and check-out, simulated biometric punches, corrections, daily board and monthly calendars.',

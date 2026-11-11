@@ -28,9 +28,9 @@ Keep it flat; refine during build.
 | `salaryrows` | month (`YYYY-MM`), userId, name/designation (as at generation), fixedSalary, presentDays, workingDays, computedPayable, payable, editedById/At, note, weeklyOff (the rule used), finalizedAt/By — unique (month, userId) |
 | `salaries` | userId, month, fixed, presentDays, workingDays, payable (editable), finalised |
 | `notifications` | userId, type, refType, refId, message, readAt |
-| `activities` | userId, type, refId, at — feeds dashboard first/last activity |
 
 ## Notes
+- **No separate activity log.** The dashboard's "first / last activity" is worked out from the modules' own records (lead timeline, proposals, project posts and comments), so it cannot drift from the real data. Posts and comments carry `(authorId, createdAt)` indexes for it.
 - Customers are `users` with role `CUSTOMER`, linked to a project by the projects module.
 - Index: `leads.phone` (unique), `proposals.token` (unique), `attendance(userId,date)`.
 - Photos stored as Cloudinary URLs; no binary data in Mongo.

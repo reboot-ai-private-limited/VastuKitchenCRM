@@ -24,6 +24,15 @@ export interface ProposalsPublicContract {
   findUnseenSent(window: ReminderWindow): Promise<SentProposalState[]>;
   /** Sent and opened, `firstSeenAt` in `(after, before)`. Oldest first. */
   findSeen(window: ReminderWindow): Promise<SentProposalState[]>;
+  /** Read-only, for the dashboard: proposals each person made and sent in `[from, to)`. */
+  activitySummary(
+    from: Date,
+    to: Date,
+  ): Promise<
+    Array<{ userId: string; generated: number; sent: number; firstAt: Date; lastAt: Date }>
+  >;
+  /** Read-only, for the dashboard: the latest SENT proposal total of each of these leads (rupees). */
+  latestSentTotals(leadIds: string[]): Promise<Array<{ leadId: string; total: number }>>;
   /** Total (whole rupees) of the lead's most recently sent proposal, or null if none was sent. */
   getLatestSentTotal(leadId: string): Promise<number | null>;
 }

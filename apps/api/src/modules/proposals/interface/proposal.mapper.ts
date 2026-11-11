@@ -1,5 +1,4 @@
 import type { ProposalDto, PublicProposalDto } from '@vastu/contracts';
-import { COMPANY_PROFILE } from '@/config/company.js';
 import type { PublicProposalView } from '../application/usecases/publicProposal.usecase.js';
 import type { ProposalView } from '../application/services/proposalSupport.js';
 
@@ -39,6 +38,7 @@ export function toPublicProposalDto({
   proposal: p,
   isExpired,
   sentByName,
+  company,
 }: PublicProposalView): PublicProposalDto {
   return {
     number: p.number,
@@ -54,10 +54,10 @@ export function toPublicProposalDto({
     notes: p.notes,
     terms: p.terms,
     company: {
-      name: COMPANY_PROFILE.name,
-      tagline: COMPANY_PROFILE.tagline,
-      address: COMPANY_PROFILE.address,
-      phone: COMPANY_PROFILE.phone,
+      name: company.name,
+      tagline: company.tagline,
+      address: company.address,
+      phone: company.phone,
     },
     sentBy: sentByName ? { name: sentByName } : null,
   };

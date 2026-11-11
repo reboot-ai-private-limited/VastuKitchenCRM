@@ -12,7 +12,7 @@ describe('ListLeadsUseCase scope', () => {
     const w = world();
     await addLead(w, { assignedToId: 'sales1' });
     await addLead(w, { phone: '9876500002', assignedToId: 'sales2' });
-    const list = new ListLeadsUseCase(w.leads, w.views, 2);
+    const list = new ListLeadsUseCase(w.leads, w.views, async () => 2);
 
     const asSales = await list.execute(sales1, { ...query, assignedTo: 'sales2' });
     expect(asSales.items.map((i) => i.lead.assignedToId)).toEqual(['sales1']);
@@ -22,7 +22,7 @@ describe('ListLeadsUseCase scope', () => {
     const w = world();
     await addLead(w, { assignedToId: 'sales1' });
     await addLead(w, { phone: '9876500002', assignedToId: null });
-    const list = new ListLeadsUseCase(w.leads, w.views, 2);
+    const list = new ListLeadsUseCase(w.leads, w.views, async () => 2);
     expect((await list.execute(admin, query)).total).toBe(2);
     expect((await list.execute(office, query)).total).toBe(2);
     expect((await list.execute(admin, { ...query, assignedTo: 'unassigned' })).items).toHaveLength(

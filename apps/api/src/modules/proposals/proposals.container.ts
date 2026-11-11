@@ -1,8 +1,8 @@
 import type { Router } from 'express';
-import { COMPANY_PROFILE, DEFAULT_PROPOSAL_TERMS } from '@/config/company.js';
 import { env } from '@/config/env.js';
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
+import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import type { EventBus } from '@/shared/events/appEvents.js';
 import {
   ProposalAccess,
@@ -25,6 +25,7 @@ import {
   DeleteProposalUseCase,
   UpdateProposalUseCase,
 } from './application/usecases/updateProposal.usecase.js';
+import { SettingsGateway } from './infrastructure/settings.adapter.js';
 import { AppEventsProposalEvents } from './infrastructure/appEventsProposalEvents.adapter.js';
 import { CryptoPublicToken } from './infrastructure/cryptoPublicToken.adapter.js';
 import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
@@ -57,12 +58,14 @@ export interface ProposalsDeps {
   /** Leads' and identity's public contracts: the only ways proposals reaches them. */
   leads: LeadsPublicContract;
   identity: IdentityPublicContract;
+  settings: SettingsPublicContract;
   events: EventBus;
 }
 
 export function buildProposalsContainer({
   leads,
   identity,
+  settings,
   events,
 }: ProposalsDeps): ProposalsContainer {
   // 1. Adapters
@@ -72,27 +75,22 @@ export function buildProposalsContainer({
   const gateway = new LeadsGateway(leads);
   const directory = new IdentityUserDirectory(identity);
   const proposalEvents = new AppEventsProposalEvents(events);
+  const proposalSettings = new SettingsGateway(settings);
 
   // 2. Services and use cases, depending only on ports
-  const links = new ProposalLinks(env.WEB_BASE_URL, COMPANY_PROFILE.name);
+  const links = new ProposalLinks(env.WEB_BASE_URL);
   const access = new ProposalAccess(proposals, gateway);
   const views = new ProposalViewBuilder(directory, links);
 
-  const create = new CreateProposalUseCase(
-    proposals,
-    gateway,
-    numbers,
-    tokens,
-    DEFAULT_PROPOSAL_TERMS,
-  );
+  const create = new CreateProposalUseCase(proposals, gateway, numbers, tokens, proposalSettings);
   const update = new UpdateProposalUseCase(access, proposals);
   const remove = new DeleteProposalUseCase(access, proposals);
   const get = new GetProposalUseCase(access, views);
   const list = new ListProposalsUseCase(proposals, gateway, views);
   const duplicate = new DuplicateProposalUseCase(access, proposals, gateway, numbers, tokens);
-  const send = new SendProposalUseCase(access, proposals, gateway, links, views);
+  const send = new SendProposalUseCase(access, proposals, gateway, links, views, proposalSettings);
   const reminderQueries = new ProposalReminderQueriesUseCase(proposals);
-  const getPublic = new GetPublicProposalUseCase(proposals, directory);
+  const getPublic = new GetPublicProposalUseCase(proposals, directory, proposalSettings);
   const recordSeen = new RecordProposalSeenUseCase(proposals, gateway, proposalEvents);
 
   return {

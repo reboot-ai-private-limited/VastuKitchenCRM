@@ -18,7 +18,14 @@ function setup(config = CONFIG) {
   const leads = new FakeLeadSource();
   const notifier = new FakeNotifier();
   const admins = new FakeAdmins();
-  const run = new RunRemindersUseCase(proposals, leads, notifier, admins, config, () => now);
+  const run = new RunRemindersUseCase(
+    proposals,
+    leads,
+    notifier,
+    admins,
+    async () => config,
+    () => now,
+  );
   return {
     proposals,
     leads,

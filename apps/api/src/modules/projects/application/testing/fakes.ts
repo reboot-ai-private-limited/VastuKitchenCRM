@@ -11,6 +11,7 @@ import type {
   LeadsGatewayPort,
   PostRepositoryPort,
   ProjectRepositoryPort,
+  ProjectSettingsPort,
   ProposalsGatewayPort,
   UserDirectoryPort,
 } from '../../domain/ports.js';
@@ -336,6 +337,13 @@ export class FakeStorage implements StoragePort {
   }
 }
 
+export class FakeSettings implements ProjectSettingsPort {
+  autoCreate = true;
+  async autoCreateOnWon() {
+    return this.autoCreate;
+  }
+}
+
 export const admin: ActorRef = { id: 'admin1', role: 'ADMIN' };
 export const designer: ActorRef = { id: 'designer1', role: 'DESIGNER' };
 export const designer2: ActorRef = { id: 'designer2', role: 'DESIGNER' };
@@ -353,11 +361,13 @@ export function world() {
   const directory = new FakeDirectory();
   const sender = new FakeSender();
   const storage = new FakeStorage();
+  const settings = new FakeSettings();
   const access = new ProjectAccess(projects, leads);
   const alerts = new ProjectAlerts(sender, directory);
   const projectViews = new ProjectViewBuilder(directory);
   const feedViews = new FeedViewBuilder(directory, comments, storage);
   return {
+    settings,
     projects,
     posts,
     comments,

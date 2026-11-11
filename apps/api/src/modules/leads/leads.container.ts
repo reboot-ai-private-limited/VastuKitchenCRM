@@ -1,6 +1,6 @@
 import type { Router } from 'express';
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
-import { env } from '@/config/env.js';
+import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import type { EventBus } from '@/shared/events/appEvents.js';
 import { LeadAccess } from './application/services/leadAccess.js';
 import { LeadViewBuilder } from './application/services/leadViews.js';
@@ -60,10 +60,12 @@ export interface LeadsContainer {
 export interface LeadsDeps {
   /** Identity's public contract: the only way leads reaches users. */
   identity: IdentityPublicContract;
+  /** Where the "stuck after N days" value lives (Admin-editable). */
+  settings: SettingsPublicContract;
   events: EventBus;
 }
 
-export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsContainer {
+export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): LeadsContainer {
   // 1. Adapters
   const leads = new MongoLeadRepository();
   const calls = new MongoCallRepository();
@@ -74,10 +76,11 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
 
   // 2. Shared services and use cases, depending only on ports
   const access = new LeadAccess(leads);
-  const views = new LeadViewBuilder(directory, env.LEAD_STUCK_DAYS);
+  const stuckDays = () => settings.get('leads.stuckDays');
+  const views = new LeadViewBuilder(directory, stuckDays);
   const getLead = new GetLeadUseCase(access, views);
   const createLead = new CreateLeadUseCase(leads, activities);
-  const listLeads = new ListLeadsUseCase(leads, views, env.LEAD_STUCK_DAYS);
+  const listLeads = new ListLeadsUseCase(leads, views, stuckDays);
   const updateLead = new UpdateLeadUseCase(access, leads, views);
   const assignLead = new AssignLeadUseCase(leads, activities, directory, leadEvents, views);
   const changeStatus = new ChangeLeadStatusUseCase(

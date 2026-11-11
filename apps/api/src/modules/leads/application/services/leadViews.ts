@@ -12,7 +12,8 @@ export interface LeadView {
 export class LeadViewBuilder {
   constructor(
     private readonly directory: UserDirectoryPort,
-    private readonly stuckDays: number,
+    /** Read per call, so an Admin's change to the setting applies at once. */
+    private readonly stuckDays: () => Promise<number>,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -22,10 +23,11 @@ export class LeadViewBuilder {
     ];
     const names = new Map((await this.directory.find(ids)).map((u) => [u.id, u.name]));
     const now = this.now();
+    const stuckDays = await this.stuckDays();
     return leads.map((lead) => ({
       lead,
       assigneeName: lead.assignedToId ? (names.get(lead.assignedToId) ?? null) : null,
-      isStuck: isStuck(lead, this.stuckDays, now),
+      isStuck: isStuck(lead, stuckDays, now),
     }));
   }
 }

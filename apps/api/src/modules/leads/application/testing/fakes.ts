@@ -164,7 +164,7 @@ export function world(now: () => Date = () => new Date()) {
   const directory = new FakeDirectory();
   const events = new FakeEvents();
   const access = new LeadAccess(leads);
-  const views = new LeadViewBuilder(directory, 2, now);
+  const views = new LeadViewBuilder(directory, async () => 2, now);
   return { leads, calls, visits, activities, directory, events, access, views, now };
 }
 

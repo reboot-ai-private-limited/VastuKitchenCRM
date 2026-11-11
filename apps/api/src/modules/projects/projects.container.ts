@@ -3,6 +3,7 @@ import type { IdentityPublicContract } from '@/modules/identity/identity.public.
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
+import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import type { StoragePort } from '@/shared/storage/storage.port.js';
 import { FeedViewBuilder } from './application/services/feedViews.js';
 import { ProjectAccess } from './application/services/projectAccess.js';
@@ -35,6 +36,7 @@ import {
   LeadsGateway,
   NotificationsAlertSender,
   ProposalsGateway,
+  SettingsGateway,
 } from './infrastructure/gateways.adapter.js';
 import { MongoCommentRepository } from './infrastructure/mongoComment.adapter.js';
 import { MongoPostRepository } from './infrastructure/mongoPost.adapter.js';
@@ -54,6 +56,7 @@ export interface ProjectsDeps {
   proposals: ProposalsPublicContract;
   identity: IdentityPublicContract;
   notifications: NotificationsPublicContract;
+  settings: SettingsPublicContract;
   storage: StoragePort;
 }
 
@@ -73,7 +76,13 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   const projectViews = new ProjectViewBuilder(directory);
   const feedViews = new FeedViewBuilder(directory, comments, deps.storage);
 
-  const fromWonLead = new CreateProjectFromWonLeadUseCase(projects, leads, proposals, alerts);
+  const fromWonLead = new CreateProjectFromWonLeadUseCase(
+    projects,
+    leads,
+    proposals,
+    new SettingsGateway(deps.settings),
+    alerts,
+  );
 
   return {
     contract: { createFromWonLead: (event) => fromWonLead.execute(event) },

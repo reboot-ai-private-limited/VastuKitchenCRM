@@ -35,25 +35,31 @@ export class RunRemindersUseCase {
     private readonly leads: LeadSourcePort,
     private readonly notifier: NotifierPort,
     private readonly admins: AdminDirectoryPort,
-    private readonly config: ReminderConfig,
+    /** Read at the start of EVERY run, so an Admin's change applies to the next one. */
+    private readonly loadConfig: () => Promise<ReminderConfig>,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(): Promise<ReminderRunResultDto> {
     const now = this.now();
+    const config = await this.loadConfig();
     const result: ReminderRunResultDto = { unseen: 0, noAction: 0, stagnant: 0 };
     const adminIds = lazy(() => this.admins.activeAdminIds());
 
-    result.unseen = await this.unseenProposals(now, adminIds);
-    result.noAction = await this.noActionProposals(now, adminIds);
-    result.stagnant = await this.stagnantLeads(now, adminIds);
+    result.unseen = await this.unseenProposals(now, config, adminIds);
+    result.noAction = await this.noActionProposals(now, config, adminIds);
+    result.stagnant = await this.stagnantLeads(now, config, adminIds);
     return result;
   }
 
   // ── rule 1 ───────────────────────────────────────────────────────────────
-  private async unseenProposals(now: Date, adminIds: () => Promise<string[]>): Promise<number> {
+  private async unseenProposals(
+    now: Date,
+    config: ReminderConfig,
+    adminIds: () => Promise<string[]>,
+  ): Promise<number> {
     const proposals = await this.proposals.findUnseenSent({
-      before: ago(now, this.config.unseenDays),
+      before: ago(now, config.unseenDays),
       after: ago(now, LOOKBACK_DAYS),
       limit: BATCH_LIMIT,
     });
@@ -78,9 +84,13 @@ export class RunRemindersUseCase {
   }
 
   // ── rule 2 ───────────────────────────────────────────────────────────────
-  private async noActionProposals(now: Date, adminIds: () => Promise<string[]>): Promise<number> {
+  private async noActionProposals(
+    now: Date,
+    config: ReminderConfig,
+    adminIds: () => Promise<string[]>,
+  ): Promise<number> {
     const proposals = await this.proposals.findSeen({
-      before: ago(now, this.config.noActionDays),
+      before: ago(now, config.noActionDays),
       after: ago(now, LOOKBACK_DAYS),
       limit: BATCH_LIMIT,
     });
@@ -108,8 +118,12 @@ export class RunRemindersUseCase {
   }
 
   // ── rule 3 ───────────────────────────────────────────────────────────────
-  private async stagnantLeads(now: Date, adminIds: () => Promise<string[]>): Promise<number> {
-    const { stuckDays, stagnantMax } = this.config;
+  private async stagnantLeads(
+    now: Date,
+    config: ReminderConfig,
+    adminIds: () => Promise<string[]>,
+  ): Promise<number> {
+    const { stuckDays, stagnantMax } = config;
     const stuckMs = stuckDays * DAY_MS;
     const leads = await this.leads.findStuck({
       before: ago(now, stuckDays),

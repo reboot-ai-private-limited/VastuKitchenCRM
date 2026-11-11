@@ -2,6 +2,7 @@ import { logger } from '@/shared/logging/logger.js';
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
+import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
 import type {
   ActorRef,
@@ -11,6 +12,7 @@ import type {
   JourneyEntry,
   LeadInfo,
   LeadsGatewayPort,
+  ProjectSettingsPort,
   ProposalsGatewayPort,
   UserDirectoryPort,
 } from '../domain/ports.js';
@@ -89,5 +91,13 @@ export class NotificationsAlertSender implements AlertSenderPort {
       if (r.status === 'rejected')
         logger.error({ err: String(r.reason), type: alert.type }, 'project alert not delivered');
     }
+  }
+}
+
+export class SettingsGateway implements ProjectSettingsPort {
+  constructor(private readonly settings: SettingsPublicContract) {}
+
+  autoCreateOnWon(): Promise<boolean> {
+    return this.settings.get('projects.autoCreateOnWon');
   }
 }

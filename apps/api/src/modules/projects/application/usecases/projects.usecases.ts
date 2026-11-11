@@ -10,6 +10,7 @@ import type {
   ActorRef,
   LeadsGatewayPort,
   ProjectRepositoryPort,
+  ProjectSettingsPort,
   PostRepositoryPort,
   ProposalsGatewayPort,
   UserDirectoryPort,
@@ -87,6 +88,7 @@ export class CreateProjectFromWonLeadUseCase {
     private readonly projects: ProjectRepositoryPort,
     private readonly leads: LeadsGatewayPort,
     private readonly proposals: ProposalsGatewayPort,
+    private readonly settings: ProjectSettingsPort,
     private readonly alerts: ProjectAlerts,
   ) {}
 
@@ -96,6 +98,14 @@ export class CreateProjectFromWonLeadUseCase {
     name: string;
     byUserId: string;
   }): Promise<void> {
+    // The Admin can switch automatic creation off (Settings). Then someone makes the project by hand.
+    if (!(await this.settings.autoCreateOnWon())) {
+      await this.alerts.leadWonWithoutProject(
+        { leadId: event.leadId, name: event.name },
+        event.byUserId,
+      );
+      return;
+    }
     const { project, created } = await this.projects.createFromWonLead({
       name: `${event.name}'s project`,
       customerId: event.customerId,

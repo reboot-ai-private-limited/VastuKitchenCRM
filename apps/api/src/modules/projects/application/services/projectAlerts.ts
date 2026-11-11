@@ -39,6 +39,24 @@ export class ProjectAlerts {
     });
   }
 
+  /**
+   * Auto-create is switched off, so a won lead has no project until an Admin makes one.
+   * Keyed per lead: a replayed event, or moving the lead away and back, never re-alerts.
+   */
+  async leadWonWithoutProject(
+    lead: { leadId: string; name: string },
+    except?: string | null,
+  ): Promise<void> {
+    const admins = (await this.directory.activeAdminIds()).filter((id) => id !== except);
+    await this.sender.send(admins, {
+      type: 'LEAD_WON',
+      title: 'Lead won — no project yet',
+      body: `${lead.name} was won. Automatic project creation is off: create the project when you are ready.`,
+      ref: { kind: 'LEAD', id: lead.leadId },
+      dedupeKey: `lead-won-no-project:${lead.leadId}`,
+    });
+  }
+
   async membersAdded(project: Project, userIds: string[], except: string): Promise<void> {
     await this.sender.send(
       userIds.filter((id) => id !== except),

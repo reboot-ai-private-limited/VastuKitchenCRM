@@ -12,20 +12,17 @@ export interface ProposalView {
 
 /** Builds the public link and the prefilled WhatsApp message. No I/O, so trivially testable. */
 export class ProposalLinks {
-  constructor(
-    private readonly webBaseUrl: string,
-    private readonly companyName: string,
-  ) {}
+  constructor(private readonly webBaseUrl: string) {}
 
   publicUrl(token: string): string {
     return `${this.webBaseUrl.replace(/\/+$/, '')}/p/${token}`;
   }
 
-  whatsappUrl(proposal: Proposal): string {
+  whatsappUrl(proposal: Proposal, companyName: string): string {
     const firstName = proposal.customer.name.split(/\s+/)[0] ?? proposal.customer.name;
     const message =
       `Namaste ${firstName}, here is your proposal ${proposal.number} ` +
-      `from ${this.companyName}: ${this.publicUrl(proposal.token)}`;
+      `from ${companyName}: ${this.publicUrl(proposal.token)}`;
     return `https://wa.me/91${proposal.customer.phone}?text=${encodeURIComponent(message)}`;
   }
 }

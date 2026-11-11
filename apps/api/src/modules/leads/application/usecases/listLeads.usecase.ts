@@ -8,7 +8,7 @@ export class ListLeadsUseCase {
   constructor(
     private readonly leads: LeadRepositoryPort,
     private readonly views: LeadViewBuilder,
-    private readonly stuckDays: number,
+    private readonly stuckDays: () => Promise<number>,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -32,7 +32,7 @@ export class ListLeadsUseCase {
       assignedToId,
       stuckBefore:
         query.stuck === true
-          ? new Date(this.now().getTime() - this.stuckDays * 86_400_000)
+          ? new Date(this.now().getTime() - (await this.stuckDays()) * 86_400_000)
           : undefined,
     });
     return { items: await this.views.build(items), total };

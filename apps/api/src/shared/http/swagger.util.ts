@@ -30,6 +30,11 @@ openApiRegistry.registerComponent('securitySchemes', 'bearerAuth', {
 const TAGS = [
   { name: 'Health', description: 'Service health check.' },
   {
+    name: 'Settings',
+    description:
+      'Admin-editable system settings: toggles, reminder days, proposal terms, company details.',
+  },
+  {
     name: 'Identity / Auth',
     description: 'Login, refresh, logout, current user, customer invite sign-in.',
   },

@@ -9,6 +9,7 @@ import type { ActorRef, LeadsGatewayPort } from '../../domain/leadsGateway.port.
 import type { NumberSequencePort } from '../../domain/numberSequence.port.js';
 import type { ProposalRepositoryPort } from '../../domain/proposal.repository.port.js';
 import type { PublicTokenPort } from '../../domain/publicToken.port.js';
+import type { ProposalSettingsPort } from '../../domain/settings.port.js';
 
 export function formatNumber(year: number, seq: number): string {
   return `VK-${year}-${String(seq).padStart(4, '0')}`;
@@ -20,7 +21,7 @@ export class CreateProposalUseCase {
     private readonly leads: LeadsGatewayPort,
     private readonly numbers: NumberSequencePort,
     private readonly tokens: PublicTokenPort,
-    private readonly defaultTerms: string,
+    private readonly settings: ProposalSettingsPort,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -48,7 +49,7 @@ export class CreateProposalUseCase {
       discount: input.discount,
       total,
       notes: input.notes ?? null,
-      terms: input.terms ?? this.defaultTerms,
+      terms: input.terms ?? (await this.settings.defaultTerms()),
       validUntil: input.validUntil ?? null,
       token: this.tokens.generate(),
       sentAt: null,

@@ -24,7 +24,7 @@ Endpoints (any signed-in user, always their own): `GET /api/notifications` (`unr
 2. **Push (FCM)** comes with the mobile app (needs a Firebase project): a `PushSender` port in the notifications module, so it slots in without touching anything else.
 
 ## Reminder rules
-All thresholds are env values in **days** (decimals allowed, e.g. `0.001` ≈ a minute, for demos and tests).
+All thresholds are **system settings** ([settings](settings.md)) in **days** (decimals allowed, e.g. `0.001` ≈ a minute, for demos and tests). The `.env` values (`REMINDER_*`, `LEAD_STUCK_DAYS`) are only the defaults; an Admin's change applies from the next run.
 
 | Rule | Fires when | Sent |
 |---|---|---|

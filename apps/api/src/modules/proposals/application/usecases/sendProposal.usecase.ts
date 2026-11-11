@@ -2,6 +2,7 @@ import { AppError } from '@/shared/errors/AppError.js';
 import { assertNotInPast, type Proposal } from '../../domain/proposal.entity.js';
 import type { ActorRef, LeadsGatewayPort } from '../../domain/leadsGateway.port.js';
 import type { ProposalRepositoryPort } from '../../domain/proposal.repository.port.js';
+import type { ProposalSettingsPort } from '../../domain/settings.port.js';
 import type {
   ProposalAccess,
   ProposalLinks,
@@ -27,6 +28,7 @@ export class SendProposalUseCase {
     private readonly leads: LeadsGatewayPort,
     private readonly links: ProposalLinks,
     private readonly views: ProposalViewBuilder,
+    private readonly settings: ProposalSettingsPort,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -53,7 +55,7 @@ export class SendProposalUseCase {
     return {
       view: view!,
       publicUrl: this.links.publicUrl(proposal.token),
-      whatsappUrl: this.links.whatsappUrl(proposal),
+      whatsappUrl: this.links.whatsappUrl(proposal, (await this.settings.company()).name),
     };
   }
 }

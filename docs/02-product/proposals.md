@@ -6,7 +6,7 @@ Proposals are generated **inside the software** (not uploaded PDFs). 2D/3D desig
 - `number` — `VK-<year>-<0001>`, sequential per year.
 - Link to the lead, plus a **snapshot** of the customer (name, phone, city, site address) so later lead edits never alter a proposal the customer already saw.
 - A **flat list of items**: title, optional description, quantity, unit price (whole rupees). Flat discount. No GST line — the default terms say prices exclude taxes.
-- `notes`, `terms` (default text, editable per proposal), optional `validUntil`.
+- `notes`, `terms` (the default comes from the **`proposals.defaultTerms` setting**, editable per proposal; changing it does not touch existing proposals), optional `validUntil`. The company block (name, tagline, address, phone) also comes from settings.
 - `status`: `DRAFT` → `SENT`. Seen tracking: `firstSeenAt`, `lastSeenAt`, `seenCount`.
 
 ## Rules

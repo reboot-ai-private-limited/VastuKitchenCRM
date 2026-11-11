@@ -19,12 +19,20 @@ function setup() {
       w.gateway,
       w.numbers,
       w.tokens,
-      'DEFAULT TERMS',
+      w.settings,
       w.now,
     ),
     update: new UpdateProposalUseCase(w.access, w.proposals, w.now),
     remove: new DeleteProposalUseCase(w.access, w.proposals),
-    send: new SendProposalUseCase(w.access, w.proposals, w.gateway, w.links, w.views, w.now),
+    send: new SendProposalUseCase(
+      w.access,
+      w.proposals,
+      w.gateway,
+      w.links,
+      w.views,
+      w.settings,
+      w.now,
+    ),
     duplicate: new DuplicateProposalUseCase(
       w.access,
       w.proposals,
@@ -33,7 +41,7 @@ function setup() {
       w.tokens,
       w.now,
     ),
-    getPublic: new GetPublicProposalUseCase(w.proposals, w.directory, w.now),
+    getPublic: new GetPublicProposalUseCase(w.proposals, w.directory, w.settings, w.now),
     seen: new RecordProposalSeenUseCase(w.proposals, w.gateway, w.events, w.now),
     get: new GetProposalUseCase(w.access, w.views),
     list: new ListProposalsUseCase(w.proposals, w.gateway, w.views),
@@ -260,7 +268,7 @@ describe('public page and seen tracking', () => {
       w.gateway,
       w.numbers,
       w.tokens,
-      'T',
+      w.settings,
       () => t,
     );
     const send = new SendProposalUseCase(
@@ -269,9 +277,10 @@ describe('public page and seen tracking', () => {
       w.gateway,
       w.links,
       w.views,
+      w.settings,
       () => t,
     );
-    const getPublic = new GetPublicProposalUseCase(w.proposals, w.directory, () => t);
+    const getPublic = new GetPublicProposalUseCase(w.proposals, w.directory, w.settings, () => t);
     const p = await create.execute(sales1, body({ validUntil: new Date('2026-11-12T00:00:00Z') }));
     await send.execute(sales1, p.id);
     expect((await getPublic.execute(p.token)).isExpired).toBe(false);

@@ -3,7 +3,7 @@
 ## Lifecycle
 Lead **Won** → project auto-created → design → site installation → **Final Delivery post** → **Deal Closed**.
 
-- A project is created **automatically** when a lead is won (one per won lead, idempotent). Its name defaults to "<customer>'s project" and its value to the lead's latest sent proposal total (Admin can edit both).
+- A project is created **automatically** when a lead is won (one per won lead, idempotent) — unless the Admin switches the **"create automatically" setting** off ([settings](../03-architecture/settings.md)): then Admins are alerted to create it by hand, and nothing is back-filled when it is turned on again. Its name defaults to "<customer>'s project" and its value to the lead's latest sent proposal total (Admin can edit both).
 - The Admin can also create a project **by hand**, for an existing customer or from a lead. A **customer can have any number of projects** (a repeat customer's wardrobes, a second kitchen). A manual project from a lead is linked to it; one for a repeat customer has no lead.
 - `stage`: `DESIGN → SITE → CLOSED`. `designStage`: `NOT_STARTED → IN_DESIGN → SHARED → APPROVED`.
 - **Closing** is Admin-only and needs a **Final Delivery post** with photos. A closed project takes no new posts; the Admin can reopen it.

@@ -1,9 +1,9 @@
 import type { Router } from 'express';
-import { env } from '@/config/env.js';
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
 import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
 import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
 import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
+import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import { RunRemindersUseCase } from './application/usecases/runReminders.usecase.js';
 import {
   IdentityAdminDirectory,
@@ -26,6 +26,7 @@ export interface RemindersDeps {
   proposals: ProposalsPublicContract;
   notifications: NotificationsPublicContract;
   identity: IdentityPublicContract;
+  settings: SettingsPublicContract;
 }
 
 export function buildRemindersContainer(deps: RemindersDeps): RemindersContainer {
@@ -34,11 +35,14 @@ export function buildRemindersContainer(deps: RemindersDeps): RemindersContainer
     new LeadsContractSource(deps.leads),
     new NotificationsContractNotifier(deps.notifications),
     new IdentityAdminDirectory(deps.identity),
-    {
-      unseenDays: env.REMINDER_UNSEEN_DAYS,
-      noActionDays: env.REMINDER_NO_ACTION_DAYS,
-      stuckDays: env.LEAD_STUCK_DAYS,
-      stagnantMax: env.REMINDER_STAGNANT_MAX,
+    async () => {
+      const [unseenDays, noActionDays, stuckDays, stagnantMax] = await Promise.all([
+        deps.settings.get('reminders.unseenDays'),
+        deps.settings.get('reminders.noActionDays'),
+        deps.settings.get('leads.stuckDays'),
+        deps.settings.get('reminders.stagnantMax'),
+      ]);
+      return { unseenDays, noActionDays, stuckDays, stagnantMax };
     },
   );
 

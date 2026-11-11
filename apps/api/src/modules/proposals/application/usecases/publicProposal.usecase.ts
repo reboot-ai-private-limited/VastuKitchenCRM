@@ -3,12 +3,15 @@ import { isExpired, type Proposal } from '../../domain/proposal.entity.js';
 import type { LeadsGatewayPort } from '../../domain/leadsGateway.port.js';
 import type { ProposalEventsPort } from '../../domain/proposalEvents.port.js';
 import type { ProposalRepositoryPort } from '../../domain/proposal.repository.port.js';
+import type { CompanyProfile, ProposalSettingsPort } from '../../domain/settings.port.js';
 import type { UserDirectoryPort } from '../../domain/userDirectory.port.js';
 
 export interface PublicProposalView {
   proposal: Proposal;
   isExpired: boolean;
   sentByName: string | null;
+  /** The company details printed on the page, as set by the Admin right now. */
+  company: CompanyProfile;
 }
 
 /**
@@ -19,6 +22,7 @@ export class GetPublicProposalUseCase {
   constructor(
     private readonly proposals: ProposalRepositoryPort,
     private readonly directory: UserDirectoryPort,
+    private readonly settings: ProposalSettingsPort,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -30,6 +34,7 @@ export class GetPublicProposalUseCase {
       proposal,
       isExpired: isExpired(proposal.validUntil, this.now()),
       sentByName: sender?.name ?? null,
+      company: await this.settings.company(),
     };
   }
 }

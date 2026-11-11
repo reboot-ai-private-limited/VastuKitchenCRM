@@ -34,7 +34,7 @@
  * the decision to make deliberately, not a side effect of scaffolding the module).
  */
 const MODULE_TIERS = [
-  ['health', 'config'], //                Tier 0 — no dependencies
+  ['health', 'config', 'settings'], //    Tier 0 — no dependencies (settings: Admin-editable values)
   ['identity'], //                        Tier 1 — users, roles, auth, customer magic link
   ['notifications', 'activity'], //       Tier 2 — in-app notifications / push; activity log
   ['leads', 'hr'], //                     Tier 3 — leads + calls + visits; employees, attendance, salary

@@ -102,6 +102,8 @@ export interface Alert {
   title: string;
   body: string;
   ref: NotificationRefDto;
+  /** Same key + same person = delivered once, however often it is sent. */
+  dedupeKey?: string;
 }
 
 /**
@@ -110,4 +112,10 @@ export interface Alert {
  */
 export interface AlertSenderPort {
   send(userIds: string[], alert: Alert): Promise<void>;
+}
+
+/** What projects needs from system settings (the adapter wraps the settings contract). */
+export interface ProjectSettingsPort {
+  /** Whether winning a lead creates its project automatically. Read each time it matters. */
+  autoCreateOnWon(): Promise<boolean>;
 }

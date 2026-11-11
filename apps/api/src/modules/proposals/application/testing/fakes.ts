@@ -9,6 +9,7 @@ import type {
   ProposalRepositoryPort,
   ReminderWindow,
 } from '../../domain/proposal.repository.port.js';
+import type { CompanyProfile, ProposalSettingsPort } from '../../domain/settings.port.js';
 import type { PublicTokenPort } from '../../domain/publicToken.port.js';
 import type { DirectoryUser, UserDirectoryPort } from '../../domain/userDirectory.port.js';
 import { ProposalAccess, ProposalLinks, ProposalViewBuilder } from '../services/proposalSupport.js';
@@ -162,6 +163,22 @@ export const sales1: ActorRef = { id: 'sales1', role: 'SALES' };
 export const sales2: ActorRef = { id: 'sales2', role: 'SALES' };
 export const admin: ActorRef = { id: 'admin1', role: 'ADMIN' };
 
+export class FakeSettings implements ProposalSettingsPort {
+  terms = 'DEFAULT TERMS';
+  companyProfile: CompanyProfile = {
+    name: 'Vaastu Kitchen',
+    tagline: 'Modular Kitchen & Furniture',
+    address: 'Siliguri',
+    phone: '+91 98004 88882',
+  };
+  async defaultTerms() {
+    return this.terms;
+  }
+  async company() {
+    return this.companyProfile;
+  }
+}
+
 export function world(now: () => Date = () => new Date('2026-11-10T10:00:00Z')) {
   const proposals = new FakeProposals();
   const gateway = new FakeGateway();
@@ -169,10 +186,23 @@ export function world(now: () => Date = () => new Date('2026-11-10T10:00:00Z')) 
   const events = new FakeEvents();
   const numbers = new FakeNumbers();
   const tokens = new FakeTokens();
-  const links = new ProposalLinks('https://admin.example.com/', 'Vaastu Kitchen');
+  const links = new ProposalLinks('https://admin.example.com/');
+  const settings = new FakeSettings();
   const access = new ProposalAccess(proposals, gateway);
   const views = new ProposalViewBuilder(directory, links);
-  return { proposals, gateway, directory, events, numbers, tokens, links, access, views, now };
+  return {
+    proposals,
+    gateway,
+    directory,
+    events,
+    numbers,
+    tokens,
+    links,
+    access,
+    views,
+    settings,
+    now,
+  };
 }
 
 export const item = (over = {}) => ({

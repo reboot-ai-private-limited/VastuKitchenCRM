@@ -7,7 +7,7 @@ All-in-one CRM for a modular kitchen & interior company: leads, proposals, proje
 1. [Vision](00-vision/brief-summary.md) — who the client is, what we build, goals. Raw notes: [original-notes.md](00-vision/original-notes.md) · [Branding](00-vision/branding.md)
 2. [MVP Scope](01-scope/mvp-scope.md) — in / out / open questions
 3. Product specs (`02-product/`): [Leads](02-product/leads.md) · [Proposals](02-product/proposals.md) · [Projects Feed](02-product/projects-feed.md) · [Complaints](02-product/complaints.md) · [HR](02-product/hr.md) · [Dashboard](02-product/dashboard.md)
-4. Architecture (`03-architecture/`): [Overview](03-architecture/overview.md) · [Data Model](03-architecture/data-model.md) · [Auth & Roles](03-architecture/auth-and-roles.md) · [Notifications & Cron](03-architecture/notifications-and-cron.md) · [Deployment](03-architecture/deployment.md)
+4. Architecture (`03-architecture/`): [Overview](03-architecture/overview.md) · [Data Model](03-architecture/data-model.md) · [Auth & Roles](03-architecture/auth-and-roles.md) · [Notifications & Cron](03-architecture/notifications-and-cron.md) · [Deployment](03-architecture/deployment.md) · [Settings](03-architecture/settings.md)
 5. Roadmap (`04-roadmap/`): [Roadmap](04-roadmap/roadmap.md) · [Risks](04-roadmap/risks.md)
 6. [Decisions (ADRs)](adr/) — why we chose what we chose
 7. Demo (`demo/`): [Demo script](demo/demo-script.md) · [Dummy data](demo/dummy-data.md)

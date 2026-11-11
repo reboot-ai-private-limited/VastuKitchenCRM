@@ -26,7 +26,13 @@ function setup() {
   const w = world();
   return {
     w,
-    fromWon: new CreateProjectFromWonLeadUseCase(w.projects, w.leads, w.proposals, w.alerts),
+    fromWon: new CreateProjectFromWonLeadUseCase(
+      w.projects,
+      w.leads,
+      w.proposals,
+      w.settings,
+      w.alerts,
+    ),
     create: new CreateProjectUseCase(
       w.projects,
       w.leads,
@@ -85,6 +91,42 @@ describe('creating a project when a lead is won', () => {
     expect(w.projects.rows).toHaveLength(1);
     expect(w.leads.events).toHaveLength(1);
     expect(w.sender.ofType('PROJECT_CREATED')).toHaveLength(1);
+  });
+});
+
+describe('the "create automatically" setting', () => {
+  it('creates nothing when switched off, and alerts every Admin instead — once per lead', async () => {
+    const { w, fromWon } = setup();
+    w.settings.autoCreate = false;
+    await fromWon.execute(won);
+
+    expect(w.projects.rows).toHaveLength(0);
+    expect(w.leads.events).toHaveLength(0);
+    const alerts = w.sender.ofType('LEAD_WON');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]?.userIds).toEqual(['admin1', 'admin2']);
+    expect(alerts[0]?.alert).toMatchObject({
+      ref: { kind: 'LEAD', id: 'lead1' },
+      dedupeKey: 'lead-won-no-project:lead1',
+    });
+  });
+
+  it('does not alert the Admin who marked the lead won', async () => {
+    const { w, fromWon } = setup();
+    w.settings.autoCreate = false;
+    await fromWon.execute({ ...won, byUserId: 'admin1' });
+    expect(w.sender.ofType('LEAD_WON')[0]?.userIds).toEqual(['admin2']);
+  });
+
+  it('applies from the next win: turning it back on does not create projects for earlier wins', async () => {
+    const { w, fromWon } = setup();
+    w.settings.autoCreate = false;
+    await fromWon.execute(won);
+    w.settings.autoCreate = true;
+    expect(w.projects.rows).toHaveLength(0); // nothing back-filled
+    await fromWon.execute({ ...won, leadId: 'lead2', name: 'Mr Das', customerId: 'cust2' });
+    expect(w.projects.rows).toHaveLength(1);
+    expect(w.projects.rows[0]?.wonLeadId).toBe('lead2');
   });
 });
 

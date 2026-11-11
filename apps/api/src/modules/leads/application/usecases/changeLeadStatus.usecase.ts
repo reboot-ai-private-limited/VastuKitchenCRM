@@ -1,5 +1,6 @@
 import type { ChangeLeadStatusBodyDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
+import { scopeFor } from '@/shared/access/scope.js';
 import type { LeadPatch } from '../../domain/lead.entity.js';
 import type { LeadActivityRepositoryPort } from '../../domain/leadActivity.repository.port.js';
 import type { LeadEventsPort } from '../../domain/leadEvents.port.js';
@@ -26,6 +27,11 @@ export class ChangeLeadStatusUseCase {
 
   async execute(actor: Actor, id: string, input: ChangeLeadStatusBodyDto): Promise<LeadView> {
     const lead = await this.access.load(id, actor);
+    // A won lead has a customer account and a project behind it. Only someone who sees every lead
+    // (the Admin) may move it back; the project is NOT deleted when they do.
+    if (lead.status === 'WON' && scopeFor(actor.role, 'leads') === 'assigned') {
+      throw AppError.forbidden('This lead is won. Ask an admin if its status needs to change.');
+    }
     if (lead.status === input.status) {
       throw AppError.badRequest(`This lead is already ${input.status}.`);
     }

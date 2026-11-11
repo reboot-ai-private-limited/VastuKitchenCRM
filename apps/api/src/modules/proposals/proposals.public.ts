@@ -24,4 +24,6 @@ export interface ProposalsPublicContract {
   findUnseenSent(window: ReminderWindow): Promise<SentProposalState[]>;
   /** Sent and opened, `firstSeenAt` in `(after, before)`. Oldest first. */
   findSeen(window: ReminderWindow): Promise<SentProposalState[]>;
+  /** Total (whole rupees) of the lead's most recently sent proposal, or null if none was sent. */
+  getLatestSentTotal(leadId: string): Promise<number | null>;
 }

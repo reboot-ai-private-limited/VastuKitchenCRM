@@ -15,6 +15,13 @@ export class UpdateLeadUseCase {
 
   async execute(actor: Actor, id: string, input: UpdateLeadBodyDto): Promise<LeadView> {
     const current = await this.access.load(id, actor);
+    // The customer signs in with this number, so on a won lead it is an identity change on the
+    // customer account, not a lead edit. Nobody changes it here.
+    if (current.status === 'WON' && input.phone !== undefined && input.phone !== current.phone) {
+      throw AppError.forbidden(
+        "A won lead's phone number cannot be changed here: the customer signs in with it.",
+      );
+    }
 
     if (input.phone !== undefined && input.phone !== current.phone) {
       const clash = await this.leads.findByPhone(input.phone);

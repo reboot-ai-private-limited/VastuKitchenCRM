@@ -6,7 +6,7 @@ export interface NotificationDoc {
   type: (typeof NOTIFICATION_TYPES)[number];
   title: string;
   body: string;
-  ref: { kind: (typeof NOTIFICATION_REF_KINDS)[number]; id: string } | null;
+  ref: { kind: (typeof NOTIFICATION_REF_KINDS)[number]; id: string; postId?: string } | null;
   dedupeKey: string | null;
   readAt: Date | null;
   createdAt: Date;
@@ -23,6 +23,7 @@ const schema = new Schema<NotificationDoc>(
         {
           kind: { type: String, enum: NOTIFICATION_REF_KINDS, required: true },
           id: { type: String, required: true },
+          postId: { type: String },
         },
         { _id: false },
       ),

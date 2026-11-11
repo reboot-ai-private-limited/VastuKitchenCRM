@@ -23,7 +23,7 @@ Role is **what you can do**. Two per-person attributes are separate:
 | Dashboard | full | HR counters | – | – | – | – | – |
 | Leads, calls, visits | all | – | assigned | – | – | add/view | – |
 | Proposals | all | – | own | – | – | – | view (link) |
-| Projects & feed | all | – | – | assigned | assigned | – | own (client tab) |
+| Projects & feed | all | – | summary + lead journey (own leads) | member | member | member | own (client tab) |
 | Complaints | all, assign | – | – | – | assigned | raise | raise/own |
 | Employees | all | non-Admin/HR | – | – | – | – | – |
 | Attendance (all staff) | ✅ | ✅ | – | – | – | – | – |

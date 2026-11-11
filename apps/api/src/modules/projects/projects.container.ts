@@ -1,0 +1,117 @@
+import type { Router } from 'express';
+import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
+import type { LeadsPublicContract } from '@/modules/leads/leads.public.js';
+import type { NotificationsPublicContract } from '@/modules/notifications/notifications.public.js';
+import type { ProposalsPublicContract } from '@/modules/proposals/proposals.public.js';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
+import { FeedViewBuilder } from './application/services/feedViews.js';
+import { ProjectAccess } from './application/services/projectAccess.js';
+import { ProjectAlerts } from './application/services/projectAlerts.js';
+import { ProjectViewBuilder } from './application/services/projectViews.js';
+import {
+  ApprovePostUseCase,
+  CreateCommentUseCase,
+  CreatePostUseCase,
+  DeleteCommentUseCase,
+  DeletePostUseCase,
+  GetJourneyUseCase,
+  ListCommentsUseCase,
+  ListPostsUseCase,
+  SignUploadUseCase,
+} from './application/usecases/feed.usecases.js';
+import {
+  ChangeDesignStageUseCase,
+  ChangeStageUseCase,
+  CloseProjectUseCase,
+  CreateProjectFromWonLeadUseCase,
+  CreateProjectUseCase,
+  GetProjectUseCase,
+  ListProjectsUseCase,
+  SetMembersUseCase,
+  UpdateProjectUseCase,
+} from './application/usecases/projects.usecases.js';
+import {
+  IdentityUserDirectory,
+  LeadsGateway,
+  NotificationsAlertSender,
+  ProposalsGateway,
+} from './infrastructure/gateways.adapter.js';
+import { MongoCommentRepository } from './infrastructure/mongoComment.adapter.js';
+import { MongoPostRepository } from './infrastructure/mongoPost.adapter.js';
+import { MongoProjectRepository } from './infrastructure/mongoProject.adapter.js';
+import * as c from './interface/projects.controller.js';
+import { buildProjectsRouter } from './interface/projects.route.js';
+import type { ProjectsPublicContract } from './projects.public.js';
+
+export interface ProjectsContainer {
+  contract: ProjectsPublicContract;
+  buildRouter: () => Router;
+}
+
+export interface ProjectsDeps {
+  /** Other modules' public contracts: the only ways projects reaches them. */
+  leads: LeadsPublicContract;
+  proposals: ProposalsPublicContract;
+  identity: IdentityPublicContract;
+  notifications: NotificationsPublicContract;
+  storage: StoragePort;
+}
+
+export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
+  // 1. Adapters
+  const projects = new MongoProjectRepository();
+  const posts = new MongoPostRepository();
+  const comments = new MongoCommentRepository();
+  const leads = new LeadsGateway(deps.leads);
+  const proposals = new ProposalsGateway(deps.proposals);
+  const directory = new IdentityUserDirectory(deps.identity);
+  const sender = new NotificationsAlertSender(deps.notifications);
+
+  // 2. Services and use cases, depending only on ports
+  const access = new ProjectAccess(projects, leads);
+  const alerts = new ProjectAlerts(sender, directory);
+  const projectViews = new ProjectViewBuilder(directory);
+  const feedViews = new FeedViewBuilder(directory, comments, deps.storage);
+
+  const fromWonLead = new CreateProjectFromWonLeadUseCase(projects, leads, proposals, alerts);
+
+  return {
+    contract: { createFromWonLead: (event) => fromWonLead.execute(event) },
+    buildRouter: () =>
+      buildProjectsRouter({
+        create: c.makeCreateProject(
+          new CreateProjectUseCase(projects, leads, proposals, directory, alerts, projectViews),
+        ),
+        list: c.makeListProjects(new ListProjectsUseCase(projects, leads, projectViews)),
+        get: c.makeGetProject(new GetProjectUseCase(access, projectViews)),
+        update: c.makeUpdateProject(new UpdateProjectUseCase(access, projects, projectViews)),
+        setMembers: c.makeSetMembers(
+          new SetMembersUseCase(access, projects, directory, alerts, projectViews),
+        ),
+        changeStage: c.makeChangeStage(new ChangeStageUseCase(access, projects, projectViews)),
+        changeDesignStage: c.makeChangeDesignStage(
+          new ChangeDesignStageUseCase(access, projects, projectViews),
+        ),
+        close: c.makeCloseProject(
+          new CloseProjectUseCase(access, projects, posts, leads, alerts, projectViews),
+        ),
+        journey: c.makeJourney(new GetJourneyUseCase(access, leads)),
+        signUpload: c.makeSignUpload(new SignUploadUseCase(access, deps.storage)),
+        listPosts: c.makeListPosts(new ListPostsUseCase(access, posts, feedViews)),
+        createPost: c.makeCreatePost(
+          new CreatePostUseCase(access, posts, deps.storage, alerts, directory, feedViews),
+        ),
+        deletePost: c.makeDeletePost(new DeletePostUseCase(access, posts)),
+        approvePost: c.makeApprovePost(
+          new ApprovePostUseCase(access, posts, alerts, directory, feedViews),
+        ),
+        listComments: c.makeListComments(
+          new ListCommentsUseCase(access, posts, comments, feedViews),
+        ),
+        createComment: c.makeCreateComment(
+          new CreateCommentUseCase(access, posts, comments, alerts, directory, feedViews),
+        ),
+        deleteComment: c.makeDeleteComment(new DeleteCommentUseCase(access, posts, comments)),
+      }),
+  };
+}

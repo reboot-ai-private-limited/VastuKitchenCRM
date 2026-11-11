@@ -99,6 +99,8 @@ export function buildProposalsContainer({
     contract: {
       findUnseenSent: (window) => reminderQueries.unseen(window),
       findSeen: (window) => reminderQueries.seen(window),
+      getLatestSentTotal: async (leadId) =>
+        (await proposals.findLatestSentByLead(leadId))?.total ?? null,
     },
     buildRouter: () =>
       buildProposalsRouter({

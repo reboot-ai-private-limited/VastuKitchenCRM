@@ -49,6 +49,8 @@ export const LEAD_ACTIVITY_TYPES = [
   'VISIT',
   'PROPOSAL_SENT',
   'PROPOSAL_SEEN',
+  'PROJECT_CREATED',
+  'PROJECT_CLOSED',
 ] as const;
 export const leadActivityTypeSchema = z.enum(LEAD_ACTIVITY_TYPES);
 export type LeadActivityType = z.infer<typeof leadActivityTypeSchema>;

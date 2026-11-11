@@ -6,7 +6,17 @@ import type { AppContainers } from './container.js';
  *
  * Handlers must be IDEMPOTENT: a handler that throws is only logged (the event bus), never retried.
  */
-export function registerSubscribers({ events, notifications }: AppContainers): void {
+export function registerSubscribers({ events, notifications, projects }: AppContainers): void {
+  // A lead was won → create its project. Idempotent (one per won lead), so a replay is harmless.
+  events.on('lead.won', async (e) => {
+    await projects.contract.createFromWonLead({
+      leadId: e.leadId,
+      customerId: e.customerId,
+      name: e.name,
+      byUserId: e.byUserId,
+    });
+  });
+
   // The customer opened a proposal → tell the person who sent it.
   events.on('proposal.seen', async (e) => {
     if (e.sentById === null) return;

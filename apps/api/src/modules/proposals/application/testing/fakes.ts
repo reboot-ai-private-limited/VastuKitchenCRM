@@ -79,6 +79,13 @@ export class FakeProposals implements ProposalRepositoryPort {
       )
       .slice(0, q.limit);
   }
+  async findLatestSentByLead(leadId: string) {
+    return (
+      this.rows
+        .filter((p) => p.leadId === leadId && p.status === 'SENT')
+        .sort((a, b) => (b.sentAt?.getTime() ?? 0) - (a.sentAt?.getTime() ?? 0))[0] ?? null
+    );
+  }
   async list(filter: ProposalListFilter) {
     this.lastFilter = filter;
     const items = this.rows.filter(

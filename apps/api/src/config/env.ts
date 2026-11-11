@@ -31,6 +31,16 @@ const schema = z.object({
   COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
   COOKIE_DOMAIN: z.string().min(1).optional(),
 
+  /**
+   * Photo/file storage (Cloudinary). Optional at boot: every other route works without it, and
+   * only signing an upload fails (with a clear 503). Put the real values in `.env`, never in git.
+   */
+  CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+  /** Every asset lives under this folder; use a different one per environment (e.g. vastu-dev). */
+  CLOUDINARY_FOLDER: z.string().min(1).default('vastu'),
+
   /** Where customer invite links point (the web app). */
   WEB_BASE_URL: z.string().url().default('http://localhost:3001'),
 

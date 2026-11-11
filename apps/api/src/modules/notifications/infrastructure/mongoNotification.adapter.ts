@@ -14,7 +14,9 @@ const toEntity = (doc: HydratedDocument<NotificationDoc>): Notification => ({
   type: doc.type,
   title: doc.title,
   body: doc.body,
-  ref: doc.ref ? { kind: doc.ref.kind, id: doc.ref.id } : null,
+  ref: doc.ref
+    ? { kind: doc.ref.kind, id: doc.ref.id, ...(doc.ref.postId ? { postId: doc.ref.postId } : {}) }
+    : null,
   dedupeKey: doc.dedupeKey,
   readAt: doc.readAt,
   createdAt: doc.createdAt,

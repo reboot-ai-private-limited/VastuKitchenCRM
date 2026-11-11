@@ -24,8 +24,12 @@ export type NewUser = Omit<User, 'id' | 'createdAt'>;
 export interface UserSummary {
   id: string;
   name: string;
+  /** 10 digits. */
+  phone: string;
   role: RoleName;
   designation: string | null;
+  /** False for a deactivated account (e.g. someone who must not be added to a project). */
+  active: boolean;
 }
 
 export interface UserListFilter {

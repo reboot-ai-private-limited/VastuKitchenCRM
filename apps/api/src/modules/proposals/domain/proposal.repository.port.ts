@@ -37,5 +37,7 @@ export interface ProposalRepositoryPort {
   findUnseenSent(query: ReminderWindow): Promise<Proposal[]>;
   /** SENT proposals whose `firstSeenAt` is in `(after, before)`. Oldest first, at most `limit`. */
   findSeen(query: ReminderWindow): Promise<Proposal[]>;
+  /** The most recently SENT proposal of a lead, or null. (Its total seeds a new project's value.) */
+  findLatestSentByLead(leadId: string): Promise<Proposal | null>;
   list(filter: ProposalListFilter): Promise<{ items: Proposal[]; total: number }>;
 }

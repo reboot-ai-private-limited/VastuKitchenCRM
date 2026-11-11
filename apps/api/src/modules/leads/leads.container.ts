@@ -14,6 +14,10 @@ import {
 import { CreateLeadUseCase } from './application/usecases/createLead.usecase.js';
 import { GetLeadUseCase } from './application/usecases/getLead.usecase.js';
 import { ImportLeadsUseCase } from './application/usecases/importLeads.usecase.js';
+import {
+  GetLeadJourneyUseCase,
+  RecordProjectEventUseCase,
+} from './application/usecases/projectHooks.usecase.js';
 import { ReminderQueriesUseCase } from './application/usecases/reminderQueries.usecase.js';
 import { ListLeadsUseCase } from './application/usecases/listLeads.usecase.js';
 import { GetLeadTimelineUseCase } from './application/usecases/timeline.usecase.js';
@@ -92,6 +96,8 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
   const listVisits = new ListVisitsUseCase(access, visits, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
   const reminderQueries = new ReminderQueriesUseCase(leads);
+  const recordProjectEvent = new RecordProjectEventUseCase(activities);
+  const getLeadJourney = new GetLeadJourneyUseCase(access, activities, directory);
   const getLeadForProposal = new GetLeadForProposalUseCase(access);
   const recordProposalSent = new RecordProposalSentUseCase(access, leads, activities);
   const recordProposalSeen = new RecordProposalSeenUseCase(activities);
@@ -104,6 +110,8 @@ export function buildLeadsContainer({ identity, events }: LeadsDeps): LeadsConta
       getLeadForProposal: (actor, leadId) => getLeadForProposal.execute(actor, leadId),
       recordProposalSent: (actor, leadId, info) => recordProposalSent.execute(actor, leadId, info),
       recordProposalSeen: (leadId, info) => recordProposalSeen.execute(leadId, info),
+      recordProjectEvent: (leadId, event) => recordProjectEvent.execute(leadId, event),
+      getLeadJourney: (actor, leadId) => getLeadJourney.execute(actor, leadId),
     },
     buildRouter: () =>
       buildLeadsRouter({

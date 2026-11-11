@@ -129,6 +129,12 @@ export class MongoProposalRepository implements ProposalRepositoryPort {
     return docs.map(toEntity);
   }
 
+  async findLatestSentByLead(leadId: string): Promise<Proposal | null> {
+    if (!isValidObjectId(leadId)) return null;
+    const doc = await ProposalModel.findOne({ leadId, status: 'SENT' }).sort({ sentAt: -1 });
+    return doc ? toEntity(doc) : null;
+  }
+
   async list(filter: ProposalListFilter): Promise<{ items: Proposal[]; total: number }> {
     const query: Record<string, unknown> = {};
     if (filter.leadId) {

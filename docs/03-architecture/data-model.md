@@ -14,9 +14,9 @@ Keep it flat; refine during build.
 | `leadActivities` | leadId, type (`CREATED`/`ASSIGNED`/`STATUS_CHANGED`/`CALL`/`VISIT`), byUserId, at, data |
 | `proposals` | number (unique), leadId, status, customer snapshot, title, items[{title,description,quantity,unitPrice,lineTotal}], subtotal, discount, total, notes, terms, validUntil, token (unique), sentAt, sentById, firstSeenAt, lastSeenAt, seenCount, createdById |
 | `counters` | _id (`proposal-<year>`), seq — atomic number sequence |
-| `projects` | leadId, customerId, name, value, stage (`design`/`site`/`delivered`), designStage, designerId, closedAt |
-| `posts` | projectId, authorId, text, photos[], visibility (`client`/`internal`), createdAt |
-| `comments` | postId, authorId, text, createdAt |
+| `projects` | name, customerId, leadId?, wonLeadId? (unique when set: one auto project per won lead), siteAddress, value, stage (`DESIGN`/`SITE`/`CLOSED`), designStage, designerId, memberIds[], createdById, closedAt |
+| `projectposts` | projectId, authorId, visibility (`CLIENT`/`TEAM`), kind (`UPDATE`/`FINAL_DELIVERY`), text, images[{publicId,width,height,bytes}], approvedById/approvedAt, commentCount, deletedAt |
+| `projectcomments` | postId, projectId, authorId, text, deletedAt |
 | `complaints` | customerId/projectId, description, photos[], raisedBy, assignedTo, status, resolutionNote, resolutionPhoto |
 | `attendance` | userId, date, inAt, outAt, method (`gps`/`biometric_sim`), location |
 | `salaries` | userId, month, fixed, presentDays, workingDays, payable (editable), finalised |

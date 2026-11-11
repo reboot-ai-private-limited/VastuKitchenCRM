@@ -68,9 +68,10 @@ describe('ChangeLeadStatusUseCase', () => {
       },
     ]);
 
-    // Away and back: no second customer lookup, no second announcement (no second project).
-    await change.execute(sales1, lead.id, { status: 'FOLLOW_UP' });
-    await change.execute(sales1, lead.id, { status: 'WON' });
+    // Away and back (only an Admin may move a won lead): no second customer lookup, no second
+    // announcement, so no second project.
+    await change.execute(admin, lead.id, { status: 'FOLLOW_UP' });
+    await change.execute(admin, lead.id, { status: 'WON' });
     expect(w.events.won).toHaveLength(1);
     expect(w.directory.customersCreated).toHaveLength(1);
   });
@@ -82,5 +83,25 @@ describe('ChangeLeadStatusUseCase', () => {
       statusCode: 404,
     });
     await expect(change.execute(admin, lead.id, { status: 'CONTACTED' })).resolves.toBeDefined();
+  });
+
+  it('locks a won lead against Sales (403) but not against the Admin; the project is not touched', async () => {
+    const { w, change } = setup();
+    const lead = await addLead(w);
+    await change.execute(sales1, lead.id, { status: 'WON' });
+
+    await expect(change.execute(sales1, lead.id, { status: 'FOLLOW_UP' })).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(w.leads.rows[0]?.status).toBe('WON');
+    await expect(change.execute(admin, lead.id, { status: 'FOLLOW_UP' })).resolves.toBeDefined();
+    expect(w.events.won).toHaveLength(1);
+  });
+
+  it('keeps Lost leads reopenable by Sales', async () => {
+    const { w, change } = setup();
+    const lead = await addLead(w);
+    await change.execute(sales1, lead.id, { status: 'LOST', lostReason: 'Price' });
+    await expect(change.execute(sales1, lead.id, { status: 'FOLLOW_UP' })).resolves.toBeDefined();
   });
 });

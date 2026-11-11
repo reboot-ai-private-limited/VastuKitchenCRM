@@ -7,15 +7,23 @@ export const NOTIFICATION_TYPES = [
   'PROPOSAL_NO_ACTION',
   'LEAD_STAGNANT',
   'LEAD_ASSIGNED',
+  'PROJECT_CREATED',
+  'PROJECT_ASSIGNED',
+  'PROJECT_POST',
+  'PROJECT_COMMENT',
+  'PROJECT_APPROVED',
+  'PROJECT_CLOSED',
 ] as const;
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
 
 /** What a notification points at, so the app can open the right screen. */
-export const NOTIFICATION_REF_KINDS = ['LEAD', 'PROPOSAL'] as const;
+export const NOTIFICATION_REF_KINDS = ['LEAD', 'PROPOSAL', 'PROJECT'] as const;
 export const notificationRefSchema = z.object({
   kind: z.enum(NOTIFICATION_REF_KINDS),
   id: z.string(),
+  /** For a project: the post to open (and scroll to), when there is one. */
+  postId: z.string().optional(),
 });
 export type NotificationRefDto = z.infer<typeof notificationRefSchema>;
 

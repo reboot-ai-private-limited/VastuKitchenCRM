@@ -8,6 +8,15 @@ export interface LeadState {
   assignedToId: string | null;
 }
 
+export interface LeadJourneyEntry {
+  id: string;
+  type: string;
+  at: Date;
+  byUserId: string | null;
+  byName: string | null;
+  data: Record<string, unknown>;
+}
+
 export interface LeadActor {
   id: string;
   role: RoleName;
@@ -51,4 +60,16 @@ export interface LeadsPublicContract {
   recordProposalSent(actor: LeadActor, leadId: string, info: { number: string }): Promise<void>;
   /** Logs that the customer opened the proposal (no actor: it happened on the public page). */
   recordProposalSeen(leadId: string, info: { number: string }): Promise<void>;
+
+  /** A project was created or closed for this lead: adds it to the lead's timeline. */
+  recordProjectEvent(
+    leadId: string,
+    event: {
+      type: 'PROJECT_CREATED' | 'PROJECT_CLOSED';
+      projectName: string;
+      byUserId: string | null;
+    },
+  ): Promise<void>;
+  /** The lead's story, oldest first, if `actor` may access the lead; otherwise NOT FOUND. */
+  getLeadJourney(actor: LeadActor, leadId: string): Promise<LeadJourneyEntry[]>;
 }

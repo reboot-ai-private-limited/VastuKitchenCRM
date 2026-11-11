@@ -48,6 +48,14 @@ const TAGS = [
     name: 'Reminders',
     description: 'The time-based reminder rules; Admin can run them on demand.',
   },
+  {
+    name: 'Projects',
+    description: 'Projects (auto-created from won leads, or made by hand), members, stages, close.',
+  },
+  {
+    name: 'Projects / Feed',
+    description: 'Photo posts, comments, customer approval and signed uploads.',
+  },
   { name: 'Proposals', description: 'Draft, edit, send (WhatsApp link) and track proposals.' },
   {
     name: 'Proposals / Public',

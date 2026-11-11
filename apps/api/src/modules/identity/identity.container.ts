@@ -112,13 +112,17 @@ export function buildIdentityContainer(): IdentityContainer {
   const summarise = (u: {
     id: string;
     name: string;
+    phone: string;
     role: RoleName;
     designation: string | null;
+    active: boolean;
   }) => ({
     id: u.id,
     name: u.name,
+    phone: u.phone,
     role: u.role,
     designation: u.designation,
+    active: u.active,
   });
 
   return {

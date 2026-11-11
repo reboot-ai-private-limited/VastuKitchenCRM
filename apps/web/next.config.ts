@@ -1,0 +1,34 @@
+import path from 'node:path';
+import type { NextConfig } from 'next';
+
+// Where the Express API lives. The browser only ever talks to THIS site: `/api/*` is proxied to the
+// API, so the httpOnly refresh cookie is same-origin (no CORS, no third-party cookie problems).
+const API_ORIGIN = process.env.API_ORIGIN ?? 'http://localhost:4000';
+const dev = process.env.NODE_ENV !== 'production';
+
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: dev ? 'SAMEORIGIN' : 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+  {
+    key: 'Content-Security-Policy',
+    value: `frame-ancestors ${dev ? "'self'" : "'none'"}; base-uri 'self'; object-src 'none'; form-action 'self'`,
+  },
+];
+
+const nextConfig: NextConfig = {
+  // The contracts package ships TypeScript source (no build step).
+  transpilePackages: ['@vastu/contracts'],
+  async rewrites() {
+    return [{ source: '/api/:path*', destination: `${API_ORIGIN}/api/:path*` }];
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
+  images: { remotePatterns: [{ protocol: 'https', hostname: 'res.cloudinary.com' }] },
+  turbopack: { root: path.resolve(import.meta.dirname, '../..') },
+};
+
+export default nextConfig;

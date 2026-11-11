@@ -100,6 +100,8 @@ export const dashboardAttentionSchema = z.object({
   overdueTodos: attentionBlockSchema,
 });
 
+export type DashboardAttentionDto = z.infer<typeof dashboardAttentionSchema>;
+
 export const recentFeedItemSchema = z.object({
   kind: z.enum(['POST', 'COMMENT', 'APPROVAL']),
   at: z.string(),
@@ -110,6 +112,8 @@ export const recentFeedItemSchema = z.object({
   snippet: z.string().nullable(),
   hasPhotos: z.boolean(),
 });
+
+export type RecentFeedItemDto = z.infer<typeof recentFeedItemSchema>;
 
 export const DASHBOARD_BLOCKS = ['counters', 'staff', 'people', 'attention', 'recent'] as const;
 export type DashboardBlockName = (typeof DASHBOARD_BLOCKS)[number];

@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Light first; dark mode is phase 2 (docs/05-design/design-system.md). */
+
+/* Tailwind utilities read these CSS variables. Never hardcode hex in components: use tokens. */
+@theme inline {
+  --font-sans: var(--font-jost), "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Semantic colours: a badge is always a tinted background with dark text of the same hue. */
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-neutral: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-orange: var(--orange);
+  --color-orange-soft: var(--orange-soft);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #f6f3ee;
+  --foreground: #2d241d;
+  --card: #ffffff;
+  --card-foreground: #2d241d;
+  --popover: #ffffff;
+  --popover-foreground: #2d241d;
+
+  --primary: #0e8f78;
+  --primary-hover: #0b7563;
+  --primary-soft: #e6f4f1;
+  --primary-foreground: #ffffff;
+  --secondary: #efeae3;
+  --secondary-foreground: #2d241d;
+  --muted: #efeae3;
+  /* Darker than the brand's #9a8b7e so body-size secondary text passes AA contrast. */
+  --muted-foreground: #7a6c60;
+  --accent: #e6f4f1;
+  --accent-foreground: #0b7563;
+  --destructive: #c0392b;
+  --border: #e6dfd7;
+  --input: #e6dfd7;
+  --ring: #0e8f78;
+
+  --sidebar: #fbf9f6;
+  --sidebar-foreground: #2d241d;
+  --sidebar-primary: #0e8f78;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e6f4f1;
+  --sidebar-accent-foreground: #0b7563;
+  --sidebar-border: #e6dfd7;
+  --sidebar-ring: #0e8f78;
+
+  --info: #1d5fa8;
+  --info-soft: #e8f1fb;
+  --success: #1e7a46;
+  --success-soft: #e7f5ec;
+  --warning: #9a6200;
+  --warning-soft: #fdf3dc;
+  --danger: #b3261e;
+  --danger-soft: #fbe9e7;
+  --neutral: #5c5148;
+  --neutral-soft: #efeae3;
+  --violet: #5b3fa6;
+  --violet-soft: #efeafb;
+  --orange: #a24a10;
+  --orange-soft: #fcebdd;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans text-sm antialiased;
+    line-height: 1.5;
+  }
+  /* Money, counts and phone numbers line up. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

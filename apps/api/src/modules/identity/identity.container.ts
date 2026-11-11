@@ -88,7 +88,13 @@ export function buildIdentityContainer(): IdentityContainer {
     customerDays: env.CUSTOMER_REFRESH_TTL_DAYS,
   });
   const login = new LoginUseCase(users, hasher, issuer);
-  const refresh = new RefreshSessionUseCase(sessions, users, tokens, issuer);
+  const refresh = new RefreshSessionUseCase(
+    sessions,
+    users,
+    tokens,
+    issuer,
+    env.REFRESH_GRACE_SECONDS * 1000,
+  );
   const logout = new LogoutUseCase(sessions, tokens);
   const getUser = new GetUserUseCase(users);
   const changePassword = new ChangePasswordUseCase(users, hasher, sessions);

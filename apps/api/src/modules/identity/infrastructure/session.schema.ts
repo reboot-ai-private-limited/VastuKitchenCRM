@@ -7,6 +7,8 @@ export interface SessionDoc {
   client: (typeof CLIENT_KINDS)[number];
   expiresAt: Date;
   revokedAt: Date | null;
+  rotatedAt: Date | null;
+  graceUsedAt: Date | null;
 }
 
 const schema = new Schema<SessionDoc>(
@@ -16,6 +18,8 @@ const schema = new Schema<SessionDoc>(
     client: { type: String, enum: CLIENT_KINDS, required: true },
     expiresAt: { type: Date, required: true },
     revokedAt: { type: Date, default: null },
+    rotatedAt: { type: Date, default: null },
+    graceUsedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

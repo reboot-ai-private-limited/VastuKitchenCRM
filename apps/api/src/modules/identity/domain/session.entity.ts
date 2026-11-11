@@ -8,6 +8,10 @@ export interface Session {
   client: ClientKind;
   expiresAt: Date;
   revokedAt: Date | null;
+  /** Set when the token was spent by a refresh (not by logout/revoke-all): only these may be replayed in the grace window. */
+  rotatedAt: Date | null;
+  /** Set when the one allowed grace replay was used. */
+  graceUsedAt: Date | null;
 }
 
-export type NewSession = Omit<Session, 'id' | 'revokedAt'>;
+export type NewSession = Omit<Session, 'id' | 'revokedAt' | 'rotatedAt' | 'graceUsedAt'>;

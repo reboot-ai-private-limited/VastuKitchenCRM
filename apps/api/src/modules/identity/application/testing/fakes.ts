@@ -93,7 +93,13 @@ export class FakeSessions implements SessionRepositoryPort {
   rows: Session[] = [];
   private seq = 0;
   async create(s: NewSession) {
-    const created: Session = { ...s, id: `s${++this.seq}`, revokedAt: null };
+    const created: Session = {
+      ...s,
+      id: `s${++this.seq}`,
+      revokedAt: null,
+      rotatedAt: null,
+      graceUsedAt: null,
+    };
     this.rows.push(created);
     return created;
   }
@@ -104,6 +110,20 @@ export class FakeSessions implements SessionRepositoryPort {
     const s = this.rows.find((x) => x.tokenHash === h && !x.revokedAt && x.expiresAt > now);
     if (!s) return null;
     s.revokedAt = now;
+    s.rotatedAt = now;
+    return s;
+  }
+  async claimGrace(h: string, now: Date, windowMs: number) {
+    const s = this.rows.find(
+      (x) =>
+        x.tokenHash === h &&
+        x.rotatedAt &&
+        x.rotatedAt.getTime() >= now.getTime() - windowMs &&
+        !x.graceUsedAt &&
+        x.expiresAt > now,
+    );
+    if (!s) return null;
+    s.graceUsedAt = now;
     return s;
   }
   async revokeByTokenHash(h: string) {

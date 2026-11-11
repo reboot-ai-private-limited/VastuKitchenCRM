@@ -26,6 +26,8 @@ const schema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  /** A just-rotated refresh token may be replayed once within this many seconds. 0 disables it. */
+  REFRESH_GRACE_SECONDS: z.coerce.number().int().min(0).max(60).default(10),
   /** Customers open a link and stay signed in, so their sessions are longer. */
   CUSTOMER_REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(90),
   CUSTOMER_INVITE_TTL_DAYS: z.coerce.number().int().positive().default(7),

@@ -41,7 +41,7 @@ Role is **what you can do**. Two per-person attributes are separate:
 
 ## Tokens
 - **Access token:** JWT (HS256), 15 min, payload `{ sub, role }`, sent as `Authorization: Bearer`.
-- **Refresh token:** opaque random value, stored **hashed** server-side, 30 days (customers 90), **rotated on every refresh**. Presenting an already-used token is treated as theft and revokes all of that user's sessions.
+- **Refresh token:** opaque random value, stored **hashed** server-side, 30 days (customers 90), **rotated on every refresh**. Presenting an already-used token is treated as theft and revokes all of that user's sessions, **except** for a one-time grace replay: within `REFRESH_GRACE_SECONDS` (default 10, `0` = off) of a rotation, the spent token is accepted once more and gets a *fresh* token pair (raw tokens are never stored, so it cannot be the same successor) without revoking anything. A second replay, or one after the window, is theft. Tokens revoked by logout, password change or deactivation are never eligible.
 - **Delivery by client**, chosen with the `X-Client` header (`web` | `mobile`, required on login/refresh):
   - `web` → refresh token in an httpOnly cookie (`SameSite=Strict`, `Secure` in prod, path `/api/identity/auth`); never in the body. The required custom header doubles as CSRF protection.
   - `mobile` → refresh token in the JSON body; the app keeps it in secure storage.

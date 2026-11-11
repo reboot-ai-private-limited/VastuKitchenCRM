@@ -1,6 +1,15 @@
 'use client';
 
-import { ArrowLeft, Clock, FileText, MapPin, MessageCircle, Phone, Plus } from 'lucide-react';
+import {
+  ArrowLeft,
+  Clock,
+  FileText,
+  MapPin,
+  MessageCircle,
+  Pencil,
+  Phone,
+  Plus,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { EmptyState } from '@/components/common/empty-state';
@@ -20,6 +29,7 @@ import { useAuth } from '@/lib/auth';
 import { describeActivity } from '@/lib/lead-activity';
 import { formatDate, formatDuration, formatINR, formatTime, relativeAge } from '@/lib/format';
 import { SOURCE_LABEL, formatPhone, leadPermissions, telUrl, whatsappUrl } from '@/lib/leads';
+import { EditLeadDialog } from './edit-lead-dialog';
 import { AssignDialog, StatusDialog } from './lead-dialogs';
 
 export function LeadDetail({ id }: { id: string }) {
@@ -27,7 +37,7 @@ export function LeadDetail({ id }: { id: string }) {
   const can = leadPermissions(user?.role);
   const lead = useLead(id);
   const projects = useLeadProjects(id, lead.data?.status === 'WON');
-  const [dialog, setDialog] = useState<'status' | 'assign' | null>(null);
+  const [dialog, setDialog] = useState<'status' | 'assign' | 'edit' | null>(null);
   const [tab, setTab] = useState('timeline');
   // Office has no call or visit log access; those tabs are for Admin and Sales.
   const seesLogs = user?.role === 'ADMIN' || user?.role === 'SALES';
@@ -78,6 +88,11 @@ export function LeadDetail({ id }: { id: string }) {
                 onClick={() => setDialog('status')}
               >
                 Change status
+              </Button>
+            )}
+            {can.edit && !locked && (
+              <Button variant="outline" onClick={() => setDialog('edit')}>
+                <Pencil /> Edit
               </Button>
             )}
             {can.assign && (
@@ -186,6 +201,7 @@ export function LeadDetail({ id }: { id: string }) {
       </div>
 
       {dialog === 'status' && <StatusDialog lead={l} onClose={() => setDialog(null)} />}
+      {dialog === 'edit' && <EditLeadDialog lead={l} onClose={() => setDialog(null)} />}
       {dialog === 'assign' && <AssignDialog lead={l} onClose={() => setDialog(null)} />}
     </PageBody>
   );

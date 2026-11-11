@@ -1,4 +1,10 @@
-import { LEAD_SOURCES, LEAD_STATUSES, type LeadSource, type LeadStatus, type RoleName } from '@vastu/contracts';
+import {
+  LEAD_SOURCES,
+  LEAD_STATUSES,
+  type LeadSource,
+  type LeadStatus,
+  type RoleName,
+} from '@vastu/contracts';
 
 export const SOURCE_LABEL: Record<LeadSource, string> = {
   WEBSITE: 'Website',
@@ -41,6 +47,7 @@ export interface LeadFilters {
   assignedTo: string | null;
   stuck: boolean;
   page: number;
+  view: 'table' | 'board';
 }
 
 export const DEFAULT_FILTERS: LeadFilters = {
@@ -50,6 +57,7 @@ export const DEFAULT_FILTERS: LeadFilters = {
   assignedTo: null,
   stuck: false,
   page: 1,
+  view: 'table',
 };
 
 const oneOf = <T extends string>(list: readonly T[], v: string | null): T | null =>
@@ -65,6 +73,7 @@ export function parseFilters(params: { get(name: string): string | null }): Lead
     assignedTo: params.get('assigned') || null,
     stuck: params.get('stuck') === '1',
     page: Number.isFinite(page) && page >= 1 ? page : 1,
+    view: params.get('view') === 'board' ? 'board' : 'table',
   };
 }
 
@@ -77,12 +86,14 @@ export function filtersToSearch(f: LeadFilters): string {
   if (f.assignedTo) p.set('assigned', f.assignedTo);
   if (f.stuck) p.set('stuck', '1');
   if (f.page > 1) p.set('page', String(f.page));
+  if (f.view === 'board') p.set('view', 'board');
   const s = p.toString();
   return s ? `?${s}` : '';
 }
 
 /** `https://wa.me/91XXXXXXXXXX`: the API stores 10-digit numbers. */
-export const whatsappUrl = (phone: string): string => `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`;
+export const whatsappUrl = (phone: string): string =>
+  `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`;
 export const telUrl = (phone: string): string => `tel:+91${phone.replace(/\D/g, '').slice(-10)}`;
 
 /** `98765 43210` for reading; the stored value stays 10 plain digits. */

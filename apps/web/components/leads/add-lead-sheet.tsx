@@ -1,14 +1,32 @@
 'use client';
 
-import { LEAD_SOURCES, createLeadBodySchema, type CreateLeadBodyDto, type LeadSource } from '@vastu/contracts';
+import {
+  LEAD_SOURCES,
+  createLeadBodySchema,
+  type CreateLeadBodyDto,
+  type LeadSource,
+} from '@vastu/contracts';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
 import { useCreateLead } from '@/lib/api/leads';
@@ -23,9 +41,23 @@ interface Form {
   notes: string;
   source: LeadSource | '';
 }
-const EMPTY: Form = { name: '', phone: '', altPhone: '', email: '', city: '', notes: '', source: '' };
+const EMPTY: Form = {
+  name: '',
+  phone: '',
+  altPhone: '',
+  email: '',
+  city: '',
+  notes: '',
+  source: '',
+};
 
-export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function AddLeadSheet({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
@@ -54,7 +86,8 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
     const parsed = createLeadBodySchema.safeParse(raw);
     if (!parsed.success) {
       const next: Record<string, string> = {};
-      for (const issue of parsed.error.issues) next[String(issue.path[0] ?? '')] ||= friendly(String(issue.path[0]), issue.message);
+      for (const issue of parsed.error.issues)
+        next[String(issue.path[0] ?? '')] ||= friendly(String(issue.path[0]), issue.message);
       setErrors(next);
       return;
     }
@@ -71,7 +104,10 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
           if (id) setDuplicateId(id);
         } else if (err instanceof ApiError && Object.keys(err.fieldErrors).length > 0) {
           setErrors(err.fieldErrors);
-        } else setBanner(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+        } else
+          setBanner(
+            err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+          );
       },
     });
   }
@@ -115,7 +151,11 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
               </p>
             )}
             {field('name', 'Name *', { autoComplete: 'off', maxLength: 120 })}
-            {field('phone', 'Phone *', { inputMode: 'tel', placeholder: '10-digit mobile', autoComplete: 'off' })}
+            {field('phone', 'Phone *', {
+              inputMode: 'tel',
+              placeholder: '10-digit mobile',
+              autoComplete: 'off',
+            })}
             <div className="space-y-1.5">
               <Label htmlFor="lead-source">Source *</Label>
               <Select value={form.source} onValueChange={(v) => set('source', v as LeadSource)}>
@@ -137,12 +177,22 @@ export function AddLeadSheet({ open, onOpenChange }: { open: boolean; onOpenChan
             {field('city', 'City', { autoComplete: 'off', maxLength: 500 })}
             <div className="space-y-1.5">
               <Label htmlFor="lead-notes">Notes</Label>
-              <Textarea id="lead-notes" value={form.notes} maxLength={2000} onChange={(e) => set('notes', e.target.value)} />
+              <Textarea
+                id="lead-notes"
+                value={form.notes}
+                maxLength={2000}
+                onChange={(e) => set('notes', e.target.value)}
+              />
               {errors.notes && <p className="text-danger text-xs">{errors.notes}</p>}
             </div>
           </div>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => close(false)} disabled={create.isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => close(false)}
+              disabled={create.isPending}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={create.isPending}>

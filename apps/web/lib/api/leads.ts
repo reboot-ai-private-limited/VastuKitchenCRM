@@ -1,10 +1,17 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import type {
   AssignLeadBodyDto,
   CallDto,
   ChangeLeadStatusBodyDto,
+  LeadStatus,
   CreateLeadBodyDto,
   LeadActivityDto,
   LeadDto,
@@ -14,11 +21,12 @@ import type {
   UserDto,
 } from '@vastu/contracts';
 import type { LeadFilters } from '@/lib/leads';
+import { addToBoard, movedLead, removeFromBoard, type BoardData } from '@/lib/board';
 import { api } from './client';
 
 export const PAGE_SIZE = 20;
 
-export const useLeads = (f: LeadFilters) =>
+export const useLeads = (f: LeadFilters, enabled = true) =>
   useQuery({
     queryKey: ['leads', 'list', f],
     queryFn: ({ signal }) =>
@@ -35,6 +43,7 @@ export const useLeads = (f: LeadFilters) =>
         signal,
       }),
     placeholderData: keepPreviousData,
+    enabled,
   });
 
 export const useLead = (id: string) =>
@@ -82,7 +91,8 @@ export function useCreateLead() {
 export function useUpdateLead(id: string) {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (body: UpdateLeadBodyDto) => api<LeadDto>(`/leads/${id}`, { method: 'PATCH', body }),
+    mutationFn: (body: UpdateLeadBodyDto) =>
+      api<LeadDto>(`/leads/${id}`, { method: 'PATCH', body }),
     onSuccess: invalidate,
   });
 }
@@ -118,3 +128,52 @@ export const useLeadVisits = (id: string, enabled: boolean) =>
     queryFn: ({ signal }) => api<VisitDto[]>(`/leads/${id}/visits`, { signal }),
     enabled,
   });
+
+export const BOARD_PAGE_SIZE = 50;
+
+/** One board column: its own paged query, so "load more" and the count are per column. */
+export const useBoardColumn = (status: LeadStatus, f: LeadFilters) =>
+  useInfiniteQuery({
+    queryKey: ['leads', 'board', status, f.search, f.source, f.assignedTo, f.stuck],
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      api<PaginatedDto<LeadDto>>('/leads', {
+        query: {
+          page: pageParam,
+          pageSize: BOARD_PAGE_SIZE,
+          status,
+          search: f.search,
+          source: f.source,
+          assignedTo: f.assignedTo,
+          stuck: f.stuck ? 'true' : undefined,
+        },
+        signal,
+      }),
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
+  });
+
+/** A drag that needs no extra input: moves the card at once, rolls back (and says so) if the API refuses. */
+export function useMoveLead() {
+  const qc = useQueryClient();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ lead, to }: { lead: LeadDto; to: LeadStatus }) =>
+      api<LeadDto>(`/leads/${lead.id}/status`, { method: 'POST', body: { status: to } }),
+    onMutate: async ({ lead, to }) => {
+      await qc.cancelQueries({ queryKey: ['leads', 'board'] });
+      const snapshot = qc.getQueriesData<BoardData>({ queryKey: ['leads', 'board'] });
+      const moved = movedLead(lead, to);
+      for (const [key, data] of snapshot) {
+        if (!data) continue;
+        const column = key[2];
+        if (column === lead.status) qc.setQueryData<BoardData>(key, removeFromBoard(data, lead.id));
+        else if (column === to) qc.setQueryData<BoardData>(key, addToBoard(data, moved));
+      }
+      return { snapshot };
+    },
+    onError: (_e, _v, ctx) => {
+      for (const [key, data] of ctx?.snapshot ?? []) qc.setQueryData(key, data);
+    },
+    onSettled: invalidate,
+  });
+}

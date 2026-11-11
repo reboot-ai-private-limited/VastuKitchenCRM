@@ -28,7 +28,8 @@ export function LeadDetail({ id }: { id: string }) {
   // Office has no call or visit log access; those tabs are for Admin and Sales.
   const seesLogs = user?.role === 'ADMIN' || user?.role === 'SALES';
 
-  if (lead.isError && lead.error instanceof ApiError && lead.error.isNotFound) return <NotFoundView />;
+  if (lead.isError && lead.error instanceof ApiError && lead.error.isNotFound)
+    return <NotFoundView />;
   if (lead.isError) return <ErrorState error={lead.error} onRetry={() => lead.refetch()} />;
   if (lead.isPending) {
     return (
@@ -44,7 +45,10 @@ export function LeadDetail({ id }: { id: string }) {
   return (
     <PageBody>
       <div>
-        <Link href="/leads" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs">
+        <Link
+          href="/leads"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+        >
           <ArrowLeft className="size-3.5" aria-hidden /> Leads
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
@@ -62,7 +66,12 @@ export function LeadDetail({ id }: { id: string }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {can.changeStatus && (
-              <Button variant="outline" disabled={locked} title={locked ? 'Won leads are locked' : undefined} onClick={() => setDialog('status')}>
+              <Button
+                variant="outline"
+                disabled={locked}
+                title={locked ? 'Won leads are locked' : undefined}
+                onClick={() => setDialog('status')}
+              >
                 Change status
               </Button>
             )}
@@ -134,7 +143,11 @@ export function LeadDetail({ id }: { id: string }) {
             <Row label="Created">{formatDate(l.createdAt)}</Row>
             {l.lostReason && <Row label="Lost because">{l.lostReason}</Row>}
           </dl>
-          {l.customerId && <p className="text-success bg-success-soft mt-3 rounded-md p-2 text-xs">Customer account created. Won leads are locked.</p>}
+          {l.customerId && (
+            <p className="text-success bg-success-soft mt-3 rounded-md p-2 text-xs">
+              Customer account created. Won leads are locked.
+            </p>
+          )}
         </aside>
       </div>
 
@@ -144,7 +157,9 @@ export function LeadDetail({ id }: { id: string }) {
   );
 }
 
-const Panel = ({ children }: { children: ReactNode }) => <div className="bg-card shadow-card mt-3 overflow-hidden rounded-xl border">{children}</div>;
+const Panel = ({ children }: { children: ReactNode }) => (
+  <div className="bg-card shadow-card mt-3 overflow-hidden rounded-xl border">{children}</div>
+);
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex items-baseline justify-between gap-4 px-0 py-2 first:pt-0 last:pb-0 [&:is(dl_dl_*)]:px-0">
@@ -169,7 +184,11 @@ function Timeline({ id }: { id: string }) {
               <p className="font-medium">{title}</p>
               {detail && <p className="text-muted-foreground text-xs">{detail}</p>}
             </div>
-            <time dateTime={a.at} className="text-muted-foreground shrink-0 text-xs" title={`${formatDate(a.at)}, ${formatTime(a.at)}`}>
+            <time
+              dateTime={a.at}
+              className="text-muted-foreground shrink-0 text-xs"
+              title={`${formatDate(a.at)}, ${formatTime(a.at)}`}
+            >
               {relativeAge(a.at)}
             </time>
           </li>
@@ -183,14 +202,30 @@ function Calls({ id, active }: { id: string; active: boolean }) {
   const q = useLeadCalls(id, active);
   if (q.isPending) return <ListSkeleton />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
-  if (q.data.length === 0) return <EmptyState icon={Phone} title="No calls logged" description="Calls are logged automatically by the phone app." />;
+  if (q.data.length === 0)
+    return (
+      <EmptyState
+        icon={Phone}
+        title="No calls logged"
+        description="Calls are logged automatically by the phone app."
+      />
+    );
   return (
     <ul className="divide-y">
       {q.data.map((c) => (
         <li key={c.id} className="flex gap-3 px-4 py-3">
-          <Phone className={c.answered ? 'text-success mt-0.5 size-4 shrink-0' : 'text-muted-foreground mt-0.5 size-4 shrink-0'} aria-hidden />
+          <Phone
+            className={
+              c.answered
+                ? 'text-success mt-0.5 size-4 shrink-0'
+                : 'text-muted-foreground mt-0.5 size-4 shrink-0'
+            }
+            aria-hidden
+          />
           <div className="min-w-0 flex-1">
-            <p className="font-medium">{c.answered ? `Answered, ${formatDuration(c.durationSec)}` : 'Not answered'}</p>
+            <p className="font-medium">
+              {c.answered ? `Answered, ${formatDuration(c.durationSec)}` : 'Not answered'}
+            </p>
             <p className="text-muted-foreground text-xs">
               {c.user.name}
               {c.outcome ? ` · ${c.outcome.replace('_', ' ').toLowerCase()}` : ''}
@@ -210,7 +245,14 @@ function Visits({ id, active }: { id: string; active: boolean }) {
   const q = useLeadVisits(id, active);
   if (q.isPending) return <ListSkeleton />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
-  if (q.data.length === 0) return <EmptyState icon={MapPin} title="No visits logged" description="Visits are checked in from the phone app." />;
+  if (q.data.length === 0)
+    return (
+      <EmptyState
+        icon={MapPin}
+        title="No visits logged"
+        description="Visits are checked in from the phone app."
+      />
+    );
   return (
     <ul className="divide-y">
       {q.data.map((v) => (
@@ -220,7 +262,12 @@ function Visits({ id, active }: { id: string; active: boolean }) {
             <p className="font-medium">{v.user.name}</p>
             <p className="text-muted-foreground text-xs">
               {v.note ?? 'No note'} ·{' '}
-              <a className="underline" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}>
+              <a
+                className="underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
+              >
                 Map
               </a>
             </p>

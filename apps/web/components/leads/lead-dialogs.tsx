@@ -13,13 +13,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
 import { useAssignLead, useChangeLeadStatus, useSalesUsers } from '@/lib/api/leads';
 import { STATUS_LABEL } from '@/lib/leads';
 
-const message = (e: unknown) => (e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+const message = (e: unknown) =>
+  e instanceof ApiError ? e.message : 'Something went wrong. Please try again.';
 
 /** Any → any. Lost needs a reason; Won asks for confirmation because it is final. */
 export function StatusDialog({
@@ -87,17 +94,29 @@ export function StatusDialog({
           {lost && (
             <div className="space-y-1.5">
               <Label htmlFor="lost-reason">Why was this lost?</Label>
-              <Textarea id="lost-reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Went with another vendor" />
+              <Textarea
+                id="lost-reason"
+                value={reason}
+                maxLength={500}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="e.g. Went with another vendor"
+              />
             </div>
           )}
           {status === 'WON' && !unchanged && (
             <p className="bg-primary-soft text-primary-hover rounded-md p-3 text-sm">
-              Marking this lead as won creates the customer account and, if enabled in settings, the project. A won lead is then locked.
+              Marking this lead as won creates the customer account and, if enabled in settings, the
+              project. A won lead is then locked.
             </p>
           )}
           <div className="space-y-1.5">
             <Label htmlFor="status-note">Note (optional)</Label>
-            <Textarea id="status-note" value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />
+            <Textarea
+              id="status-note"
+              value={note}
+              maxLength={1000}
+              onChange={(e) => setNote(e.target.value)}
+            />
           </div>
           {error && (
             <p role="alert" className="text-danger text-sm">
@@ -174,7 +193,10 @@ export function AssignDialog({ lead, onClose }: { lead: LeadDto; onClose: () => 
           <Button variant="outline" onClick={onClose} disabled={assign.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={assign.isPending || userId === (lead.assignedTo?.id ?? NONE)}>
+          <Button
+            onClick={submit}
+            disabled={assign.isPending || userId === (lead.assignedTo?.id ?? NONE)}
+          >
             {assign.isPending ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>

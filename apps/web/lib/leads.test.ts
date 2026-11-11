@@ -5,7 +5,7 @@ const params = (q: string) => new URLSearchParams(q);
 
 describe('lead filters in the URL', () => {
   it('round-trips', () => {
-    const f = { ...DEFAULT_FILTERS, search: 'sharma', status: 'VISIT' as const, source: 'JUSTDIAL' as const, assignedTo: 'me', stuck: true, page: 3 };
+    const f = { ...DEFAULT_FILTERS, search: 'sharma', status: 'VISIT' as const, source: 'JUSTDIAL' as const, assignedTo: 'me', stuck: true, page: 3, view: 'board' as const };
     expect(parseFilters(params(filtersToSearch(f)))).toEqual(f);
   });
   it('omits defaults', () => {

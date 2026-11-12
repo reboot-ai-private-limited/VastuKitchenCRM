@@ -218,7 +218,7 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   </div>
 );
 
-function Timeline({ id }: { id: string }) {
+export function Timeline({ id }: { id: string }) {
   const q = useLeadTimeline(id);
   if (q.isPending) return <ListSkeleton />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;

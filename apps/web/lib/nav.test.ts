@@ -11,6 +11,7 @@ describe('navigation per role (docs/05-design/layout-and-navigation.md)', () => 
       'Dashboard',
       'Leads',
       'Proposals',
+      'Customers',
       'Projects',
       'To-dos',
       'Complaints',
@@ -29,12 +30,20 @@ describe('navigation per role (docs/05-design/layout-and-navigation.md)', () => 
     expect(labels('SALES')).toEqual([
       'Leads',
       'Proposals',
+      'Customers',
       'Projects',
       'To-dos',
       'Complaints',
       'Attendance',
     ]);
-    expect(labels('OFFICE')).toEqual(['Leads', 'Projects', 'To-dos', 'Complaints', 'Attendance']);
+    expect(labels('OFFICE')).toEqual([
+      'Leads',
+      'Customers',
+      'Projects',
+      'To-dos',
+      'Complaints',
+      'Attendance',
+    ]);
     expect(labels('DESIGNER')).toEqual(['Projects', 'To-dos', 'Complaints', 'Attendance']);
     expect(labels('TECHNICIAN')).toEqual(['Projects', 'To-dos', 'Complaints', 'Attendance']);
   });

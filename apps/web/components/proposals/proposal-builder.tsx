@@ -1,6 +1,11 @@
 'use client';
 
-import { findBuiltinTemplate, DEFAULT_PROPOSAL_TEMPLATE_KEY, type LeadDto, type ProposalDto } from '@vastu/contracts';
+import {
+  findBuiltinTemplate,
+  DEFAULT_PROPOSAL_TEMPLATE_KEY,
+  type LeadDto,
+  type ProposalDto,
+} from '@vastu/contracts';
 import { ArrowDown, ArrowUp, Plus, Save, Send, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -424,29 +429,32 @@ export function ProposalBuilder({
           <p className="text-muted-foreground mb-2 text-xs font-medium">
             Live preview: what the customer will see
           </p>
-          <TemplateDocument
-            template={template}
-            doc={{
-              number: proposal?.number,
-              title: form.title.trim() || 'Untitled proposal',
-              issuedAt: proposal?.createdAt ?? null,
-              validUntil: form.validUntil || null,
-              customer: {
-                name: customer?.name ?? '',
-                city: customer?.city ?? null,
-                siteAddress: form.siteAddress.trim() || null,
-              },
-              items: totals.items.map((i, n) => ({ ...i, lineTotal: totals.lines[n] ?? 0 })),
-              subtotal: totals.subtotal,
-              discount: previewDiscount(form),
-              total: totals.total,
-              notes: form.notes.trim() || null,
-              terms:
-                form.terms.trim() ||
-                (proposal ? '' : 'The company’s default terms will appear here.'),
-              sentBy: proposal?.createdBy?.name ?? null,
-            }}
-          />
+          {/* A fixed-height window: the pages scroll inside it, like the chat, so the form never moves. */}
+          <div className="bg-secondary/60 max-h-[calc(100dvh-9rem)] min-h-80 space-y-0 overflow-y-auto overscroll-contain rounded-xl border p-3">
+            <TemplateDocument
+              template={template}
+              doc={{
+                number: proposal?.number,
+                title: form.title.trim() || 'Untitled proposal',
+                issuedAt: proposal?.createdAt ?? null,
+                validUntil: form.validUntil || null,
+                customer: {
+                  name: customer?.name ?? '',
+                  city: customer?.city ?? null,
+                  siteAddress: form.siteAddress.trim() || null,
+                },
+                items: totals.items.map((i, n) => ({ ...i, lineTotal: totals.lines[n] ?? 0 })),
+                subtotal: totals.subtotal,
+                discount: previewDiscount(form),
+                total: totals.total,
+                notes: form.notes.trim() || null,
+                terms:
+                  form.terms.trim() ||
+                  (proposal ? '' : 'The company’s default terms will appear here.'),
+                sentBy: proposal?.createdBy?.name ?? null,
+              }}
+            />
+          </div>
         </div>
       </div>
 

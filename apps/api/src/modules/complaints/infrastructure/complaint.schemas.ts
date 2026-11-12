@@ -35,6 +35,20 @@ const eventSchema = new Schema<ComplaintEventDoc>(
   { _id: false },
 );
 
+export interface ComplaintCommentDoc {
+  _id: Types.ObjectId;
+  authorId: Types.ObjectId;
+  text: string | null;
+  images: ImageRefDoc[];
+  createdAt: Date;
+}
+const commentSchema = new Schema<ComplaintCommentDoc>({
+  authorId: { type: Schema.Types.ObjectId, required: true },
+  text: { type: String, default: null },
+  images: { type: [imageSchema], default: [] },
+  createdAt: { type: Date, required: true },
+});
+
 export interface ComplaintDoc {
   projectId: Types.ObjectId;
   customerId: Types.ObjectId;
@@ -51,6 +65,7 @@ export interface ComplaintDoc {
   closedAt: Date | null;
   reopenCount: number;
   events: ComplaintEventDoc[];
+  comments: ComplaintCommentDoc[];
   createdAt: Date;
 }
 
@@ -71,6 +86,7 @@ const complaintSchema = new Schema<ComplaintDoc>(
     closedAt: { type: Date, default: null },
     reopenCount: { type: Number, default: 0 },
     events: { type: [eventSchema], default: [] },
+    comments: { type: [commentSchema], default: [] },
   },
   { timestamps: true },
 );

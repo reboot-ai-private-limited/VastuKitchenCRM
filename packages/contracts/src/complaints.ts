@@ -33,6 +33,18 @@ export const complaintEventSchema = z.object({
 });
 export type ComplaintEventDto = z.infer<typeof complaintEventSchema>;
 
+/** A message in a complaint's conversation. Everyone who can see the complaint can read and write. */
+export const complaintCommentSchema = z.object({
+  id: z.string(),
+  author: person.extend({ isCustomer: z.boolean() }),
+  text: z.string().nullable(),
+  images: z.array(imageSchema),
+  createdAt: z.string(),
+  /** The author or an Admin. */
+  canDelete: z.boolean(),
+});
+export type ComplaintCommentDto = z.infer<typeof complaintCommentSchema>;
+
 export const complaintSchema = z.object({
   id: z.string(),
   projectId: z.string(),
@@ -52,6 +64,8 @@ export const complaintSchema = z.object({
   /** How many times it was reopened after being resolved. */
   reopenCount: z.number().int(),
   history: z.array(complaintEventSchema),
+  /** The conversation, oldest first. */
+  comments: z.array(complaintCommentSchema),
   /** What the caller may do right now, so clients never re-derive the rules. */
   can: z.object({
     assign: z.boolean(),
@@ -66,6 +80,20 @@ const text = (max: number) => z.string().trim().min(1).max(max);
 const photos = z.array(imageInputSchema).max(MAX_COMPLAINT_IMAGES).optional();
 
 export const complaintIdParamsSchema = z.object({ complaintId: z.string().min(1) });
+export const complaintCommentParamsSchema = z.object({
+  complaintId: z.string().min(1),
+  commentId: z.string().min(1),
+});
+
+export const addComplaintCommentBodySchema = z
+  .object({
+    text: z.string().trim().min(1).max(2000).optional(),
+    images: z.array(imageInputSchema).max(MAX_IMAGES_PER_COMMENT).optional(),
+  })
+  .refine((v) => v.text !== undefined || (v.images?.length ?? 0) > 0, {
+    message: 'Write something or add a photo',
+  });
+export type AddComplaintCommentBodyDto = z.infer<typeof addComplaintCommentBodySchema>;
 /** Ask for a photo-upload ticket for a complaint about this project. */
 export const signComplaintUploadBodySchema = z.object({ projectId: z.string().min(1) });
 

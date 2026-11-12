@@ -11,6 +11,18 @@ export interface ComplaintEvent {
   assigneeId: string | null;
 }
 
+export interface ComplaintComment {
+  id: string;
+  authorId: string;
+  text: string | null;
+  images: StoredImageRef[];
+  createdAt: Date;
+}
+
+export type NewComplaintComment = Pick<ComplaintComment, 'authorId' | 'text' | 'images'> & {
+  at: Date;
+};
+
 export interface Complaint {
   id: string;
   projectId: string;
@@ -31,6 +43,8 @@ export interface Complaint {
   closedAt: Date | null;
   reopenCount: number;
   events: ComplaintEvent[];
+  /** The conversation, oldest first. */
+  comments: ComplaintComment[];
 }
 
 export type NewComplaint = Pick<

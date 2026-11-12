@@ -17,6 +17,15 @@ export interface ImageView {
   height: number | null;
 }
 
+export interface CommentView {
+  id: string;
+  author: Person & { isCustomer: boolean };
+  text: string | null;
+  images: ImageView[];
+  createdAt: Date;
+  canDelete: boolean;
+}
+
 export interface ComplaintView {
   complaint: Complaint;
   status: ComplaintStatus;
@@ -33,6 +42,7 @@ export interface ComplaintView {
     note: string | null;
     assignee: Person | null;
   }>;
+  comments: CommentView[];
   can: ComplaintAbilities;
 }
 
@@ -50,6 +60,7 @@ export class ComplaintViewBuilder {
       userIds.add(c.customerId);
       if (c.raisedById) userIds.add(c.raisedById);
       if (c.assignedToId) userIds.add(c.assignedToId);
+      for (const m of c.comments) userIds.add(m.authorId);
       for (const e of c.events) {
         if (e.actorId) userIds.add(e.actorId);
         if (e.assigneeId) userIds.add(e.assigneeId);
@@ -86,6 +97,17 @@ export class ComplaintViewBuilder {
         actor: maybe(e.actorId),
         note: e.note,
         assignee: maybe(e.assigneeId),
+      })),
+      comments: c.comments.map((m) => ({
+        id: m.id,
+        author: {
+          ...person(m.authorId),
+          isCustomer: userById.get(m.authorId)?.role === 'CUSTOMER',
+        },
+        text: m.text,
+        images: images(m.images),
+        createdAt: m.createdAt,
+        canDelete: viewer.role === 'ADMIN' || m.authorId === viewer.id,
       })),
       can: this.access.abilities(c, viewer),
     }));

@@ -29,6 +29,14 @@ export const toComplaintDto = (v: ComplaintView): ComplaintDto => {
       note: h.note,
       assignee: h.assignee,
     })),
+    comments: v.comments.map((m) => ({
+      id: m.id,
+      author: m.author,
+      text: m.text,
+      images: m.images,
+      createdAt: m.createdAt.toISOString(),
+      canDelete: m.canDelete,
+    })),
     can: v.can,
   };
 };

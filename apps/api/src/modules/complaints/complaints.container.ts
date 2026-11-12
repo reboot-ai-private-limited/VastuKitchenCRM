@@ -7,9 +7,11 @@ import { ComplaintAccess } from './application/services/complaintAccess.js';
 import { ComplaintAlerts } from './application/services/complaintAlerts.js';
 import { ComplaintViewBuilder } from './application/services/complaintViews.js';
 import {
+  AddComplaintCommentUseCase,
   AssignComplaintUseCase,
   CloseComplaintUseCase,
   CountComplaintsUseCase,
+  DeleteComplaintCommentUseCase,
   FindStaleComplaintsUseCase,
   GetComplaintUseCase,
   ListComplaintsUseCase,
@@ -120,6 +122,21 @@ export function buildComplaintsContainer(deps: ComplaintsDeps): ComplaintsContai
         ),
         close: c.makeClose(
           new CloseComplaintUseCase(access, complaints, projects, directory, views, alerts, now),
+        ),
+        addComment: c.makeAddComment(
+          new AddComplaintCommentUseCase(
+            access,
+            complaints,
+            projects,
+            directory,
+            deps.storage,
+            alerts,
+            views,
+            now,
+          ),
+        ),
+        deleteComment: c.makeDeleteComment(
+          new DeleteComplaintCommentUseCase(access, complaints, views),
         ),
       }),
   };

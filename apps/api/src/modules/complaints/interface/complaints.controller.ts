@@ -5,9 +5,11 @@ import { asyncHandler } from '@/shared/http/asyncHandler.js';
 import { sendSuccess } from '@/shared/http/response.util.js';
 import type { Viewer } from '../domain/complaint.entity.js';
 import type {
+  AddComplaintCommentUseCase,
   AssignComplaintUseCase,
   CloseComplaintUseCase,
   CountComplaintsUseCase,
+  DeleteComplaintCommentUseCase,
   GetComplaintUseCase,
   ListComplaintsUseCase,
   RaiseComplaintUseCase,
@@ -89,3 +91,23 @@ export const makeReopen = (uc: ReopenComplaintUseCase): RequestHandler =>
   change(uc as Change, 'Complaint reopened.');
 export const makeClose = (uc: CloseComplaintUseCase): RequestHandler =>
   change(uc as Change, 'Complaint closed.');
+
+export const makeAddComment = (uc: AddComplaintCommentUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    sendSuccess(
+      req,
+      res,
+      toComplaintDto(await uc.execute(actorOf(req), id(req), req.body)),
+      'Message sent.',
+    );
+  });
+
+export const makeDeleteComment = (uc: DeleteComplaintCommentUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    sendSuccess(
+      req,
+      res,
+      toComplaintDto(await uc.execute(actorOf(req), id(req), String(req.params['commentId']))),
+      'Message removed.',
+    );
+  });

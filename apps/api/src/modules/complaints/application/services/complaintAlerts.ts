@@ -68,6 +68,32 @@ export class ComplaintAlerts {
     });
   }
 
+  /** A message: tell the other people on the complaint; the team hears when the customer writes. */
+  async commented(
+    c: Complaint,
+    projectName: string,
+    actorId: string,
+    actorName: string,
+    text: string,
+    byCustomer: boolean,
+  ) {
+    await this.deliver(
+      [
+        c.customerId,
+        c.raisedById,
+        c.assignedToId,
+        ...(byCustomer ? await this.directory.activeAdminIds() : []),
+      ],
+      actorId,
+      {
+        type: 'COMPLAINT_COMMENT',
+        title: `New message on a complaint — ${projectName}`,
+        body: `${actorName}: ${snippet(text)}`,
+        ref: this.ref(c),
+      },
+    );
+  }
+
   async closed(c: Complaint, projectName: string, actorId: string) {
     await this.deliver([c.customerId], actorId, {
       type: 'COMPLAINT_CLOSED',

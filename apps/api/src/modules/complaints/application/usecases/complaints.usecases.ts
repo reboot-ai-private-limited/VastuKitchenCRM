@@ -1,4 +1,5 @@
 import type {
+  AddComplaintCommentBodyDto,
   AssignComplaintBodyDto,
   CloseComplaintBodyDto,
   ComplaintCountsDto,
@@ -448,5 +449,70 @@ export class FindStaleComplaintsUseCase {
 
   async execute(before: Date, limit: number) {
     return this.complaints.findStale(before, limit);
+  }
+}
+
+/** Anyone who can see the complaint may write in it, until it is closed. */
+export class AddComplaintCommentUseCase {
+  constructor(
+    private readonly access: ComplaintAccess,
+    private readonly complaints: ComplaintRepositoryPort,
+    private readonly projects: ProjectsGatewayPort,
+    private readonly directory: UserDirectoryPort,
+    private readonly storage: StoragePort,
+    private readonly alerts: ComplaintAlerts,
+    private readonly views: ComplaintViewBuilder,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
+
+  async execute(
+    actor: Viewer,
+    complaintId: string,
+    input: AddComplaintCommentBodyDto,
+  ): Promise<ComplaintView> {
+    const c = await this.access.load(complaintId, actor);
+    if (c.status === 'CLOSED')
+      throw AppError.conflict('This complaint is closed, so it takes no new messages.');
+    const images = projectImages(this.storage, c.projectId, input.images);
+    const updated = await this.complaints.addComment(c.id, {
+      authorId: actor.id,
+      text: input.text ?? null,
+      images,
+      at: this.now(),
+    });
+    if (!updated) throw AppError.conflict('This complaint was just closed.');
+
+    const [[me], names] = await Promise.all([
+      this.directory.find([actor.id]),
+      this.projects.names([c.projectId]),
+    ]);
+    await this.alerts.commented(
+      updated,
+      names[0]?.name ?? 'Project',
+      actor.id,
+      me?.name ?? 'Someone',
+      input.text ?? 'Sent a photo',
+      actor.role === 'CUSTOMER',
+    );
+    return (await this.views.build([updated], actor))[0]!;
+  }
+}
+
+/** The author, or an Admin, removes a message. */
+export class DeleteComplaintCommentUseCase {
+  constructor(
+    private readonly access: ComplaintAccess,
+    private readonly complaints: ComplaintRepositoryPort,
+    private readonly views: ComplaintViewBuilder,
+  ) {}
+
+  async execute(actor: Viewer, complaintId: string, commentId: string): Promise<ComplaintView> {
+    const c = await this.access.load(complaintId, actor);
+    const comment = c.comments.find((m) => m.id === commentId);
+    if (!comment) throw AppError.notFound('Message not found.');
+    if (actor.role !== 'ADMIN' && comment.authorId !== actor.id) throw AppError.forbidden();
+    const updated = await this.complaints.removeComment(c.id, commentId);
+    if (!updated) throw AppError.notFound('Message not found.');
+    return (await this.views.build([updated], actor))[0]!;
   }
 }

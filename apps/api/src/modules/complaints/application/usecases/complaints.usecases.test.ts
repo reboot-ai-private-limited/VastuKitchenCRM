@@ -422,3 +422,75 @@ describe('the reminder scan', () => {
     expect(await resolved.w.complaints.findStale(later, 10)).toHaveLength(0);
   });
 });
+
+describe('the complaint conversation', () => {
+  it('anyone who can see the complaint writes in it, oldest first, with who wrote it', async () => {
+    const { w, id } = await inState('ASSIGNED');
+    await w.addComment.execute(A.customer, id, { text: 'Still stuck, please come today' });
+    await w.addComment.execute(A.tech, id, { text: 'On my way', images: [photo('arrived')] });
+    // Seen by the customer: they can delete only their own message.
+    const v = await w.addComment.execute(A.customer, id, { text: 'Thank you' });
+    expect(v.comments.map((m) => [m.author.name, m.author.isCustomer, m.text])).toEqual([
+      ['customer', true, 'Still stuck, please come today'],
+      ['tech', false, 'On my way'],
+      ['customer', true, 'Thank you'],
+    ]);
+    expect(v.comments[1]?.images).toHaveLength(1);
+    expect(v.comments.map((m) => m.canDelete)).toEqual([true, false, true]);
+  });
+
+  it('people who cannot see the complaint cannot write in it', async () => {
+    const { w, id } = await inState('ASSIGNED');
+    await expect(w.addComment.execute(A.customer2, id, { text: 'hi' })).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    await expect(w.addComment.execute(A.tech2, id, { text: 'hi' })).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it('photos must come from this project', async () => {
+    const { w, id } = await inState('ASSIGNED');
+    await expect(
+      w.addComment.execute(A.customer, id, {
+        images: [{ publicId: 'vastu-test/projects/other/x', width: 1, height: 1 }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('tells the other people on it, the team when the customer writes, never the writer', async () => {
+    const { w, id } = await inState('ASSIGNED');
+    await w.addComment.execute(A.customer, id, { text: 'Any update?' });
+    expect(w.sender.to(ID.tech, 'COMPLAINT_COMMENT')).toHaveLength(1);
+    expect(w.sender.to(ID.admin, 'COMPLAINT_COMMENT')).toHaveLength(1);
+    expect(w.sender.to(ID.customer)).toHaveLength(0);
+
+    w.sender.clear();
+    await w.addComment.execute(A.tech, id, { text: 'Tomorrow morning' });
+    expect(w.sender.to(ID.customer, 'COMPLAINT_COMMENT')).toHaveLength(1);
+    expect(w.sender.to(ID.tech)).toHaveLength(0);
+    expect(w.sender.to(ID.admin)).toHaveLength(0); // only told when the customer writes
+  });
+
+  it('a closed complaint takes no new messages', async () => {
+    const { w, id } = await inState('RESOLVED');
+    await w.close.execute(A.admin, id, {});
+    await expect(w.addComment.execute(A.customer, id, { text: 'one more' })).rejects.toMatchObject({
+      statusCode: 409,
+    });
+  });
+
+  it('the author or an Admin removes a message, nobody else', async () => {
+    const { w, id } = await inState('ASSIGNED');
+    const v = await w.addComment.execute(A.customer, id, { text: 'oops wrong place' });
+    const mid = v.comments[0]!.id;
+    await expect(w.deleteComment.execute(A.tech, id, mid)).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    await expect(w.deleteComment.execute(A.customer, id, hex(7))).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    const after = await w.deleteComment.execute(A.customer, id, mid);
+    expect(after.comments).toHaveLength(0);
+  });
+});

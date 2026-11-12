@@ -4,6 +4,7 @@ import type {
   Complaint,
   ComplaintFilter,
   NewComplaint,
+  NewComplaintComment,
   Transition,
 } from '../domain/complaint.entity.js';
 import type { ComplaintRepositoryPort } from '../domain/ports.js';
@@ -35,6 +36,13 @@ const toComplaint = (d: HydratedDocument<ComplaintDoc>): Complaint => ({
     actorId: idOrNull(e.actorId),
     note: e.note,
     assigneeId: idOrNull(e.assigneeId),
+  })),
+  comments: (d.comments ?? []).map((m) => ({
+    id: m._id.toString(),
+    authorId: m.authorId.toString(),
+    text: m.text,
+    images: m.images.map((i) => ({ ...i })),
+    createdAt: m.createdAt,
   })),
 });
 
@@ -119,6 +127,29 @@ export class MongoComplaintRepository implements ComplaintRepositoryPort {
         $push: { events: event },
         ...(t.incReopen ? { $inc: { reopenCount: 1 } } : {}),
       },
+      { new: true },
+    );
+    return d ? toComplaint(d) : null;
+  }
+
+  async addComment(id: string, c: NewComplaintComment): Promise<Complaint | null> {
+    const d = await ComplaintModel.findOneAndUpdate(
+      { _id: oid(id), status: { $ne: 'CLOSED' } },
+      {
+        $push: {
+          comments: { authorId: oid(c.authorId), text: c.text, images: c.images, createdAt: c.at },
+        },
+      },
+      { new: true },
+    );
+    return d ? toComplaint(d) : null;
+  }
+
+  async removeComment(id: string, commentId: string): Promise<Complaint | null> {
+    if (!Types.ObjectId.isValid(commentId)) return null;
+    const d = await ComplaintModel.findByIdAndUpdate(
+      id,
+      { $pull: { comments: { _id: oid(commentId) } } },
       { new: true },
     );
     return d ? toComplaint(d) : null;

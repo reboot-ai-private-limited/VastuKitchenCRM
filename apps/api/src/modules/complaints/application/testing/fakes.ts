@@ -5,6 +5,7 @@ import type {
   Complaint,
   ComplaintFilter,
   NewComplaint,
+  NewComplaintComment,
   Transition,
 } from '../../domain/complaint.entity.js';
 import type {
@@ -20,9 +21,11 @@ import { ComplaintAccess } from '../services/complaintAccess.js';
 import { ComplaintAlerts } from '../services/complaintAlerts.js';
 import { ComplaintViewBuilder } from '../services/complaintViews.js';
 import {
+  AddComplaintCommentUseCase,
   AssignComplaintUseCase,
   CloseComplaintUseCase,
   CountComplaintsUseCase,
+  DeleteComplaintCommentUseCase,
   ListComplaintsUseCase,
   RaiseComplaintUseCase,
   RaiseRules,
@@ -60,6 +63,7 @@ export class FakeComplaints implements ComplaintRepositoryPort {
       closedAt: null,
       reopenCount: 0,
       events: [{ type: 'RAISED', at: i.at, actorId: i.raisedById, note: null, assigneeId: null }],
+      comments: [],
     };
     this.rows.push(c);
     return structuredClone(c);
@@ -96,6 +100,24 @@ export class FakeComplaints implements ComplaintRepositoryPort {
     if (t.incReopen) c.reopenCount++;
     c.events.push(t.event);
     return structuredClone(c);
+  }
+  async addComment(id: string, c: NewComplaintComment) {
+    const row = this.rows.find((x) => x.id === id);
+    if (!row || row.status === 'CLOSED') return null;
+    row.comments.push({
+      id: hex(++this.seq + 9000),
+      authorId: c.authorId,
+      text: c.text,
+      images: c.images,
+      createdAt: c.at,
+    });
+    return structuredClone(row);
+  }
+  async removeComment(id: string, commentId: string) {
+    const row = this.rows.find((x) => x.id === id);
+    if (!row) return null;
+    row.comments = row.comments.filter((m) => m.id !== commentId);
+    return structuredClone(row);
   }
   async findStale(before: Date, limit: number) {
     return this.rows
@@ -271,6 +293,17 @@ export function world(now = new Date('2026-11-11T10:00:00Z')) {
       views,
       tick,
     ),
+    addComment: new AddComplaintCommentUseCase(
+      access,
+      complaints,
+      projects,
+      directory,
+      storage,
+      alerts,
+      views,
+      tick,
+    ),
+    deleteComment: new DeleteComplaintCommentUseCase(access, complaints, views),
     list: new ListComplaintsUseCase(access, complaints, views),
     counts: new CountComplaintsUseCase(access, complaints),
     assign: new AssignComplaintUseCase(

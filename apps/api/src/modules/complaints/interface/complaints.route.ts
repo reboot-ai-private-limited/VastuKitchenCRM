@@ -1,7 +1,9 @@
 import { Router, type RequestHandler } from 'express';
 import type { z } from 'zod';
 import {
+  addComplaintCommentBodySchema,
   assignComplaintBodySchema,
+  complaintCommentParamsSchema,
   closeComplaintBodySchema,
   complaintCountsSchema,
   complaintIdParamsSchema,
@@ -27,7 +29,7 @@ const forbidden = errorResponse('You may never do this on a complaint');
 const wrongStatus = errorResponse('Not possible in its current status, or someone just changed it');
 
 const doc = (
-  method: 'get' | 'post',
+  method: 'get' | 'post' | 'delete',
   path: string,
   summary: string,
   request: Record<string, unknown> | undefined,
@@ -128,6 +130,21 @@ doc(
   { 200: okResponse('Now CLOSED', complaintSchema), 403: forbidden, 409: wrongStatus },
 );
 
+doc(
+  'post',
+  '/api/complaints/{complaintId}/comments',
+  'Write in the complaint conversation (text and/or photos) — anyone who can see the complaint',
+  { ...params, body: json(addComplaintCommentBodySchema) },
+  { 200: okResponse('The complaint with the new message', complaintSchema), 409: wrongStatus },
+);
+doc(
+  'delete',
+  '/api/complaints/{complaintId}/comments/{commentId}',
+  'Remove a message — its author or an Admin',
+  { params: complaintCommentParamsSchema },
+  { 200: okResponse('The complaint without it', complaintSchema), 403: forbidden },
+);
+
 export interface ComplaintControllers {
   signRaise: RequestHandler;
   signResolve: RequestHandler;
@@ -139,6 +156,8 @@ export interface ComplaintControllers {
   resolve: RequestHandler;
   reopen: RequestHandler;
   close: RequestHandler;
+  addComment: RequestHandler;
+  deleteComment: RequestHandler;
 }
 
 export function buildComplaintsRouter(c: ComplaintControllers): Router {
@@ -172,6 +191,16 @@ export function buildComplaintsRouter(c: ComplaintControllers): Router {
     '/:complaintId/close',
     validate({ params: complaintIdParamsSchema, body: closeComplaintBodySchema }),
     c.close,
+  );
+  router.post(
+    '/:complaintId/comments',
+    validate({ params: complaintIdParamsSchema, body: addComplaintCommentBodySchema }),
+    c.addComment,
+  );
+  router.delete(
+    '/:complaintId/comments/:commentId',
+    validate({ params: complaintCommentParamsSchema }),
+    c.deleteComment,
   );
   return router;
 }

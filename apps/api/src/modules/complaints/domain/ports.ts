@@ -6,7 +6,13 @@ import type {
   ProjectStage,
   RoleName,
 } from '@vastu/contracts';
-import type { Complaint, ComplaintFilter, NewComplaint, Transition } from './complaint.entity.js';
+import type {
+  Complaint,
+  ComplaintFilter,
+  NewComplaint,
+  NewComplaintComment,
+  Transition,
+} from './complaint.entity.js';
 
 export interface ComplaintRepositoryPort {
   create(input: NewComplaint): Promise<Complaint>;
@@ -22,6 +28,10 @@ export interface ComplaintRepositoryPort {
    * step; null when it is not (someone else got there first) or does not exist.
    */
   transition(id: string, transition: Transition): Promise<Complaint | null>;
+  /** Adds a message, unless the complaint is CLOSED (null then, or when it does not exist). */
+  addComment(id: string, comment: NewComplaintComment): Promise<Complaint | null>;
+  /** Removes one message. Null when the complaint or the message does not exist. */
+  removeComment(id: string, commentId: string): Promise<Complaint | null>;
   /** Open or assigned and active since before `before`, oldest first. */
   findStale(before: Date, limit: number): Promise<Complaint[]>;
 }

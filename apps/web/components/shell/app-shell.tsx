@@ -1,6 +1,7 @@
 'use client';
 
 import { Menu } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import type { UserDto } from '@vastu/contracts';
 import { Logo } from '@/components/common/logo';
@@ -14,6 +15,8 @@ import { UserMenu } from './user-menu';
 /** Staff shell: sticky top bar, fixed sidebar from `lg`, drawer on tablets, bottom tabs on phones. */
 export function AppShell({ user, children }: { user: UserDto; children: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
+  // A project is a workspace: it fills the screen and scrolls inside its own panes, like a chat app.
+  const workspace = /^\/projects\/[^/]+\/?$/.test(usePathname());
   return (
     <div className="min-h-dvh">
       <a
@@ -42,7 +45,14 @@ export function AppShell({ user, children }: { user: UserDto; children: ReactNod
         <aside className="bg-sidebar sticky top-14 hidden h-[calc(100dvh-3.5rem)] overflow-y-auto border-r lg:block">
           <SidebarNav role={user.role} />
         </aside>
-        <main id="main" className="min-w-0 p-4 pb-24 md:pb-6 lg:p-6">
+        <main
+          id="main"
+          className={
+            workspace
+              ? 'h-[calc(100dvh-3.5rem)] min-w-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0'
+              : 'min-w-0 p-4 pb-24 md:pb-6 lg:p-6'
+          }
+        >
           {children}
         </main>
       </div>

@@ -50,6 +50,7 @@ export function PostCard({
   const del = useDeletePost(projectId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [replying, setReplying] = useState(false);
   const thread = useComments(projectId, post.id, showAll);
   const comments: CommentDto[] = showAll && thread.data ? thread.data : post.recentComments;
   const hidden = post.commentCount - comments.length;
@@ -168,7 +169,23 @@ export function PostCard({
               ))}
             </ul>
           )}
-          {!closed && <CommentComposer projectId={projectId} postId={post.id} />}
+          {!closed &&
+            (replying ? (
+              <CommentComposer
+                projectId={projectId}
+                postId={post.id}
+                onDone={() => setReplying(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                aria-label={`Reply to ${post.author.name}`}
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs font-medium"
+                onClick={() => setReplying(true)}
+              >
+                <MessageCircle className="size-3.5" aria-hidden /> Reply
+              </button>
+            ))}
         </div>
       </div>
 
@@ -249,7 +266,15 @@ function Comment({ projectId, postId, c }: { projectId: string; postId: string; 
   );
 }
 
-function CommentComposer({ projectId, postId }: { projectId: string; postId: string }) {
+function CommentComposer({
+  projectId,
+  postId,
+  onDone,
+}: {
+  projectId: string;
+  postId: string;
+  onDone: () => void;
+}) {
   const [text, setText] = useState('');
   const up = useImageUploader(projectId, MAX_IMAGES_PER_COMMENT);
   const create = useCreateComment(projectId, postId);
@@ -265,6 +290,7 @@ function CommentComposer({ projectId, postId }: { projectId: string; postId: str
         onSuccess: () => {
           setText('');
           up.reset();
+          onDone();
         },
         onError: (e) => fail(e, 'Couldn’t post your comment.'),
       },
@@ -276,6 +302,7 @@ function CommentComposer({ projectId, postId }: { projectId: string; postId: str
       <div className="flex items-end gap-2">
         <Textarea
           aria-label="Write a comment"
+          autoFocus
           placeholder="Add a comment here…"
           rows={1}
           value={text}
@@ -283,6 +310,17 @@ function CommentComposer({ projectId, postId }: { projectId: string; postId: str
           className="bg-transparent min-h-9 flex-1 border-dashed"
           onChange={(e) => setText(e.target.value)}
         />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            up.discard();
+            setText('');
+            onDone();
+          }}
+        >
+          Cancel
+        </Button>
         <Button
           size="icon"
           aria-label="Send comment"

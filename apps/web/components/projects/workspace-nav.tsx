@@ -28,7 +28,7 @@ export function WorkspaceNav({
   return (
     <nav
       aria-label="Project sections"
-      className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 md:mx-0 md:sticky md:top-20 md:flex-col md:overflow-visible md:px-0 md:pb-0"
+      className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible"
     >
       {ITEMS.filter((i) => sections.includes(i.id)).map((i) => {
         const active = i.id === value;

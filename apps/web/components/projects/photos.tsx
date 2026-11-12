@@ -123,6 +123,8 @@ export function PhotoAttach({
   onRemove,
   onRetry,
   compact,
+  thumbs = true,
+  button = true,
 }: {
   items: UploadItem[];
   problem: string | null;
@@ -131,11 +133,15 @@ export function PhotoAttach({
   onRemove: (id: string) => void;
   onRetry: (id: string) => void;
   compact?: boolean;
+  /** Show the previews (default). Turn off to render only the add button, e.g. inside a message bar. */
+  thumbs?: boolean;
+  /** Show the add button (default). Turn off to render only the previews and any problem message. */
+  button?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-2">
-      {items.length > 0 && (
+      {thumbs && items.length > 0 && (
         <ul className="flex flex-wrap gap-2">
           {items.map((i) => (
             <li
@@ -187,34 +193,38 @@ export function PhotoAttach({
         </ul>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size={compact ? 'icon-sm' : 'sm'}
-          disabled={items.length >= max}
-          aria-label="Add photos"
-          onClick={() => input.current?.click()}
-        >
-          <ImagePlus /> {!compact && 'Photos'}
-        </Button>
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          multiple
-          className="sr-only"
-          aria-label="Choose photos"
-          onChange={(e) => {
-            onAdd(Array.from(e.target.files ?? []));
-            e.target.value = '';
-          }}
-        />
-        {problem && (
+        {button && (
+          <Button
+            type="button"
+            variant="ghost"
+            size={compact ? 'icon-sm' : 'sm'}
+            disabled={items.length >= max}
+            aria-label="Add photos"
+            onClick={() => input.current?.click()}
+          >
+            <ImagePlus /> {!compact && 'Photos'}
+          </Button>
+        )}
+        {button && (
+          <input
+            ref={input}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            aria-label="Choose photos"
+            onChange={(e) => {
+              onAdd(Array.from(e.target.files ?? []));
+              e.target.value = '';
+            }}
+          />
+        )}
+        {thumbs && problem && (
           <p role="alert" className="text-danger text-xs">
             {problem}
           </p>
         )}
-        {items.some((i) => i.status === 'error') && !problem && (
+        {thumbs && items.some((i) => i.status === 'error') && !problem && (
           <p role="alert" className="text-danger text-xs">
             {items.find((i) => i.status === 'error')?.error} Tap the red photo to retry.
           </p>

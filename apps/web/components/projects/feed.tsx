@@ -1,8 +1,8 @@
 'use client';
 
 import type { PostVisibility, TimelineItemDto } from '@vastu/contracts';
-import { Eye, Layers, MessageSquare } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Eye, Layers, MessageSquare, Send } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
@@ -17,9 +17,6 @@ import { useCreatePost, usePosts, useTimeline } from '@/lib/api/projects';
 import { describeProjectActivity } from '@/lib/project-activity';
 import { MAX_IMAGES_PER_POST } from '@/lib/upload';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/lib/auth';
-import { initials } from '@/lib/format';
 import { ActivityRow } from './feed-rows';
 import { PhotoAttach } from './photos';
 import { PostCard } from './post-card';
@@ -63,28 +60,58 @@ export function Feed({
       }));
   const items = [...newestFirst].reverse();
 
-  // Land on the newest end when the feed first appears and after you post.
-  const bottom = useRef<HTMLDivElement>(null);
-  const [scrollTick, setScrollTick] = useState(0);
+  // The feed scrolls inside its pane. It opens at the newest end; scrolling up loads older posts.
+  const scroller = useRef<HTMLDivElement>(null);
   const landed = useRef(false);
-  useEffect(() => {
+  const heightBefore = useRef<number | null>(null);
+  const [scrollTick, setScrollTick] = useState(0);
+  const toBottom = (smooth: boolean) =>
+    scroller.current?.scrollTo({
+      top: scroller.current.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto',
+    });
+
+  useLayoutEffect(() => {
     if (q.isPending) landed.current = false;
     else if (!landed.current) {
       landed.current = true;
-      bottom.current?.scrollIntoView({ block: 'end' });
+      toBottom(false);
     }
   }, [q.isPending, visibility]);
+
+  // Older posts arrive above: keep what you were reading where it was.
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el && heightBefore.current !== null) {
+      el.scrollTop += el.scrollHeight - heightBefore.current;
+      heightBefore.current = null;
+    }
+  }, [newestFirst.length]);
+
   useEffect(() => {
-    if (scrollTick > 0) bottom.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    if (scrollTick > 0) toBottom(true);
   }, [scrollTick, newestFirst.length]);
 
+  const loadOlder = () => {
+    const el = scroller.current;
+    if (!el || !q.hasNextPage || q.isFetchingNextPage) return;
+    heightBefore.current = el.scrollHeight;
+    void q.fetchNextPage();
+  };
+  // A short first page may not reach the top of the pane: keep loading until it can scroll.
+  useEffect(() => {
+    const el = scroller.current;
+    if (el && landed.current && el.scrollHeight <= el.clientHeight) loadOlder();
+  });
+
   return (
-    <div className="mx-auto w-full max-w-170 space-y-3">
+    <div className="flex h-full min-h-0 flex-col">
       {seesTeam && (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center border-b px-3 py-2 sm:px-4">
           <div
             role="tablist"
             aria-label="Feed"
+            title="Team notes and activity are only visible to staff"
             className="bg-secondary inline-flex rounded-lg p-0.5 text-sm"
           >
             {(['TEAM', 'CLIENT'] as const).map((v) => (
@@ -104,7 +131,7 @@ export function Feed({
               </button>
             ))}
           </div>
-          <p className="text-muted-foreground hidden text-xs sm:block">
+          <p className="text-muted-foreground ml-3 hidden truncate text-xs lg:block">
             {visibility === 'CLIENT'
               ? 'Exactly what the customer sees.'
               : 'Team notes and activity are only visible to staff.'}
@@ -112,73 +139,76 @@ export function Feed({
         </div>
       )}
 
-      {q.isPending ? (
-        <div className="space-y-4" aria-hidden>
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      ) : q.isError ? (
-        <div className="bg-card shadow-card rounded-xl border">
-          <ErrorState error={q.error} onRetry={() => q.refetch()} />
-        </div>
-      ) : items.length === 0 ? (
-        <div className="bg-card shadow-card rounded-xl border">
-          <EmptyState
-            icon={MessageSquare}
-            title="No posts yet"
-            description={closed ? undefined : 'Share an update or a photo to get started.'}
-          />
-        </div>
-      ) : (
-        <>
-          {q.hasNextPage && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full"
-              disabled={q.isFetchingNextPage}
-              onClick={() => q.fetchNextPage()}
-            >
-              {q.isFetchingNextPage ? 'Loading…' : 'Load older'}
-            </Button>
+      <div
+        ref={scroller}
+        onScroll={(e) => e.currentTarget.scrollTop < 120 && loadOlder()}
+        className="min-h-0 flex-1 overflow-y-auto px-3 sm:px-4"
+      >
+        <div className="mx-auto w-full max-w-170">
+          {q.isPending ? (
+            <div className="space-y-4 py-4" aria-hidden>
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : q.isError ? (
+            <div className="bg-card shadow-card my-4 rounded-xl border">
+              <ErrorState error={q.error} onRetry={() => q.refetch()} />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="my-4 rounded-xl border">
+              <EmptyState
+                icon={MessageSquare}
+                title="No posts yet"
+                description={closed ? undefined : 'Share an update or a photo to get started.'}
+              />
+            </div>
+          ) : (
+            <>
+              {q.isFetchingNextPage && (
+                <p className="text-muted-foreground py-2 text-center text-xs">Loading older…</p>
+              )}
+              <ul>
+                {items.map((it) =>
+                  it.kind === 'POST' ? (
+                    <PostCard
+                      key={`p${it.post.id}`}
+                      projectId={projectId}
+                      post={it.post}
+                      closed={closed}
+                      isCustomer={isCustomer}
+                    />
+                  ) : (
+                    <ActivityRow key={`a${it.activity.id}`} iso={it.at}>
+                      <ActivityLine activity={it.activity} />
+                    </ActivityRow>
+                  ),
+                )}
+              </ul>
+            </>
           )}
-          <ul>
-            {items.map((it) =>
-              it.kind === 'POST' ? (
-                <PostCard
-                  key={`p${it.post.id}`}
-                  projectId={projectId}
-                  post={it.post}
-                  closed={closed}
-                  isCustomer={isCustomer}
-                />
-              ) : (
-                <ActivityRow key={`a${it.activity.id}`} iso={it.at}>
-                  <ActivityLine activity={it.activity} />
-                </ActivityRow>
-              ),
-            )}
-          </ul>
-        </>
-      )}
+        </div>
+      </div>
 
-      {closed ? (
-        <p className="bg-neutral-soft text-neutral rounded-lg p-3 text-sm">
-          This project is closed. It takes no new posts or comments. Reopen it to continue.
-        </p>
-      ) : (
-        <Composer
-          key={String(finalDeliveryRequested)}
-          projectId={projectId}
-          isCustomer={isCustomer}
-          finalDelivery={finalDeliveryRequested}
-          onPosted={() => {
-            onFinalDeliveryDone();
-            setScrollTick((t) => t + 1);
-          }}
-        />
-      )}
-      <div ref={bottom} />
+      <div className="bg-background shrink-0 border-t">
+        <div className="mx-auto w-full max-w-170">
+          {closed ? (
+            <p className="bg-neutral-soft text-neutral m-3 rounded-lg p-3 text-sm">
+              This project is closed. It takes no new posts or comments. Reopen it to continue.
+            </p>
+          ) : (
+            <Composer
+              key={String(finalDeliveryRequested)}
+              projectId={projectId}
+              isCustomer={isCustomer}
+              finalDelivery={finalDeliveryRequested}
+              onPosted={() => {
+                onFinalDeliveryDone();
+                setScrollTick((t) => t + 1);
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -208,7 +238,7 @@ function Composer({
   finalDelivery: boolean;
   onPosted: () => void;
 }) {
-  const { user } = useAuth();
+  // The options tray opens when you start writing and closes after you post or cancel.
   const [open, setOpen] = useState(finalDelivery);
   const [text, setText] = useState('');
   // Team by default for staff; the toggle is explicit. Customers' posts are always Client.
@@ -216,11 +246,21 @@ function Composer({
   const [asFinal, setAsFinal] = useState(finalDelivery);
   const up = useImageUploader(projectId, MAX_IMAGES_PER_POST);
   const create = useCreatePost(projectId);
+  const box = useRef<HTMLTextAreaElement>(null);
   const clientVisible = isCustomer || toClient || asFinal;
   const empty = text.trim() === '' && up.images.length === 0;
   const needsPhoto = asFinal && up.images.length === 0;
+  const canPost = !empty && !needsPhoto && !up.busy && !create.isPending;
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [text]);
 
   function post() {
+    if (!canPost) return;
     create.mutate(
       {
         ...(text.trim() ? { text: text.trim() } : {}),
@@ -234,8 +274,8 @@ function Composer({
           setText('');
           setToClient(false);
           setAsFinal(false);
-          up.reset();
           setOpen(false);
+          up.reset();
           onPosted();
         },
         onError: (e) =>
@@ -252,95 +292,102 @@ function Composer({
     setOpen(false);
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="hover:bg-muted/50 focus-visible:ring-ring flex w-full items-center gap-3 rounded-lg border-t px-1 py-4 text-left outline-none focus-visible:ring-2 sm:pl-[4.75rem]"
-      >
-        <Avatar className="size-9 shrink-0">
-          <AvatarFallback>{initials(user?.name ?? '?')}</AvatarFallback>
-        </Avatar>
-        <span className="text-muted-foreground">
-          {isCustomer ? 'Write to the team…' : 'Add a post here…'}
-        </span>
-      </button>
-    );
-  }
-
   return (
-    <section
-      className={cn('space-y-3 border-t py-4 sm:pl-[4.75rem]', asFinal && 'border-success/40')}
-      aria-label="New post"
-    >
-      {asFinal && (
-        <p className="bg-success-soft text-success rounded-md p-2.5 text-xs">
-          Final delivery: add at least one photo. It is always visible to the customer, and closing
-          the project needs it.
-        </p>
-      )}
-      <Textarea
-        aria-label="Write an update"
-        placeholder={isCustomer ? 'Write to the team…' : 'Share an update…'}
-        autoFocus
-        rows={3}
-        value={text}
-        maxLength={5000}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <PhotoAttach
-        items={up.items}
-        problem={up.problem}
-        max={MAX_IMAGES_PER_POST}
-        onAdd={up.add}
-        onRemove={up.remove}
-        onRetry={up.retry}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {isCustomer ? (
-          <span />
-        ) : (
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="post-client"
-                checked={clientVisible}
-                disabled={asFinal}
-                onCheckedChange={(c) => setToClient(c === true)}
-              />
-              <Label htmlFor="post-client">Show to customer</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="post-final"
-                checked={asFinal}
-                onCheckedChange={(c) => setAsFinal(c === true)}
-              />
-              <Label htmlFor="post-final">Final delivery</Label>
-            </div>
+    <section aria-label="New post" className="space-y-2 px-3 py-2 sm:px-4">
+      {(open || up.items.length > 0) && (
+        <div className="space-y-2">
+          {asFinal && (
+            <p className="bg-success-soft text-success rounded-md p-2 text-xs">
+              Final delivery: add at least one photo. It is always visible to the customer, and
+              closing the project needs it.
+            </p>
+          )}
+          <PhotoAttach
+            button={false}
+            items={up.items}
+            problem={up.problem}
+            max={MAX_IMAGES_PER_POST}
+            onAdd={up.add}
+            onRemove={up.remove}
+            onRetry={up.retry}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+            {isCustomer ? (
+              <span />
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="post-client"
+                    checked={clientVisible}
+                    disabled={asFinal}
+                    onCheckedChange={(c) => setToClient(c === true)}
+                  />
+                  <Label htmlFor="post-client">Show to customer</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="post-final"
+                    checked={asFinal}
+                    onCheckedChange={(c) => setAsFinal(c === true)}
+                  />
+                  <Label htmlFor="post-final">Final delivery</Label>
+                </div>
+                <span className="text-muted-foreground text-xs">
+                  {clientVisible
+                    ? 'This post will be visible to the customer.'
+                    : 'This post is for the team only.'}
+                </span>
+              </div>
+            )}
+            <Button variant="ghost" size="sm" disabled={create.isPending} onClick={cancel}>
+              Cancel
+            </Button>
           </div>
-        )}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" disabled={create.isPending} onClick={cancel}>
-            Cancel
-          </Button>
-          <Button
-            disabled={empty || needsPhoto || up.busy || create.isPending}
-            onClick={post}
-            title={needsPhoto ? 'A final delivery needs a photo' : undefined}
-          >
-            {create.isPending ? 'Posting…' : up.busy ? 'Uploading…' : 'Post'}
-          </Button>
         </div>
-      </div>
-      {!isCustomer && (
-        <p className="text-muted-foreground text-xs">
-          {clientVisible
-            ? 'This post will be visible to the customer.'
-            : 'This post is for the team only.'}
-        </p>
       )}
+      <div className="flex items-end gap-2">
+        <PhotoAttach
+          thumbs={false}
+          compact
+          items={up.items}
+          problem={up.problem}
+          max={MAX_IMAGES_PER_POST}
+          onAdd={(files) => {
+            setOpen(true);
+            up.add(files);
+          }}
+          onRemove={up.remove}
+          onRetry={up.retry}
+        />
+        <Textarea
+          ref={box}
+          aria-label="Add a post"
+          placeholder={isCustomer ? 'Write to the team…' : 'Add a post…'}
+          rows={1}
+          value={text}
+          maxLength={5000}
+          className="max-h-32 min-h-10 flex-1 resize-none rounded-2xl py-2"
+          onFocus={() => setOpen(true)}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              post();
+            }
+          }}
+        />
+        <Button
+          size="icon"
+          className="size-10 shrink-0 rounded-full"
+          aria-label={create.isPending ? 'Posting' : 'Post'}
+          disabled={!canPost}
+          onClick={post}
+          title={needsPhoto ? 'A final delivery needs a photo' : undefined}
+        >
+          <Send />
+        </Button>
+      </div>
     </section>
   );
 }

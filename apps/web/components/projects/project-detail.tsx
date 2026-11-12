@@ -4,7 +4,7 @@ import { DESIGN_STAGES, type DesignStage, type ProjectDto } from '@vastu/contrac
 import {
   ArrowLeft,
   CheckCircle2,
-  MapPin,
+  Info,
   MoreHorizontal,
   Pencil,
   RotateCcw,
@@ -17,7 +17,6 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { ErrorState } from '@/components/common/error-state';
 import { NotFoundView } from '@/components/common/not-found-view';
-import { PageBody } from '@/components/common/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
@@ -74,15 +80,16 @@ export function ProjectDetail({ id }: { id: string }) {
   };
   const [dialog, setDialog] = useState<Dialog>(null);
   const [finalDelivery, setFinalDelivery] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   if (q.isError && q.error instanceof ApiError && q.error.isNotFound) return <NotFoundView />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
   if (q.isPending)
     return (
-      <PageBody>
+      <div className="space-y-4 p-4">
         <Skeleton className="h-10 w-72" />
         <Skeleton className="h-96 w-full" />
-      </PageBody>
+      </div>
     );
 
   const p = q.data;
@@ -94,133 +101,141 @@ export function ProjectDetail({ id }: { id: string }) {
   const raisable = canRaiseComplaint(user?.role) && !can.summaryOnly;
   const closed = p.stage === 'CLOSED';
 
+  const hasMenu =
+    can.editProject ||
+    can.manageMembers ||
+    (can.invite && !can.isCustomer) ||
+    (can.isAdmin && !closed);
+
   return (
-    <PageBody>
-      <div>
-        <Link
-          href="/projects"
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden /> Projects
-        </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1.5">
-            <h1 className="text-xl font-semibold tracking-tight">{p.name}</h1>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <StatusBadge kind="project" value={p.stage} />
-              <DesignStageChip value={p.designStage} />
-              <span className="text-muted-foreground">{p.customer.name}</span>
-              {p.value != null && (
-                <span className="tabular font-semibold">{formatINR(p.value)}</span>
-              )}
+    <div className="flex h-full flex-col md:flex-row">
+      <aside className="flex shrink-0 flex-col border-b md:w-60 md:border-r md:border-b-0">
+        <div className="space-y-2 p-3 md:p-4">
+          <Link
+            href="/projects"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden /> Projects
+          </Link>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-base leading-tight font-semibold">{p.name}</h1>
+              <p className="text-muted-foreground truncate text-xs">{p.customer.name}</p>
             </div>
-            {p.siteAddress && (
-              <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                <MapPin className="size-3.5" aria-hidden />
-                {p.siteAddress}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {can.isAdmin && !closed && (
-              <Button onClick={() => setDialog('close')}>
-                <CheckCircle2 /> Close project
+            <div className="flex shrink-0 items-center">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Project info"
+                onClick={() => setInfoOpen(true)}
+              >
+                <Info />
               </Button>
-            )}
-            {(can.editProject || can.manageMembers || (can.invite && !can.isCustomer)) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label="Project actions">
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {can.editProject && (
-                    <DropdownMenuItem onSelect={() => setDialog('edit')}>
-                      <Pencil /> Edit project
-                    </DropdownMenuItem>
-                  )}
-                  {can.manageMembers && (
-                    <DropdownMenuItem onSelect={() => setDialog('members')}>
-                      <Users /> Team
-                    </DropdownMenuItem>
-                  )}
-                  {can.invite && !can.isCustomer && (
-                    <>
-                      <DropdownMenuSeparator />
+              {hasMenu && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" aria-label="Project actions">
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {can.editProject && (
+                      <DropdownMenuItem onSelect={() => setDialog('edit')}>
+                        <Pencil /> Edit project
+                      </DropdownMenuItem>
+                    )}
+                    {can.manageMembers && (
+                      <DropdownMenuItem onSelect={() => setDialog('members')}>
+                        <Users /> Team
+                      </DropdownMenuItem>
+                    )}
+                    {can.invite && !can.isCustomer && (
                       <DropdownMenuItem onSelect={() => setDialog('invite')}>
                         <UserPlus /> Invite customer
                       </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {closed && (
-        <p className="bg-neutral-soft text-neutral rounded-lg p-3 text-sm">
-          Closed{p.closedAt ? ` on ${formatDate(p.closedAt)}` : ''}.{' '}
-          {can.changeStage ? 'Use “Reopen” on the right to continue work.' : ''}
-        </p>
-      )}
-
-      <div
-        className={
-          can.summaryOnly
-            ? 'grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]'
-            : 'grid items-start gap-4 md:grid-cols-[11rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)_280px]'
-        }
-      >
-        {can.summaryOnly ? (
-          <Summary project={p} />
-        ) : (
-          <>
-            <WorkspaceNav sections={allowed} value={tab} onChange={setTab} />
-            <div className="min-w-0">
-              {tab === 'feed' && (
-                <Feed
-                  projectId={p.id}
-                  seesTeam={can.seesTeam}
-                  closed={closed}
-                  isCustomer={can.isCustomer}
-                  finalDeliveryRequested={finalDelivery}
-                  onFinalDeliveryDone={() => setFinalDelivery(false)}
-                />
-              )}
-              {tab === 'todos' && can.seesTeam && (
-                <TodosTab
-                  projectId={p.id}
-                  closed={closed}
-                  members={p.members}
-                  todoId={todoParam}
-                  onTodoChange={(id) => setParams({ tab: 'todos', todo: id })}
-                />
-              )}
-              {tab === 'complaints' && (
-                <ComplaintsTab
-                  projectId={p.id}
-                  canRaise={raisable && !closed}
-                  onRaise={() => setDialog('complaint')}
-                />
-              )}
-              {tab === 'docs' && (
-                <DocsTab
-                  projectId={p.id}
-                  closed={closed}
-                  isAdmin={can.isAdmin}
-                  isCustomer={can.isCustomer}
-                />
+                    )}
+                    {can.isAdmin && !closed && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => setDialog('close')}>
+                          <CheckCircle2 /> Close project
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
-          </>
-        )}
-        <div className="md:col-span-2 xl:col-span-1">
-          <Rail project={p} can={can} />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge kind="project" value={p.stage} />
+            <DesignStageChip value={p.designStage} />
+          </div>
         </div>
-      </div>
+        {!can.summaryOnly && (
+          <div className="px-3 pb-2 md:pb-4">
+            <WorkspaceNav sections={allowed} value={tab} onChange={setTab} />
+          </div>
+        )}
+      </aside>
+
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {can.summaryOnly ? (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <Summary project={p} />
+          </div>
+        ) : tab === 'feed' ? (
+          <Feed
+            projectId={p.id}
+            seesTeam={can.seesTeam}
+            closed={closed}
+            isCustomer={can.isCustomer}
+            finalDeliveryRequested={finalDelivery}
+            onFinalDeliveryDone={() => setFinalDelivery(false)}
+          />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {tab === 'todos' && can.seesTeam && (
+              <TodosTab
+                projectId={p.id}
+                closed={closed}
+                members={p.members}
+                todoId={todoParam}
+                onTodoChange={(id) => setParams({ tab: 'todos', todo: id })}
+              />
+            )}
+            {tab === 'complaints' && (
+              <ComplaintsTab
+                projectId={p.id}
+                canRaise={raisable && !closed}
+                onRaise={() => setDialog('complaint')}
+              />
+            )}
+            {tab === 'docs' && (
+              <DocsTab
+                projectId={p.id}
+                closed={closed}
+                isAdmin={can.isAdmin}
+                isCustomer={can.isCustomer}
+              />
+            )}
+          </div>
+        )}
+      </section>
+
+      <Sheet open={infoOpen} onOpenChange={setInfoOpen}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-sm">
+          <SheetHeader>
+            <SheetTitle>Project info</SheetTitle>
+            <SheetDescription className="sr-only">
+              Stage, team and details for this project
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-6">
+            <Rail project={p} can={can} />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {dialog === 'edit' && <EditProjectDialog project={p} onClose={() => setDialog(null)} />}
       {dialog === 'members' && <MembersDialog project={p} onClose={() => setDialog(null)} />}
@@ -240,7 +255,7 @@ export function ProjectDetail({ id }: { id: string }) {
           }}
         />
       )}
-    </PageBody>
+    </div>
   );
 }
 
@@ -257,7 +272,7 @@ function Rail({
   const onError = (e: unknown) =>
     toast.error(e instanceof ApiError ? e.message : 'Couldn’t change that.');
   return (
-    <aside className="bg-card shadow-card h-fit space-y-4 rounded-xl border p-4 text-sm xl:sticky xl:top-20">
+    <div className="space-y-4 text-sm">
       {(can.changeStage || can.changeDesignStage) && (
         <div className="space-y-3">
           {can.changeStage && (
@@ -361,6 +376,18 @@ function Rail({
           <dt className="text-muted-foreground">Customer</dt>
           <dd className="text-right">{p.customer.name}</dd>
         </div>
+        {p.siteAddress && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Site</dt>
+            <dd className="text-right">{p.siteAddress}</dd>
+          </div>
+        )}
+        {p.value != null && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Value</dt>
+            <dd className="tabular text-right font-semibold">{formatINR(p.value)}</dd>
+          </div>
+        )}
         <div className="flex justify-between gap-3">
           <dt className="text-muted-foreground">Created</dt>
           <dd>{formatDate(p.createdAt)}</dd>
@@ -377,7 +404,7 @@ function Rail({
           Lead journey →
         </Link>
       )}
-    </aside>
+    </div>
   );
 }
 

@@ -19,6 +19,7 @@ const TABS = [
 /** Customers: no sidebar. Top bar, a centred column, and a bottom bar (docs/05-design/screens.md §12). */
 export function CustomerShell({ user, children }: { user: UserDto; children: ReactNode }) {
   const pathname = usePathname();
+  const workspace = /^\/projects\/[^/]+\/?$/.test(pathname);
   return (
     <div className="min-h-dvh">
       <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-3 backdrop-blur">
@@ -27,7 +28,14 @@ export function CustomerShell({ user, children }: { user: UserDto; children: Rea
         <NotificationBell />
         <UserMenu user={user} />
       </header>
-      <main id="main" className="mx-auto max-w-3xl p-4 pb-24">
+      <main
+        id="main"
+        className={
+          workspace
+            ? 'h-[calc(100dvh-3.5rem)] overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]'
+            : 'mx-auto max-w-3xl p-4 pb-24'
+        }
+      >
         {children}
       </main>
       <nav

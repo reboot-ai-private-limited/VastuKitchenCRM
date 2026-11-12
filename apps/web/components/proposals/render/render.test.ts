@@ -67,6 +67,10 @@ describe('planSheets', () => {
     expect(sheets).toHaveLength(3);
     expect(sheets.map((s) => s.rows!.showTotals)).toEqual([false, false, true]);
     expect(sheets.reduce((sum, s) => sum + s.rows!.items.length, 0)).toBe(n);
-    expect(sheets.map((s) => s.rows!.offset)).toEqual([0, FIRST_PAGE_ROWS, FIRST_PAGE_ROWS + NEXT_PAGE_ROWS]);
+    expect(sheets.map((s) => s.rows!.offset)).toEqual([
+      0,
+      FIRST_PAGE_ROWS,
+      FIRST_PAGE_ROWS + NEXT_PAGE_ROWS,
+    ]);
   });
 });

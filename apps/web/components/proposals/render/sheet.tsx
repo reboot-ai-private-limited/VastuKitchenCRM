@@ -38,7 +38,7 @@ export function Sheet({ theme, children }: { theme: ProposalTheme; children: Rea
   return (
     <div
       ref={wrap}
-      className="proposal-sheet-wrap mx-auto w-full print:!h-auto"
+      className="proposal-sheet-wrap mx-auto w-full overflow-hidden print:!h-auto print:overflow-visible"
       style={{ maxWidth: SHEET_W, height: SHEET_H * scale }}
     >
       <div

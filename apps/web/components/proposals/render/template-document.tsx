@@ -54,7 +54,13 @@ export function planSheets(template: ProposalTemplate, doc: DocumentView): Plann
  * builder preview, the sent view and the public page, so what is checked is what the customer
  * gets. "Save as PDF" in the browser's print dialog produces the PDF; nothing is stored.
  */
-export function TemplateDocument({ doc, template }: { doc: DocumentView; template: ProposalTemplate }) {
+export function TemplateDocument({
+  doc,
+  template,
+}: {
+  doc: DocumentView;
+  template: ProposalTemplate;
+}) {
   const values = tokenValues(doc);
   const sheets = planSheets(template, doc);
   return (

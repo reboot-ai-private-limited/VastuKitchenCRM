@@ -31,7 +31,8 @@ export function sampleDocument(): DocumentView {
     subtotal,
     discount: 25000,
     total: subtotal - 25000,
-    notes: 'Appliances are not included. Final countertop colour to be confirmed at material freeze.',
+    notes:
+      'Appliances are not included. Final countertop colour to be confirmed at material freeze.',
     terms:
       '1. This quotation is valid for 30 days.\n2. 50% advance confirms the order.\n3. Delivery within 8 weeks of material freeze.\n4. One-year warranty on workmanship; manufacturer warranty on hardware.',
     company: {
@@ -43,4 +44,3 @@ export function sampleDocument(): DocumentView {
     sentBy: 'Sayantra Roy',
   };
 }
-

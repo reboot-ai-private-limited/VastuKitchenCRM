@@ -35,13 +35,24 @@ export function newBlock(type: ProposalBlockType): ProposalBlock {
     case 'richText':
       return { type, text: 'Write here. Use {{client.name}} to put the customer’s name.' };
     case 'stats':
-      return { type, items: [{ value: '14+', label: 'Years' }, { value: '500+', label: 'Projects' }] };
+      return {
+        type,
+        items: [
+          { value: '14+', label: 'Years' },
+          { value: '500+', label: 'Projects' },
+        ],
+      };
     case 'bullets':
       return { type, items: ['First point', 'Second point'], columns: 1 };
     case 'steps':
       return { type, items: [{ title: 'Step one', text: 'What happens' }] };
     case 'image':
-      return { type, src: 'https://vaastukitchen.com/home-slider/vastu1.jpg', alt: 'Picture', height: 300 };
+      return {
+        type,
+        src: 'https://vaastukitchen.com/home-slider/vastu1.jpg',
+        alt: 'Picture',
+        height: 300,
+      };
     case 'gallery':
       return {
         type,
@@ -57,7 +68,13 @@ export function newBlock(type: ProposalBlockType): ProposalBlock {
     case 'specs':
       return { type, rows: [{ label: 'Label', value: 'Value' }] };
     case 'paymentSchedule':
-      return { type, rows: [{ label: 'On order', percent: 50 }, { label: 'On handover', percent: 50 }] };
+      return {
+        type,
+        rows: [
+          { label: 'On order', percent: 50 },
+          { label: 'On handover', percent: 50 },
+        ],
+      };
     case 'signature':
       return { type, leftLabel: 'For Vaastu Kitchen', rightLabel: 'Accepted by {{client.name}}' };
     case 'pricingTable':
@@ -69,7 +86,11 @@ export function newBlock(type: ProposalBlockType): ProposalBlock {
 }
 
 const toLines = (items: string[]) => items.join('\n');
-const fromLines = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean);
+const fromLines = (s: string) =>
+  s
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
 
 /** Rows as `a | b` lines: compact to edit, easy to paste from a spreadsheet. */
 const toPairs = <T extends Record<string, unknown>>(rows: T[], keys: Array<keyof T>) =>
@@ -81,7 +102,15 @@ const fromPairs = (s: string, n: number) =>
     .filter((p) => p[0])
     .map((p) => Array.from({ length: n }, (_, i) => p[i] ?? ''));
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <Label className="text-xs">{label}</Label>
@@ -117,7 +146,15 @@ function Text({
   );
 }
 
-function Num({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function Num({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
   return (
     <Field label={label}>
       <Input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} />
@@ -167,7 +204,11 @@ export function BlockFields({
     case 'heading':
       return (
         <div className="space-y-2">
-          <Text label="Small line above" value={b.eyebrow ?? ''} onChange={(v) => onChange({ ...b, ...(v ? { eyebrow: v } : { eyebrow: undefined }) })} />
+          <Text
+            label="Small line above"
+            value={b.eyebrow ?? ''}
+            onChange={(v) => onChange({ ...b, ...(v ? { eyebrow: v } : { eyebrow: undefined }) })}
+          />
           <Text label="Heading" value={b.text} onChange={(v) => onChange({ ...b, text: v })} />
         </div>
       );
@@ -190,22 +231,46 @@ export function BlockFields({
           value={toPairs(b.items, ['value', 'label'])}
           hint="One per line: value | label (up to 6)"
           onChange={(v) =>
-            onChange({ ...b, items: fromPairs(v, 2).slice(0, 6).map(([value, label]) => ({ value: value!, label: label! })) })
+            onChange({
+              ...b,
+              items: fromPairs(v, 2)
+                .slice(0, 6)
+                .map(([value, label]) => ({ value: value!, label: label! })),
+            })
           }
         />
       );
     case 'bullets':
       return (
         <div className="space-y-2">
-          <Text label="Title" value={b.title ?? ''} onChange={(v) => onChange({ ...b, title: v || undefined })} />
-          <Text label="Points" area value={toLines(b.items)} hint="One per line" onChange={(v) => onChange({ ...b, items: fromLines(v) })} />
-          <Pick label="Columns" value={b.columns} options={[1, 2]} onChange={(v) => onChange({ ...b, columns: v })} />
+          <Text
+            label="Title"
+            value={b.title ?? ''}
+            onChange={(v) => onChange({ ...b, title: v || undefined })}
+          />
+          <Text
+            label="Points"
+            area
+            value={toLines(b.items)}
+            hint="One per line"
+            onChange={(v) => onChange({ ...b, items: fromLines(v) })}
+          />
+          <Pick
+            label="Columns"
+            value={b.columns}
+            options={[1, 2]}
+            onChange={(v) => onChange({ ...b, columns: v })}
+          />
         </div>
       );
     case 'steps':
       return (
         <div className="space-y-2">
-          <Text label="Title" value={b.title ?? ''} onChange={(v) => onChange({ ...b, title: v || undefined })} />
+          <Text
+            label="Title"
+            value={b.title ?? ''}
+            onChange={(v) => onChange({ ...b, title: v || undefined })}
+          />
           <Text
             label="Steps"
             area
@@ -213,7 +278,13 @@ export function BlockFields({
             value={toPairs(b.items, ['title', 'text'])}
             hint="One per line: step | what happens"
             onChange={(v) =>
-              onChange({ ...b, items: fromPairs(v, 2).map(([title, text]) => ({ title: title!, ...(text ? { text } : {}) })) })
+              onChange({
+                ...b,
+                items: fromPairs(v, 2).map(([title, text]) => ({
+                  title: title!,
+                  ...(text ? { text } : {}),
+                })),
+              })
             }
           />
         </div>
@@ -221,10 +292,26 @@ export function BlockFields({
     case 'image':
       return (
         <div className="space-y-2">
-          <Text label="Picture address (URL)" value={b.src} onChange={(v) => onChange({ ...b, src: v })} />
-          <Text label="Describe the picture" value={b.alt} onChange={(v) => onChange({ ...b, alt: v })} />
-          <Text label="Caption" value={b.caption ?? ''} onChange={(v) => onChange({ ...b, caption: v || undefined })} />
-          <Num label="Height (px)" value={b.height} onChange={(v) => onChange({ ...b, height: Math.min(700, Math.max(80, v || 300)) })} />
+          <Text
+            label="Picture address (URL)"
+            value={b.src}
+            onChange={(v) => onChange({ ...b, src: v })}
+          />
+          <Text
+            label="Describe the picture"
+            value={b.alt}
+            onChange={(v) => onChange({ ...b, alt: v })}
+          />
+          <Text
+            label="Caption"
+            value={b.caption ?? ''}
+            onChange={(v) => onChange({ ...b, caption: v || undefined })}
+          />
+          <Num
+            label="Height (px)"
+            value={b.height}
+            onChange={(v) => onChange({ ...b, height: Math.min(700, Math.max(80, v || 300)) })}
+          />
         </div>
       );
     case 'gallery':
@@ -237,58 +324,112 @@ export function BlockFields({
             value={toPairs(b.images, ['src', 'alt'])}
             hint="One per line: picture URL | description (up to 9)"
             onChange={(v) =>
-              onChange({ ...b, images: fromPairs(v, 2).slice(0, 9).map(([src, alt]) => ({ src: src!, alt: alt || 'Picture' })) })
+              onChange({
+                ...b,
+                images: fromPairs(v, 2)
+                  .slice(0, 9)
+                  .map(([src, alt]) => ({ src: src!, alt: alt || 'Picture' })),
+              })
             }
           />
-          <Pick label="Columns" value={b.columns} options={[2, 3]} onChange={(v) => onChange({ ...b, columns: v })} />
+          <Pick
+            label="Columns"
+            value={b.columns}
+            options={[2, 3]}
+            onChange={(v) => onChange({ ...b, columns: v })}
+          />
         </div>
       );
     case 'team':
       return (
         <div className="space-y-2">
-          <Text label="Title" value={b.title ?? ''} onChange={(v) => onChange({ ...b, title: v || undefined })} />
+          <Text
+            label="Title"
+            value={b.title ?? ''}
+            onChange={(v) => onChange({ ...b, title: v || undefined })}
+          />
           <Text
             label="People"
             area
             value={toPairs(b.members, ['name', 'role'])}
             hint="One per line: name | role"
-            onChange={(v) => onChange({ ...b, members: fromPairs(v, 2).slice(0, 8).map(([name, role]) => ({ name: name!, role: role! })) })}
+            onChange={(v) =>
+              onChange({
+                ...b,
+                members: fromPairs(v, 2)
+                  .slice(0, 8)
+                  .map(([name, role]) => ({ name: name!, role: role! })),
+              })
+            }
           />
         </div>
       );
     case 'logos':
       return (
         <div className="space-y-2">
-          <Text label="Title" value={b.title ?? ''} onChange={(v) => onChange({ ...b, title: v || undefined })} />
-          <Text label="Brands" area value={toLines(b.names)} hint="One per line" onChange={(v) => onChange({ ...b, names: fromLines(v).slice(0, 16) })} />
+          <Text
+            label="Title"
+            value={b.title ?? ''}
+            onChange={(v) => onChange({ ...b, title: v || undefined })}
+          />
+          <Text
+            label="Brands"
+            area
+            value={toLines(b.names)}
+            hint="One per line"
+            onChange={(v) => onChange({ ...b, names: fromLines(v).slice(0, 16) })}
+          />
         </div>
       );
     case 'quote':
       return (
         <div className="space-y-2">
           <Text label="Quote" area value={b.text} onChange={(v) => onChange({ ...b, text: v })} />
-          <Text label="Who said it" value={b.author} onChange={(v) => onChange({ ...b, author: v })} />
-          <Text label="Their role" value={b.role ?? ''} onChange={(v) => onChange({ ...b, role: v || undefined })} />
+          <Text
+            label="Who said it"
+            value={b.author}
+            onChange={(v) => onChange({ ...b, author: v })}
+          />
+          <Text
+            label="Their role"
+            value={b.role ?? ''}
+            onChange={(v) => onChange({ ...b, role: v || undefined })}
+          />
         </div>
       );
     case 'specs':
       return (
         <div className="space-y-2">
-          <Text label="Title" value={b.title ?? ''} onChange={(v) => onChange({ ...b, title: v || undefined })} />
+          <Text
+            label="Title"
+            value={b.title ?? ''}
+            onChange={(v) => onChange({ ...b, title: v || undefined })}
+          />
           <Text
             label="Rows"
             area
             rows={6}
             value={toPairs(b.rows, ['label', 'value'])}
             hint="One per line: label | value. Tokens work here too."
-            onChange={(v) => onChange({ ...b, rows: fromPairs(v, 2).slice(0, 20).map(([label, value]) => ({ label: label!, value: value! })) })}
+            onChange={(v) =>
+              onChange({
+                ...b,
+                rows: fromPairs(v, 2)
+                  .slice(0, 20)
+                  .map(([label, value]) => ({ label: label!, value: value! })),
+              })
+            }
           />
         </div>
       );
     case 'paymentSchedule':
       return (
         <div className="space-y-2">
-          <Text label="Title" value={b.title ?? ''} onChange={(v) => onChange({ ...b, title: v || undefined })} />
+          <Text
+            label="Title"
+            value={b.title ?? ''}
+            onChange={(v) => onChange({ ...b, title: v || undefined })}
+          />
           <Text
             label="Stages"
             area
@@ -299,7 +440,10 @@ export function BlockFields({
                 ...b,
                 rows: fromPairs(v, 2)
                   .slice(0, 8)
-                  .map(([percent, label]) => ({ percent: Math.min(100, Math.max(1, Number(percent) || 0)), label: label! })),
+                  .map(([percent, label]) => ({
+                    percent: Math.min(100, Math.max(1, Number(percent) || 0)),
+                    label: label!,
+                  })),
               })
             }
           />
@@ -308,14 +452,26 @@ export function BlockFields({
     case 'signature':
       return (
         <div className="space-y-2">
-          <Text label="Left line" value={b.leftLabel} onChange={(v) => onChange({ ...b, leftLabel: v })} />
-          <Text label="Right line" value={b.rightLabel} onChange={(v) => onChange({ ...b, rightLabel: v })} />
+          <Text
+            label="Left line"
+            value={b.leftLabel}
+            onChange={(v) => onChange({ ...b, leftLabel: v })}
+          />
+          <Text
+            label="Right line"
+            value={b.rightLabel}
+            onChange={(v) => onChange({ ...b, rightLabel: v })}
+          />
         </div>
       );
     case 'pricingTable':
     case 'notes':
     case 'terms':
     case 'contactCard':
-      return <p className="text-muted-foreground text-xs">Filled in from the proposal and company details. Nothing to set.</p>;
+      return (
+        <p className="text-muted-foreground text-xs">
+          Filled in from the proposal and company details. Nothing to set.
+        </p>
+      );
   }
 }

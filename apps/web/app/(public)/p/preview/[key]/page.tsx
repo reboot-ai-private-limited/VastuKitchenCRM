@@ -7,7 +7,10 @@ import { TemplateDocument } from '@/components/proposals/render/template-documen
 import { playfair } from '@/lib/fonts';
 import { PrintButton } from '../../[token]/print-button';
 
-export const metadata: Metadata = { title: 'Template preview', robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: 'Template preview',
+  robots: { index: false, follow: false },
+};
 
 /** Development aid: every built-in template with sample data. Not served in production. */
 export default async function TemplatePreview({ params }: { params: Promise<{ key: string }> }) {
@@ -16,12 +19,18 @@ export default async function TemplatePreview({ params }: { params: Promise<{ ke
   const template = findBuiltinTemplate(key);
   if (!template) notFound();
   return (
-    <main className={`${playfair.variable} bg-secondary/60 min-h-dvh px-3 py-6 sm:px-6 print:bg-white print:p-0`}>
+    <main
+      className={`${playfair.variable} bg-secondary/60 min-h-dvh px-3 py-6 sm:px-6 print:bg-white print:p-0`}
+    >
       <div className="mx-auto max-w-[794px] space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
           <nav className="flex gap-3 text-sm">
             {BUILTIN_PROPOSAL_TEMPLATES.map((t) => (
-              <Link key={t.key} href={`/p/preview/${t.key}`} className={t.key === key ? 'font-semibold underline' : ''}>
+              <Link
+                key={t.key}
+                href={`/p/preview/${t.key}`}
+                className={t.key === key ? 'font-semibold underline' : ''}
+              >
                 {t.name}
               </Link>
             ))}

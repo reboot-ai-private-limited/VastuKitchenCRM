@@ -27,16 +27,22 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
     <div className="flex flex-wrap gap-x-8 gap-y-3 text-[12px]">
       <div>
         <p className={`${kicker} opacity-70`}>Proposal</p>
-        <p className="mt-1 text-[15px] font-semibold whitespace-nowrap">{ctx.doc.number ?? 'Draft'}</p>
+        <p className="mt-1 text-[15px] font-semibold whitespace-nowrap">
+          {ctx.doc.number ?? 'Draft'}
+        </p>
       </div>
       <div>
         <p className={`${kicker} opacity-70`}>Date</p>
-        <p className="mt-1 text-[15px] font-semibold whitespace-nowrap">{ctx.values['proposal.date']}</p>
+        <p className="mt-1 text-[15px] font-semibold whitespace-nowrap">
+          {ctx.values['proposal.date']}
+        </p>
       </div>
       {ctx.values['proposal.validUntil'] && (
         <div>
           <p className={`${kicker} opacity-70`}>Valid until</p>
-          <p className="mt-1 text-[15px] font-semibold whitespace-nowrap">{ctx.values['proposal.validUntil']}</p>
+          <p className="mt-1 text-[15px] font-semibold whitespace-nowrap">
+            {ctx.values['proposal.validUntil']}
+          </p>
         </div>
       )}
     </div>
@@ -80,7 +86,9 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
             <h1 className={`${h} text-[42px] leading-[1.08]`}>{headline}</h1>
             {sub && <p className="mt-4 text-[16px] opacity-70">{sub}</p>}
           </div>
-          <div className="space-y-5">{cover ? facts : <div className="space-y-5">{facts}</div>}</div>
+          <div className="space-y-5">
+            {cover ? facts : <div className="space-y-5">{facts}</div>}
+          </div>
         </div>
         <img src={def.image} alt="" className="h-full w-[48%] object-cover" />
       </div>
@@ -93,7 +101,10 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
       <img src={def.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgb(20 14 10 / .55) 0%, rgb(20 14 10 / .15) 35%, rgb(20 14 10 / .85) 100%)' }}
+        style={{
+          background:
+            'linear-gradient(180deg, rgb(20 14 10 / .55) 0%, rgb(20 14 10 / .15) 35%, rgb(20 14 10 / .85) 100%)',
+        }}
       />
       <div className="relative flex h-full flex-col justify-between p-[60px]">
         {logo(true)}
@@ -114,7 +125,10 @@ function Interior({ def, template, ctx, n, of, continued }: PageProps) {
   const title = def.title ? fillTokens(def.title, ctx.values) : '';
   return (
     <div className="flex h-full flex-col px-[58px] pt-[46px] pb-[34px]">
-      <header className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--t-accent)' }}>
+      <header
+        className="flex items-center justify-between border-b pb-3"
+        style={{ borderColor: 'var(--t-accent)' }}
+      >
         <img src={template.logo} alt="Vaastu Kitchen" className="h-9 w-auto object-contain" />
         <p className={`${kicker} opacity-60`}>{ctx.doc.number ?? 'Draft'}</p>
       </header>

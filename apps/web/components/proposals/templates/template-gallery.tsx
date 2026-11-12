@@ -69,7 +69,13 @@ function Card({
             <Copy /> Copy
           </Button>
           {!t.builtin && (
-            <Button size="sm" variant="ghost" className="text-danger" onClick={onDelete} disabled={busy}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-danger"
+              onClick={onDelete}
+              disabled={busy}
+            >
               <Trash2 /> Delete
             </Button>
           )}
@@ -94,7 +100,8 @@ export function TemplateGallery() {
           toast.success('Copied');
           if (edit) router.push(`/proposals/templates/${c.key}`);
         },
-        onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not copy the template.'),
+        onError: (e) =>
+          toast.error(e instanceof ApiError ? e.message : 'Could not copy the template.'),
       },
     );
 
@@ -104,7 +111,10 @@ export function TemplateGallery() {
         title="Proposal templates"
         description="How proposals look: cover, pages, thank-you. Built-in designs can be copied and changed."
         actions={
-          <Button onClick={() => copy(DEFAULT_PROPOSAL_TEMPLATE_KEY)} disabled={duplicate.isPending}>
+          <Button
+            onClick={() => copy(DEFAULT_PROPOSAL_TEMPLATE_KEY)}
+            disabled={duplicate.isPending}
+          >
             New template
           </Button>
         }
@@ -153,7 +163,8 @@ export function TemplateGallery() {
                     toast.success('Template deleted');
                     setDeleting(null);
                   },
-                  onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not delete.'),
+                  onError: (e) =>
+                    toast.error(e instanceof ApiError ? e.message : 'Could not delete.'),
                 })
               }
             >

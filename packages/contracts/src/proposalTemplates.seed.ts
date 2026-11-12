@@ -39,7 +39,16 @@ const PROCESS: ProposalBlock = {
 const PARTNERS: ProposalBlock = {
   type: 'logos',
   title: 'Materials and hardware we trust',
-  names: ['Blum', 'Hafele', 'Hettich', 'Rehau', 'Century Laminates', 'Greenlam', 'Sylvan Plywood', 'Ebco'],
+  names: [
+    'Blum',
+    'Hafele',
+    'Hettich',
+    'Rehau',
+    'Century Laminates',
+    'Greenlam',
+    'Sylvan Plywood',
+    'Ebco',
+  ],
 };
 
 const PAYMENT: ProposalBlock = {
@@ -61,7 +70,8 @@ const SIGNATURE: ProposalBlock = {
 const modern: ProposalTemplate = {
   key: 'modern-modular',
   name: 'Modern modular',
-  description: 'Full-bleed photography, teal accents and the complete story: about us, scope, price, process.',
+  description:
+    'Full-bleed photography, teal accents and the complete story: about us, scope, price, process.',
   logo: LOGO,
   theme: {
     primary: '#0E8F78',
@@ -104,7 +114,13 @@ const modern: ProposalTemplate = {
             { value: '7', label: 'Step process' },
           ],
         },
-        { type: 'image', src: STUDIO, alt: 'Our studio', caption: 'Our studio in Siliguri', height: 280 },
+        {
+          type: 'image',
+          src: STUDIO,
+          alt: 'Our studio',
+          caption: 'Our studio in Siliguri',
+          height: 280,
+        },
         PARTNERS,
       ],
     },
@@ -114,7 +130,11 @@ const modern: ProposalTemplate = {
       layout: 'hero',
       title: 'Your project',
       blocks: [
-        { type: 'heading', eyebrow: 'Understanding your home', text: 'What we will build for {{client.name}}' },
+        {
+          type: 'heading',
+          eyebrow: 'Understanding your home',
+          text: 'What we will build for {{client.name}}',
+        },
         {
           type: 'specs',
           title: 'Project details',
@@ -209,7 +229,11 @@ const classic: ProposalTemplate = {
       layout: 'hero',
       title: 'Our promise',
       blocks: [
-        { type: 'heading', eyebrow: 'Since 2008', text: "We don't just design spaces, we elevate lifestyles." },
+        {
+          type: 'heading',
+          eyebrow: 'Since 2008',
+          text: "We don't just design spaces, we elevate lifestyles.",
+        },
         {
           type: 'richText',
           text: 'Every Vaastu Kitchen is drawn around the way you live: the way you cook, the people who gather, the things you keep close.\n\nWe pair careful design with reliable execution, using proven hardware and finishes, and we stand behind the result.',
@@ -299,4 +323,3 @@ export const DEFAULT_PROPOSAL_TEMPLATE_KEY = modern.key;
 export function findBuiltinTemplate(key: string): ProposalTemplate | undefined {
   return BUILTIN_PROPOSAL_TEMPLATES.find((t) => t.key === key);
 }
-

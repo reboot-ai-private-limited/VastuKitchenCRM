@@ -58,7 +58,11 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       return (
         <div className="grid grid-cols-3 gap-4">
           {block.items.map((s) => (
-            <div key={s.label} className="rounded-lg p-4 text-center" style={{ background: 'var(--t-tint)' }}>
+            <div
+              key={s.label}
+              className="rounded-lg p-4 text-center"
+              style={{ background: 'var(--t-tint)' }}
+            >
               <p className={`${h} text-[32px] leading-none`} style={{ color: 'var(--t-primary)' }}>
                 {s.value}
               </p>
@@ -72,10 +76,15 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       return (
         <div>
           {block.title && <p className={`${h} mb-2 text-[18px]`}>{f(block.title)}</p>}
-          <ul className={`grid gap-x-8 gap-y-1.5 text-[13px] ${block.columns === 2 ? 'grid-cols-2' : ''}`}>
+          <ul
+            className={`grid gap-x-8 gap-y-1.5 text-[13px] ${block.columns === 2 ? 'grid-cols-2' : ''}`}
+          >
             {block.items.map((i) => (
               <li key={i} className="flex gap-2">
-                <span className="mt-[7px] size-1.5 shrink-0 rounded-full" style={{ background: 'var(--t-primary)' }} />
+                <span
+                  className="mt-[7px] size-1.5 shrink-0 rounded-full"
+                  style={{ background: 'var(--t-primary)' }}
+                />
                 {f(i)}
               </li>
             ))}
@@ -116,7 +125,9 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
             style={{ height: block.height }}
           />
           {block.caption && (
-            <figcaption className="mt-1.5 text-center text-[11px] opacity-60">{f(block.caption)}</figcaption>
+            <figcaption className="mt-1.5 text-center text-[11px] opacity-60">
+              {f(block.caption)}
+            </figcaption>
           )}
         </figure>
       );
@@ -125,7 +136,12 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       return (
         <div className={`grid gap-2 ${block.columns === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
           {block.images.map((g) => (
-            <img key={g.src} src={g.src} alt={g.alt} className="h-[130px] w-full rounded-md object-cover" />
+            <img
+              key={g.src}
+              src={g.src}
+              alt={g.alt}
+              className="h-[130px] w-full rounded-md object-cover"
+            />
           ))}
         </div>
       );
@@ -178,17 +194,23 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       return (
         <div>
           {block.title && <p className={`${h} mb-2 text-[18px]`}>{f(block.title)}</p>}
-          <dl className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--t-tint)' }}>
-            {block.rows.map((r, n) => (
-              <div
-                key={r.label}
-                className="grid grid-cols-[170px_1fr] gap-3 px-4 py-2 text-[13px]"
-                style={n % 2 === 0 ? { background: 'var(--t-tint)' } : undefined}
-              >
-                <dt className="font-semibold opacity-70">{r.label}</dt>
-                <dd>{f(r.value)}</dd>
-              </div>
-            ))}
+          <dl
+            className="overflow-hidden rounded-lg border"
+            style={{ borderColor: 'var(--t-tint)' }}
+          >
+            {block.rows
+              .map((r) => ({ label: r.label, value: f(r.value) }))
+              .filter((r) => r.value.trim() !== '')
+              .map((r, n) => (
+                <div
+                  key={r.label}
+                  className="grid grid-cols-[170px_1fr] gap-3 px-4 py-2 text-[13px]"
+                  style={n % 2 === 0 ? { background: 'var(--t-tint)' } : undefined}
+                >
+                  <dt className="font-semibold opacity-70">{r.label}</dt>
+                  <dd>{r.value}</dd>
+                </div>
+              ))}
           </dl>
         </div>
       );
@@ -199,7 +221,10 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
         <div>
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] tracking-wider text-white uppercase" style={{ background: 'var(--t-primary)' }}>
+              <tr
+                className="text-left text-[11px] tracking-wider text-white uppercase"
+                style={{ background: 'var(--t-primary)' }}
+              >
                 <th className="w-8 rounded-tl-md px-3 py-2">#</th>
                 <th className="px-3 py-2">Item</th>
                 <th className="px-3 py-2 text-right">Qty</th>
@@ -218,11 +243,15 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
                   <td className="px-3 py-2.5">
                     <p className="font-semibold">{i.title}</p>
                     {i.description && (
-                      <p className="mt-0.5 text-[11px] whitespace-pre-line opacity-65">{i.description}</p>
+                      <p className="mt-0.5 text-[11px] whitespace-pre-line opacity-65">
+                        {i.description}
+                      </p>
                     )}
                   </td>
                   <td className="tabular px-3 py-2.5 text-right whitespace-nowrap">{i.quantity}</td>
-                  <td className="tabular px-3 py-2.5 text-right whitespace-nowrap">{formatINR(i.unitPrice)}</td>
+                  <td className="tabular px-3 py-2.5 text-right whitespace-nowrap">
+                    {formatINR(i.unitPrice)}
+                  </td>
                   <td className="tabular px-3 py-2.5 text-right font-semibold whitespace-nowrap">
                     {formatINR(i.lineTotal)}
                   </td>
@@ -269,7 +298,9 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       return doc.terms ? (
         <div>
           <p className={`${eyebrow} opacity-60`}>Terms</p>
-          <p className="mt-1.5 text-[11.5px] leading-relaxed whitespace-pre-line opacity-80">{doc.terms}</p>
+          <p className="mt-1.5 text-[11.5px] leading-relaxed whitespace-pre-line opacity-80">
+            {doc.terms}
+          </p>
         </div>
       ) : null;
 
@@ -277,7 +308,10 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       return (
         <div>
           {block.title && <p className={`${h} mb-2 text-[18px]`}>{f(block.title)}</p>}
-          <div className="overflow-hidden rounded-lg border text-[13px]" style={{ borderColor: 'var(--t-tint)' }}>
+          <div
+            className="overflow-hidden rounded-lg border text-[13px]"
+            style={{ borderColor: 'var(--t-tint)' }}
+          >
             {block.rows.map((r, n) => (
               <div
                 key={r.label}
@@ -287,7 +321,9 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
                 <span>
                   <span className="font-semibold">{r.percent}%</span> · {r.label}
                 </span>
-                <span className="font-semibold">{formatINR(Math.round((doc.total * r.percent) / 100))}</span>
+                <span className="font-semibold">
+                  {formatINR(Math.round((doc.total * r.percent) / 100))}
+                </span>
               </div>
             ))}
           </div>

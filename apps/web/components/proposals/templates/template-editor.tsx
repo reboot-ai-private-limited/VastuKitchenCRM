@@ -26,7 +26,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
-import { useDuplicateProposalTemplate, useSaveProposalTemplate } from '@/lib/api/proposal-templates';
+import {
+  useDuplicateProposalTemplate,
+  useSaveProposalTemplate,
+} from '@/lib/api/proposal-templates';
 import { cn } from '@/lib/utils';
 import { sampleDocument } from '../render/sample-doc';
 import { TemplateDocument } from '../render/template-document';
@@ -55,7 +58,13 @@ const pageId = () => `p${Math.random().toString(36).slice(2, 8)}`;
  * Left: design and pages. Middle: the selected page's blocks. Right: that page, live, with sample
  * data. Built-in templates open read-only; duplicate one to make it yours.
  */
-export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate; builtin: boolean }) {
+export function TemplateEditor({
+  initial,
+  builtin,
+}: {
+  initial: ProposalTemplate;
+  builtin: boolean;
+}) {
   const router = useRouter();
   const [t, setT] = useState<ProposalTemplate>(initial);
   const [sel, setSel] = useState(0);
@@ -90,7 +99,8 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
         setDirty(false);
         toast.success('Template saved');
       },
-      onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not save the template.'),
+      onError: (e) =>
+        toast.error(e instanceof ApiError ? e.message : 'Could not save the template.'),
     });
   }
 
@@ -102,7 +112,8 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
           toast.success('Copied: you are now editing your own version');
           router.push(`/proposals/templates/${copy.key}`);
         },
-        onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not copy the template.'),
+        onError: (e) =>
+          toast.error(e instanceof ApiError ? e.message : 'Could not copy the template.'),
       },
     );
   }
@@ -111,7 +122,10 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
   const addPage = () => {
     edit({
       ...t,
-      pages: [...t.pages, { id: pageId(), kind: 'content', layout: 'hero', title: 'New page', blocks: [] }],
+      pages: [
+        ...t.pages,
+        { id: pageId(), kind: 'content', layout: 'hero', title: 'New page', blocks: [] },
+      ],
     });
     setSel(t.pages.length);
     setOpenBlock(null);
@@ -127,7 +141,9 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
             </Link>
           </Button>
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-tight">{t.name || 'Untitled template'}</h1>
+            <h1 className="truncate text-xl font-semibold tracking-tight">
+              {t.name || 'Untitled template'}
+            </h1>
             {ro && (
               <p className="text-muted-foreground flex items-center gap-1 text-sm">
                 <Lock className="size-3.5" /> Built-in: copy it to change it
@@ -151,47 +167,55 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
         {/* Design and pages */}
         <div className="bg-card shadow-card space-y-4 rounded-xl border p-4">
           <fieldset disabled={ro} className="space-y-4">
-          <div>
-            <Label className="text-xs">Name</Label>
-            <Input value={t.name} onChange={(e) => edit({ ...t, name: e.target.value })} />
-          </div>
-          <div>
-            <Label className="text-xs">Description</Label>
-            <Textarea rows={2} value={t.description} onChange={(e) => edit({ ...t, description: e.target.value })} />
-          </div>
-          <div>
-            <Label className="text-xs">Logo address (URL)</Label>
-            <Input value={t.logo} onChange={(e) => edit({ ...t, logo: e.target.value })} />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {(['primary', 'ink', 'paper', 'tint', 'accent'] as const).map((k) => (
-              <div key={k}>
-                <Label className="text-xs capitalize">{k === 'ink' ? 'Text' : k === 'paper' ? 'Page' : k}</Label>
-                <input
-                  type="color"
-                  aria-label={k}
-                  value={t.theme[k]}
-                  onChange={(e) => edit({ ...t, theme: { ...t.theme, [k]: e.target.value } })}
-                  className="h-9 w-full cursor-pointer rounded-md border"
-                />
-              </div>
-            ))}
             <div>
-              <Label className="text-xs">Headings</Label>
-              <Select
-                value={t.theme.headingFont}
-                onValueChange={(v) => edit({ ...t, theme: { ...t.theme, headingFont: v as 'serif' | 'sans' } })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="serif">Serif</SelectItem>
-                  <SelectItem value="sans">Sans</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Name</Label>
+              <Input value={t.name} onChange={(e) => edit({ ...t, name: e.target.value })} />
             </div>
-          </div>
+            <div>
+              <Label className="text-xs">Description</Label>
+              <Textarea
+                rows={2}
+                value={t.description}
+                onChange={(e) => edit({ ...t, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Logo address (URL)</Label>
+              <Input value={t.logo} onChange={(e) => edit({ ...t, logo: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {(['primary', 'ink', 'paper', 'tint', 'accent'] as const).map((k) => (
+                <div key={k}>
+                  <Label className="text-xs capitalize">
+                    {k === 'ink' ? 'Text' : k === 'paper' ? 'Page' : k}
+                  </Label>
+                  <input
+                    type="color"
+                    aria-label={k}
+                    value={t.theme[k]}
+                    onChange={(e) => edit({ ...t, theme: { ...t.theme, [k]: e.target.value } })}
+                    className="h-9 w-full cursor-pointer rounded-md border"
+                  />
+                </div>
+              ))}
+              <div>
+                <Label className="text-xs">Headings</Label>
+                <Select
+                  value={t.theme.headingFont}
+                  onValueChange={(v) =>
+                    edit({ ...t, theme: { ...t.theme, headingFont: v as 'serif' | 'sans' } })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="serif">Serif</SelectItem>
+                    <SelectItem value="sans">Sans</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </fieldset>
 
           <div>
@@ -225,10 +249,30 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
                     </button>
                     {!ro && (
                       <>
-                        <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Move up" onClick={() => { edit({ ...t, pages: move(t.pages, i, -1) }); setSel(Math.max(0, i - 1)); }}>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          aria-label="Move up"
+                          onClick={() => {
+                            edit({ ...t, pages: move(t.pages, i, -1) });
+                            setSel(Math.max(0, i - 1));
+                          }}
+                        >
                           <ArrowUp />
                         </Button>
-                        <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Move down" onClick={() => { edit({ ...t, pages: move(t.pages, i, 1) }); setSel(Math.min(t.pages.length - 1, i + 1)); }}>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          aria-label="Move down"
+                          onClick={() => {
+                            edit({ ...t, pages: move(t.pages, i, 1) });
+                            setSel(Math.min(t.pages.length - 1, i + 1));
+                          }}
+                        >
                           <ArrowDown />
                         </Button>
                         <Button
@@ -260,63 +304,81 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
             Page {pageIndex + 1}: {KIND_LABELS[page.kind]}
           </p>
           <fieldset disabled={ro} className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">Kind</Label>
-              <Select value={page.kind} onValueChange={(v) => setPage({ kind: v as ProposalPageDef['kind'] })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(KIND_LABELS) as Array<ProposalPageDef['kind']>).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {KIND_LABELS[k]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {(page.kind === 'cover' || page.kind === 'thankyou') && (
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Layout</Label>
-                <Select value={page.layout} onValueChange={(v) => setPage({ layout: v as ProposalPageDef['layout'] })}>
+                <Label className="text-xs">Kind</Label>
+                <Select
+                  value={page.kind}
+                  onValueChange={(v) => setPage({ kind: v as ProposalPageDef['kind'] })}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hero">Full picture</SelectItem>
-                    <SelectItem value="split">Split</SelectItem>
-                    <SelectItem value="minimal">Minimal</SelectItem>
+                    {(Object.keys(KIND_LABELS) as Array<ProposalPageDef['kind']>).map((k) => (
+                      <SelectItem key={k} value={k}>
+                        {KIND_LABELS[k]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
+              {(page.kind === 'cover' || page.kind === 'thankyou') && (
+                <div>
+                  <Label className="text-xs">Layout</Label>
+                  <Select
+                    value={page.layout}
+                    onValueChange={(v) => setPage({ layout: v as ProposalPageDef['layout'] })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hero">Full picture</SelectItem>
+                      <SelectItem value="split">Split</SelectItem>
+                      <SelectItem value="minimal">Minimal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
 
-          {page.kind === 'cover' || page.kind === 'thankyou' ? (
-            <div className="space-y-2">
-              <div>
-                <Label className="text-xs">Headline</Label>
-                <Input value={page.headline ?? ''} onChange={(e) => setPage({ headline: e.target.value })} />
+            {page.kind === 'cover' || page.kind === 'thankyou' ? (
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Headline</Label>
+                  <Input
+                    value={page.headline ?? ''}
+                    onChange={(e) => setPage({ headline: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Line under it</Label>
+                  <Input
+                    value={page.subline ?? ''}
+                    onChange={(e) => setPage({ subline: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Picture address (URL)</Label>
+                  <Input
+                    value={page.image ?? ''}
+                    onChange={(e) => setPage({ image: e.target.value })}
+                  />
+                </div>
+                <p className="text-muted-foreground text-[11px]">
+                  Tokens: {'{{client.name}}'}, {'{{proposal.title}}'}, {'{{proposal.date}}'}
+                </p>
               </div>
+            ) : (
               <div>
-                <Label className="text-xs">Line under it</Label>
-                <Input value={page.subline ?? ''} onChange={(e) => setPage({ subline: e.target.value })} />
+                <Label className="text-xs">Page title</Label>
+                <Input
+                  value={page.title ?? ''}
+                  onChange={(e) => setPage({ title: e.target.value })}
+                />
               </div>
-              <div>
-                <Label className="text-xs">Picture address (URL)</Label>
-                <Input value={page.image ?? ''} onChange={(e) => setPage({ image: e.target.value })} />
-              </div>
-              <p className="text-muted-foreground text-[11px]">
-                Tokens: {'{{client.name}}'}, {'{{proposal.title}}'}, {'{{proposal.date}}'}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <Label className="text-xs">Page title</Label>
-              <Input value={page.title ?? ''} onChange={(e) => setPage({ title: e.target.value })} />
-            </div>
-          )}
+            )}
           </fieldset>
 
           <div>
@@ -336,10 +398,24 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
                     </button>
                     {!ro && (
                       <>
-                        <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Move up" onClick={() => setBlocks(move(page.blocks, n, -1))}>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          aria-label="Move up"
+                          onClick={() => setBlocks(move(page.blocks, n, -1))}
+                        >
                           <ArrowUp />
                         </Button>
-                        <Button type="button" size="icon" variant="ghost" className="size-7" aria-label="Move down" onClick={() => setBlocks(move(page.blocks, n, 1))}>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          aria-label="Move down"
+                          onClick={() => setBlocks(move(page.blocks, n, 1))}
+                        >
                           <ArrowDown />
                         </Button>
                         <Button
@@ -360,7 +436,10 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
                   </div>
                   {openBlock === n && (
                     <fieldset disabled={ro} className="border-t p-3">
-                      <BlockFields block={b} onChange={(nb) => setBlocks(page.blocks.map((x, i) => (i === n ? nb : x)))} />
+                      <BlockFields
+                        block={b}
+                        onChange={(nb) => setBlocks(page.blocks.map((x, i) => (i === n ? nb : x)))}
+                      />
                     </fieldset>
                   )}
                 </li>
@@ -393,7 +472,9 @@ export function TemplateEditor({ initial, builtin }: { initial: ProposalTemplate
 
         {/* Live page */}
         <div className="lg:sticky lg:top-20">
-          <p className="text-muted-foreground mb-2 text-xs font-medium">Live preview with sample data</p>
+          <p className="text-muted-foreground mb-2 text-xs font-medium">
+            Live preview with sample data
+          </p>
           <TemplateDocument doc={doc} template={previewTemplate} />
         </div>
       </div>

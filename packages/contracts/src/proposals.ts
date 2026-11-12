@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { paginatedSchema } from './pagination.js';
+import { proposalTemplateSchema } from './proposalTemplates.js';
 
 export const PROPOSAL_STATUSES = ['DRAFT', 'SENT'] as const;
 export const proposalStatusSchema = z.enum(PROPOSAL_STATUSES);
@@ -49,6 +50,8 @@ export const createProposalBodySchema = z.object({
   notes: proposalFields.notes.optional(),
   terms: proposalFields.terms.optional(),
   validUntil: proposalFields.validUntil.optional(),
+  /** A template key (built-in or custom). Omitted: the default template. */
+  templateKey: z.string().min(1).max(60).optional(),
 });
 export type CreateProposalBodyDto = z.infer<typeof createProposalBodySchema>;
 
@@ -62,6 +65,8 @@ export const updateProposalBodySchema = z
     notes: proposalFields.notes.nullable(),
     terms: proposalFields.terms,
     validUntil: proposalFields.validUntil.nullable(),
+    /** Drafts only: re-snapshots the chosen template into the proposal. */
+    templateKey: z.string().min(1).max(60),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to update');
@@ -96,6 +101,9 @@ export const proposalSchema = z.object({
   total: z.number().int(),
   notes: z.string().nullable(),
   terms: z.string(),
+  /** The template this proposal was made with, and a snapshot of it: later edits to the template never change a sent proposal. */
+  templateKey: z.string(),
+  template: proposalTemplateSchema,
   validUntil: z.string().nullable(),
   /** Present once the proposal has been sent. */
   publicUrl: z.string().nullable(),
@@ -137,6 +145,7 @@ export const publicProposalSchema = z.object({
   total: z.number().int(),
   notes: z.string().nullable(),
   terms: z.string(),
+  template: proposalTemplateSchema,
   company: z.object({
     name: z.string(),
     tagline: z.string(),

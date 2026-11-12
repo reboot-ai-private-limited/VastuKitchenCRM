@@ -1,0 +1,268 @@
+import { Linking, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { PressableScale } from '@/components/ui/pressable-scale';
+import { Reveal } from '@/components/ui/reveal';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Text } from '@/components/ui/text';
+import { colors, space } from '@/constants/theme';
+import { ApiError } from '@/lib/api/client';
+import { formatDate, formatINR, formatPhone, timeAgo } from '@/lib/format';
+import { useProposalDetail, useSendProposal } from './use-proposals';
+
+export function ProposalDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const q = useProposalDetail(id);
+  const send = useSendProposal(id);
+  const p = q.data;
+
+  const handleSendWhatsApp = () => {
+    send.mutate(undefined, {
+      onSuccess: (res) => {
+        void Linking.openURL(res.whatsappUrl);
+      },
+    });
+  };
+
+  const handleShareLink = () => {
+    if (p?.publicUrl) {
+      void Share.share({
+        message: `${p.title} (${p.number}): ${p.publicUrl}`,
+        url: p.publicUrl,
+      });
+      return;
+    }
+    send.mutate(undefined, {
+      onSuccess: (res) => {
+        void Share.share({
+          message: `${res.proposal.title} (${res.proposal.number}): ${res.publicUrl}`,
+          url: res.publicUrl,
+        });
+      },
+    });
+  };
+
+  let body;
+  if (q.isPending) {
+    body = (
+      <View style={{ gap: space[3] }}>
+        <Skeleton height={28} width="65%" />
+        <Skeleton height={160} />
+      </View>
+    );
+  } else if (q.isError || !p) {
+    const notFound = q.error instanceof ApiError && (q.error.status === 404 || q.error.status === 403);
+    body = (
+      <View style={{ gap: space[3], alignItems: 'center', paddingVertical: space[8] }}>
+        <Text muted>{notFound ? 'Proposal could not be found.' : 'Could not load proposal.'}</Text>
+        {!notFound ? <Button title="Retry" variant="outline" onPress={() => void q.refetch()} /> : null}
+      </View>
+    );
+  } else {
+    body = (
+      <>
+        <Reveal>
+          <Text variant="caption" muted>
+            {p.number}
+          </Text>
+          <Text variant="title">{p.title}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[2] }}>
+            <Badge
+              label={p.status === 'DRAFT' ? 'Draft' : p.seenCount > 0 ? `Seen ${p.seenCount}x` : 'Sent'}
+              t={p.status === 'DRAFT' ? 'neutral' : p.seenCount > 0 ? 'accent' : 'info'}
+            />
+            {p.validUntil ? <Badge label={`Valid till ${formatDate(p.validUntil)}`} t="neutral" /> : null}
+          </View>
+        </Reveal>
+
+        <Reveal index={1}>
+          <View style={{ gap: space[2] }}>
+            <Button
+              title={p.status === 'DRAFT' ? 'Send via WhatsApp' : 'Send again on WhatsApp'}
+              size="lg"
+              loading={send.isPending}
+              onPress={handleSendWhatsApp}
+              fullWidth
+            />
+            <View style={{ flexDirection: 'row', gap: space[3] }}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Share link"
+                  variant="outline"
+                  onPress={handleShareLink}
+                  loading={send.isPending}
+                  fullWidth
+                />
+              </View>
+              {p.publicUrl ? (
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Open preview"
+                    variant="outline"
+                    onPress={() => void Linking.openURL(p.publicUrl!)}
+                    fullWidth
+                  />
+                </View>
+              ) : null}
+            </View>
+            {send.isError ? (
+              <Text variant="caption" color={colors.destructive}>
+                {send.error.message}
+              </Text>
+            ) : null}
+          </View>
+        </Reveal>
+
+        <Reveal index={2}>
+          <Card style={{ gap: space[3] }}>
+            <View>
+              <Text variant="caption" muted>
+                Customer
+              </Text>
+              <Text variant="label">{p.customer.name}</Text>
+              <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
+                {formatPhone(p.customer.phone)}
+                {p.customer.city ? `  ·  ${p.customer.city}` : ''}
+              </Text>
+            </View>
+            {p.customer.siteAddress ? (
+              <View>
+                <Text variant="caption" muted>
+                  Site address
+                </Text>
+                <Text>{p.customer.siteAddress}</Text>
+              </View>
+            ) : null}
+            <View>
+              <Text variant="caption" muted>
+                Customer engagement
+              </Text>
+              <Text>
+                {p.status === 'DRAFT'
+                  ? 'Not sent yet'
+                  : p.seenCount > 0
+                    ? `Opened ${p.seenCount} time${p.seenCount === 1 ? '' : 's'} · last seen ${timeAgo(p.lastSeenAt!)}`
+                    : `Sent ${timeAgo(p.sentAt!)} · not opened yet`}
+              </Text>
+            </View>
+            <PressableScale
+              onPress={() => router.push({ pathname: '/leads/[id]', params: { id: p.leadId } } as Href)}
+              style={styles.leadLink}
+            >
+              <Text variant="caption" color={colors.primary}>
+                Open lead
+              </Text>
+              <Feather name="arrow-right" size={14} color={colors.primary} />
+            </PressableScale>
+          </Card>
+        </Reveal>
+
+        <Reveal index={3}>
+          <Card style={{ gap: space[3] }}>
+            <Text variant="section">Items</Text>
+            {p.items.map((item, idx) => (
+              <View key={`${item.title}-${idx}`} style={styles.itemRow}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text variant="label">{item.title}</Text>
+                  {item.description ? (
+                    <Text variant="caption" muted>
+                      {item.description}
+                    </Text>
+                  ) : null}
+                  <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
+                    {item.quantity} × {formatINR(item.unitPrice)}
+                  </Text>
+                </View>
+                <Text variant="label" style={{ fontVariant: ['tabular-nums'] }}>
+                  {formatINR(item.lineTotal)}
+                </Text>
+              </View>
+            ))}
+
+            <View style={styles.divider} />
+
+            <View style={styles.totalLine}>
+              <Text muted>Subtotal</Text>
+              <Text style={{ fontVariant: ['tabular-nums'] }}>{formatINR(p.subtotal)}</Text>
+            </View>
+            {p.discount > 0 ? (
+              <View style={styles.totalLine}>
+                <Text muted>Discount</Text>
+                <Text color={colors.primary} style={{ fontVariant: ['tabular-nums'] }}>
+                  − {formatINR(p.discount)}
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.totalLine}>
+              <Text variant="section">Total</Text>
+              <Text variant="title" style={{ fontVariant: ['tabular-nums'] }}>
+                {formatINR(p.total)}
+              </Text>
+            </View>
+          </Card>
+        </Reveal>
+
+        {p.notes ? (
+          <Card style={{ gap: space[1] }}>
+            <Text variant="caption" muted>
+              Notes
+            </Text>
+            <Text>{p.notes}</Text>
+          </Card>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: p?.number ?? 'Proposal',
+          headerShadowVisible: false,
+          headerTintColor: colors.primary,
+        }}
+      />
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{
+          padding: space[4],
+          paddingBottom: insets.bottom + space[8],
+          gap: space[5],
+        }}
+      >
+        {body}
+      </ScrollView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  leadLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[1],
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: space[3],
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  totalLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+});

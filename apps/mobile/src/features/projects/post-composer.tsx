@@ -1,0 +1,240 @@
+import { useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import {
+  MAX_IMAGES_PER_COMMENT,
+  MAX_IMAGES_PER_POST,
+  type CreateCommentBodyDto,
+  type CreatePostBodyDto,
+  type PostVisibility,
+} from '@vastu/contracts';
+import { Button } from '@/components/ui/button';
+import { PressableScale } from '@/components/ui/pressable-scale';
+import { Text } from '@/components/ui/text';
+import { colors, font, radius, space } from '@/constants/theme';
+import { ApiError, NetworkError } from '@/lib/api/client';
+import { usePhotoAttachments } from './use-photo-attachments';
+
+type Props = {
+  projectId: string;
+  placeholder: string;
+  /** A new post (can choose who sees it) or a reply on a post. */
+  kind: 'post' | 'reply';
+  onCancel?: () => void;
+  /** Resolves when the server accepted it; the composer then clears itself. */
+  onSubmit: (body: CreatePostBodyDto & CreateCommentBodyDto) => Promise<unknown>;
+};
+
+function describe(e: unknown): string {
+  if (e instanceof NetworkError) return 'Connection lost. Check your internet and try again.';
+  if (e instanceof ApiError) return e.message;
+  return 'Something went wrong. Try again.';
+}
+
+export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel }: Props) {
+  const photos = usePhotoAttachments(projectId, kind === 'post' ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT);
+  const [text, setText] = useState('');
+  const [visibility, setVisibility] = useState<PostVisibility>('TEAM');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasContent = text.trim().length > 0 || photos.images.length > 0;
+  const canSend = hasContent && photos.uploadsDone && !photos.busy && !sending;
+
+  const send = async () => {
+    if (!canSend) return;
+    setSending(true);
+    setError(null);
+    try {
+      const trimmed = text.trim();
+      await onSubmit({
+        ...(trimmed ? { text: trimmed } : {}),
+        images: photos.images,
+        visibility,
+        kind: 'UPDATE',
+      });
+      setText('');
+      photos.clear();
+    } catch (e) {
+      setError(describe(e));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const shownError = error ?? photos.problem;
+
+  return (
+    <View style={styles.wrap}>
+      {photos.items.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space[2] }}>
+          {photos.items.map((a) => (
+            <View key={a.key} style={styles.thumbBox}>
+              <Image source={{ uri: a.image.uri }} style={styles.thumb} contentFit="cover" />
+              {a.status === 'uploading' ? (
+                <View style={styles.overlay}>
+                  <ActivityIndicator color={colors.primaryForeground} />
+                  <Text variant="caption" color={colors.primaryForeground}>
+                    {Math.round(a.progress * 100)}%
+                  </Text>
+                </View>
+              ) : null}
+              {a.status === 'error' ? (
+                <PressableScale onPress={() => photos.retry(a.key)} style={styles.overlay} accessibilityLabel="Retry upload">
+                  <Feather name="refresh-cw" size={18} color={colors.primaryForeground} />
+                  <Text variant="caption" color={colors.primaryForeground}>
+                    Retry
+                  </Text>
+                </PressableScale>
+              ) : null}
+              <PressableScale
+                onPress={() => photos.remove(a.key)}
+                accessibilityLabel="Remove photo"
+                hitSlop={8}
+                style={styles.remove}
+              >
+                <Feather name="x" size={14} color={colors.primaryForeground} />
+              </PressableScale>
+            </View>
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {kind === 'post' ? (
+        <View style={styles.visibilityRow}>
+          {(['TEAM', 'CLIENT'] as const).map((v) => {
+            const active = visibility === v;
+            const fg = active ? colors.primaryForeground : colors.mutedForeground;
+            return (
+              <PressableScale
+                key={v}
+                onPress={() => setVisibility(v)}
+                style={[styles.chip, active && styles.chipActive]}
+              >
+                <Feather name={v === 'TEAM' ? 'lock' : 'eye'} size={13} color={fg} />
+                <Text variant="caption" numberOfLines={1} color={fg}>
+                  {v === 'TEAM' ? 'Team only' : 'Visible to customer'}
+                </Text>
+              </PressableScale>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {shownError ? (
+        <Text variant="caption" color={colors.destructive}>
+          {shownError}
+        </Text>
+      ) : null}
+
+      {kind === 'reply' ? (
+        <>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={placeholder}
+            placeholderTextColor={colors.placeholder}
+            multiline
+            autoFocus
+            style={[styles.input, { flex: 0, minHeight: 72, textAlignVertical: 'top' }]}
+          />
+          <View style={styles.replyActions}>
+            <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
+              <Feather name="camera" size={20} color={colors.mutedForeground} />
+            </PressableScale>
+            <PressableScale
+              onPress={() => void photos.pickFromGallery()}
+              accessibilityLabel="Attach photos"
+              style={styles.icon}
+            >
+              <Feather name="image" size={20} color={colors.mutedForeground} />
+            </PressableScale>
+            <View style={{ flex: 1 }} />
+            {onCancel ? <Button title="Cancel" variant="ghost" size="sm" onPress={onCancel} /> : null}
+            <Button title="Reply" size="sm" onPress={() => void send()} loading={sending} disabled={!canSend} />
+          </View>
+        </>
+      ) : (
+      <View style={styles.row}>
+        <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
+          <Feather name="camera" size={22} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          onPress={() => void photos.pickFromGallery()}
+          accessibilityLabel="Attach photos"
+          style={styles.icon}
+        >
+          <Feather name="image" size={22} color={colors.mutedForeground} />
+        </PressableScale>
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.placeholder}
+          multiline
+          style={styles.input}
+        />
+        <Button title="Send" onPress={() => void send()} loading={sending} disabled={!canSend} />
+      </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { gap: space[2] },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: space[1] },
+  replyActions: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.input,
+    fontFamily: font.regular,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+  thumbBox: { width: 72, height: 72, borderRadius: radius.md, overflow: 'hidden' },
+  thumb: { width: 72, height: 72, backgroundColor: colors.muted },
+  overlay: {
+    ...StyleSheet.absoluteFill as object,
+    backgroundColor: 'rgba(15, 28, 26, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  remove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(15, 28, 26, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  visibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+  },
+  chip: {
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 34,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.muted,
+  },
+  chipActive: { backgroundColor: colors.primary },
+});

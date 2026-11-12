@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Vastu Kitchen",
+    "slug": "vastu-kitchen",
+    "scheme": "vastukitchen",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": false, "bundleIdentifier": "in.vastukitchen.app" },
+    "android": {
+      "package": "in.vastukitchen.app",
+      "allowBackup": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-image",
+      "expo-font",
+      ["expo-splash-screen", { "backgroundColor": "#ffffff" }],
+      "expo-status-bar",
+      ["expo-image-picker", { "photosPermission": "Vastu Kitchen needs your photos to attach them to project updates and complaints.", "cameraPermission": "Vastu Kitchen needs the camera to take site and design photos." }]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

@@ -42,6 +42,8 @@ export interface TodoRepositoryPort {
   countsByList(projectId: string): Promise<Map<string, { open: number; done: number }>>;
   /** Everything assigned to a person, across projects (capped). */
   listAssigned(userId: string, status: TodoStatusFilter): Promise<Todo[]>;
+  /** Every to-do on every project (an Admin's overview), newest first, capped. */
+  listAll(status: TodoStatusFilter): Promise<Todo[]>;
   findOverdue(window: OverdueWindow): Promise<Todo[]>;
   adjustCommentCount(id: string, delta: 1 | -1): Promise<void>;
 }

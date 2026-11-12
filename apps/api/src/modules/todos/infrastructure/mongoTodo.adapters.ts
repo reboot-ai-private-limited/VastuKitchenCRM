@@ -209,6 +209,12 @@ export class MongoTodoRepository implements TodoRepositoryPort {
     return (await TodoModel.find(filter).sort({ createdAt: -1 }).limit(MINE_LIMIT)).map(toTodo);
   }
 
+  async listAll(status: TodoStatusFilter): Promise<Todo[]> {
+    const filter: Record<string, unknown> = { deletedAt: null };
+    applyStatus(filter, status);
+    return (await TodoModel.find(filter).sort({ createdAt: -1 }).limit(MINE_LIMIT)).map(toTodo);
+  }
+
   async findOverdue(w: OverdueWindow): Promise<Todo[]> {
     const docs = await TodoModel.find({
       deletedAt: null,

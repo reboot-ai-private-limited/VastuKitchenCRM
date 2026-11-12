@@ -83,6 +83,27 @@ export function groupMine(
   return out.filter((g) => g.todos.length > 0);
 }
 
+/**
+ * To-dos grouped under their project. The API already sorts everything most urgent first, so the
+ * projects come out with the most urgent one first, and inside each project overdue comes before
+ * due-soon before undated.
+ */
+export function groupByProject(
+  todos: MyTodoDto[],
+): Array<{ project: MyTodoDto['project']; todos: MyTodoDto[]; overdue: number }> {
+  const out = new Map<
+    string,
+    { project: MyTodoDto['project']; todos: MyTodoDto[]; overdue: number }
+  >();
+  for (const t of todos) {
+    const g = out.get(t.project.id) ?? { project: t.project, todos: [], overdue: 0 };
+    g.todos.push(t);
+    if (t.bucket === 'OVERDUE' && !t.completed) g.overdue++;
+    out.set(t.project.id, g);
+  }
+  return [...out.values()];
+}
+
 /** Optimistic complete/reopen on one to-do inside any cached array. Other to-dos are returned untouched. */
 export function withCompletion<T extends Pick<TodoDto, 'id' | 'completed'>>(
   todos: T[],

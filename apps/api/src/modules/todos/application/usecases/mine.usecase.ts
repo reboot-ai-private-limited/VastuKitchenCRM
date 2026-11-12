@@ -26,7 +26,7 @@ export function bucketOf(todo: Pick<Todo, 'dueOn' | 'completedAt'>, today: strin
 
 const ORDER: Record<TodoBucket, number> = { OVERDUE: 0, TODAY: 1, UPCOMING: 2, NO_DATE: 3 };
 
-/** "My assignments": everything assigned to me, across projects, most urgent first. */
+/** "My assignments": everything assigned to me, across projects, most urgent first. An Admin may ask for everyone's. */
 export class MyTodosUseCase {
   constructor(
     private readonly todos: TodoRepositoryPort,
@@ -38,7 +38,10 @@ export class MyTodosUseCase {
   ) {}
 
   async execute(actor: ActorRef, query: MyTodosQueryDto): Promise<MyTodoView[]> {
-    const mine = await this.todos.listAssigned(actor.id, query.status);
+    const mine =
+      query.scope === 'all' && actor.role === 'ADMIN'
+        ? await this.todos.listAll(query.status)
+        : await this.todos.listAssigned(actor.id, query.status);
 
     // Only projects I can still open: someone removed from a project stops seeing its to-dos.
     const accessible = new Map(

@@ -48,10 +48,10 @@ export const useTodoComments = (id: string | null) =>
     enabled: !!id,
   });
 
-export const useMyTodos = (status: TodoStatusFilter) =>
+export const useMyTodos = (status: TodoStatusFilter, scope: 'mine' | 'all' = 'mine') =>
   useQuery({
-    queryKey: ['todos', 'mine', status],
-    queryFn: ({ signal }) => api<MyTodoDto[]>('/todos/mine', { query: { status }, signal }),
+    queryKey: ['todos', 'mine', status, scope],
+    queryFn: ({ signal }) => api<MyTodoDto[]>('/todos/mine', { query: { status, scope }, signal }),
     refetchOnWindowFocus: true,
   });
 

@@ -140,7 +140,7 @@ describe('who can use to-dos (team only)', () => {
         statusCode: 404,
       });
       await expect(del.execute(who, t.todo.id)).rejects.toMatchObject({ statusCode: 404 });
-      expect(await mine.execute(who, { status: 'all' })).toEqual([]);
+      expect(await mine.execute(who, { status: 'all', scope: 'mine' })).toEqual([]);
     }
     expect(w.todos.rows).toHaveLength(1);
   });
@@ -450,7 +450,7 @@ describe('my assignments', () => {
     );
     await complete.execute(tech, finished.todo.id);
 
-    const open = await mine.execute(tech, { status: 'open' });
+    const open = await mine.execute(tech, { status: 'open', scope: 'mine' });
     expect(open.map((m) => [m.view.todo.title, m.bucket])).toEqual([
       ['late', 'OVERDUE'],
       ['today', 'TODAY'],
@@ -461,14 +461,23 @@ describe('my assignments', () => {
       project: { id: 'proj1', name: "Mrs Rao's project" },
       listName: 'Procurement',
     });
-    expect((await mine.execute(tech, { status: 'done' })).map((m) => m.view.todo.title)).toEqual([
-      'finished',
-    ]);
-    expect(await mine.execute(designer, { status: 'all' })).toEqual([]);
+    expect(
+      (await mine.execute(tech, { status: 'done', scope: 'mine' })).map((m) => m.view.todo.title),
+    ).toEqual(['finished']);
+    expect(await mine.execute(designer, { status: 'all', scope: 'mine' })).toEqual([]);
+
+    // The Admin can ask for everyone's; nobody else gets more than their own.
+    expect(
+      (await mine.execute(admin, { status: 'open', scope: 'all' })).map((m) => m.view.todo.title),
+    ).toContain('not mine');
+    expect(await mine.execute(admin, { status: 'open', scope: 'mine' })).toEqual([]);
+    expect(
+      (await mine.execute(tech, { status: 'open', scope: 'all' })).map((m) => m.view.todo.title),
+    ).not.toContain('not mine');
 
     // Removed from the project: its to-dos disappear from "my assignments".
     w.projects.members = w.projects.members.filter((m) => m !== 'tech1');
-    expect(await mine.execute(tech, { status: 'all' })).toEqual([]);
+    expect(await mine.execute(tech, { status: 'all', scope: 'mine' })).toEqual([]);
   });
 });
 

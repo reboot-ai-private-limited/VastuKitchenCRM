@@ -4,6 +4,7 @@ import {
   dueChip,
   filterByStatus,
   groupByList,
+  groupByProject,
   groupMine,
   progressLabel,
   progressPercent,
@@ -131,5 +132,22 @@ describe('optimistic helpers', () => {
     expect(withListCounts([list()], 'l1', true)[0]).toMatchObject({ openCount: 4, doneCount: 4 });
     expect(withListCounts([list()], 'l1', false)[0]).toMatchObject({ openCount: 6, doneCount: 2 });
     expect(withListCounts([list({ openCount: 0 })], 'l1', true)[0]!.openCount).toBe(0);
+  });
+});
+
+describe('groupByProject', () => {
+  it("puts each project's to-dos together, most urgent project first, and counts what is overdue", () => {
+    const t = (id: string, project: string, bucket: MyTodoDto['bucket']) =>
+      mine({ id, project: { id: project, name: project.toUpperCase() }, bucket });
+    const g = groupByProject([
+      t('1', 'b', 'OVERDUE'),
+      t('2', 'a', 'TODAY'),
+      t('3', 'b', 'OVERDUE'),
+      t('4', 'a', 'NO_DATE'),
+    ]);
+    expect(g.map((x) => [x.project.name, x.todos.map((y) => y.id), x.overdue])).toEqual([
+      ['B', ['1', '3'], 2],
+      ['A', ['2', '4'], 0],
+    ]);
   });
 });

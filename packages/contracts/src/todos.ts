@@ -154,6 +154,8 @@ export type MyTodoDto = z.infer<typeof myTodoSchema>;
 
 export const myTodosQuerySchema = z.object({
   status: z.enum(['open', 'done', 'all']).default('open'),
+  /** `all`: every to-do on every project. Only an Admin gets it; for anyone else it means `mine`. */
+  scope: z.enum(['mine', 'all']).default('mine'),
 });
 export type MyTodosQueryDto = z.infer<typeof myTodosQuerySchema>;
 

@@ -132,6 +132,9 @@ export class FakeTodos implements TodoRepositoryPort {
   async listAssigned(userId: string, s: TodoStatusFilter) {
     return this.rows.filter((t) => !t.deleted && t.assigneeIds.includes(userId) && status(t, s));
   }
+  async listAll(s: TodoStatusFilter) {
+    return this.rows.filter((t) => !t.deleted && status(t, s));
+  }
   async findOverdue(w: OverdueWindow) {
     return this.rows
       .filter(

@@ -75,6 +75,7 @@ export function ProjectDetail({ id }: { id: string }) {
   // The tab and an open to-do live in the URL, so notifications and the My to-dos page can deep-link.
   const wanted = params.get('tab');
   const todoParam = params.get('todo');
+  const complaintParam = params.get('complaint');
   const setParams = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) {
@@ -103,7 +104,8 @@ export function ProjectDetail({ id }: { id: string }) {
   const allowed = SECTIONS.filter((t) => (t === 'todos' ? can.seesTeam : true));
   // Chat is what opens by default.
   const tab: WorkspaceSection = allowed.find((t) => t === wanted) ?? 'feed';
-  const setTab = (t: string) => setParams({ tab: t === 'feed' ? null : t, todo: null });
+  const setTab = (t: string) =>
+    setParams({ tab: t === 'feed' ? null : t, todo: null, complaint: null });
   const raisable = canRaiseComplaint(user?.role) && !can.summaryOnly;
   const closed = p.stage === 'CLOSED';
 
@@ -217,6 +219,8 @@ export function ProjectDetail({ id }: { id: string }) {
                 projectId={p.id}
                 canRaise={raisable && !closed}
                 onRaise={() => setDialog('complaint')}
+                complaintId={complaintParam}
+                onComplaintChange={(id) => setParams({ tab: 'complaints', complaint: id })}
               />
             )}
             {tab === 'docs' && (
@@ -251,6 +255,7 @@ export function ProjectDetail({ id }: { id: string }) {
         open={dialog === 'complaint'}
         onOpenChange={(o) => setDialog(o ? 'complaint' : null)}
         defaultProjectId={p.id}
+        onRaised={(id) => setParams({ tab: 'complaints', complaint: id })}
       />
       {dialog === 'invite' && <InviteDialog project={p} onClose={() => setDialog(null)} />}
       {dialog === 'close' && (

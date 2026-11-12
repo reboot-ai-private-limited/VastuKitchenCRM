@@ -32,10 +32,13 @@ export function RaiseDialog({
   open,
   onOpenChange,
   defaultProjectId,
+  onRaised,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   defaultProjectId?: string | null;
+  /** Where to go after raising. Default: the complaint's own page. A project passes this to open it in place. */
+  onRaised?: (id: string) => void;
 }) {
   const router = useRouter();
   const projects = useProjectOptions(open);
@@ -82,7 +85,8 @@ export function RaiseDialog({
           toast.success('Complaint raised');
           sent.current = true;
           close(false);
-          router.push(`/complaints/${c.id}`);
+          if (onRaised) onRaised(c.id);
+          else router.push(`/complaints/${c.id}`);
         },
         onError: (e) =>
           setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.'),

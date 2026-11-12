@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { RoleName } from '@vastu/contracts';
 import { env } from '@/config/env.js';
 import { logger } from '@/shared/logging/logger.js';
+import { WaAgentClient } from '@/shared/whatsapp/waAgentClient.js';
 import { SessionIssuer } from './application/services/sessionIssuer.js';
 import { ChangePasswordUseCase } from './application/usecases/changePassword.usecase.js';
 import {
@@ -21,7 +22,11 @@ import {
 } from './application/usecases/designations.usecase.js';
 import { GetUserUseCase } from './application/usecases/getUser.usecase.js';
 import { ListUsersUseCase } from './application/usecases/listUsers.usecase.js';
-import { RequestOtpUseCase, VerifyOtpUseCase, DEV_OTP_CODE } from './application/usecases/otp.usecase.js';
+import {
+  RequestOtpUseCase,
+  VerifyOtpUseCase,
+  DEV_OTP_CODE,
+} from './application/usecases/otp.usecase.js';
 import { LoginUseCase } from './application/usecases/login.usecase.js';
 import { LogoutUseCase } from './application/usecases/logout.usecase.js';
 import { RefreshSessionUseCase } from './application/usecases/refreshSession.usecase.js';
@@ -88,9 +93,12 @@ export function buildIdentityContainer(): IdentityContainer {
   const signer = new JwtAccessTokenSigner();
   const tokens = new CryptoTokenGenerator();
   const otps = new MongoOtpRepository();
-  const waConfigured =
-    env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && env.WA_AGENT_OTP_TEMPLATE;
-  if (!waConfigured) {
+  const otpTemplate = env.WA_AGENT_OTP_TEMPLATE_ID
+    ? { id: env.WA_AGENT_OTP_TEMPLATE_ID }
+    : env.WA_AGENT_OTP_TEMPLATE
+      ? { name: env.WA_AGENT_OTP_TEMPLATE, language: env.WA_AGENT_OTP_LANGUAGE }
+      : null;
+  if (!(env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && otpTemplate)) {
     logger.warn(
       env.OTP_DEV_MODE
         ? 'WA AGENT is not configured: login codes print in this console and are always 123456'
@@ -98,14 +106,15 @@ export function buildIdentityContainer(): IdentityContainer {
     );
   }
   const otpSender =
-    env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && env.WA_AGENT_OTP_TEMPLATE
-      ? new WaAgentOtpSender({
-          apiKey: env.WA_AGENT_API_KEY,
-          phoneNumberId: env.WA_AGENT_PHONE_NUMBER_ID,
-          template: env.WA_AGENT_OTP_TEMPLATE,
-          language: env.WA_AGENT_OTP_LANGUAGE,
-          baseUrl: env.WA_AGENT_BASE_URL,
-        })
+    env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && otpTemplate
+      ? new WaAgentOtpSender(
+          new WaAgentClient({
+            apiKey: env.WA_AGENT_API_KEY,
+            phoneNumberId: env.WA_AGENT_PHONE_NUMBER_ID,
+            baseUrl: env.WA_AGENT_BASE_URL,
+          }),
+          otpTemplate,
+        )
       : new ConsoleOtpSender();
 
   // 2. Use cases, depending only on ports

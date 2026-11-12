@@ -53,8 +53,14 @@ const schema = z.object({
    */
   WA_AGENT_API_KEY: blankAsUnset(z.string().min(1).optional()),
   WA_AGENT_PHONE_NUMBER_ID: blankAsUnset(z.string().min(1).optional()),
+  /** The login-code (AUTHENTICATION) template: its id from the portal, or its name (+ language). */
+  WA_AGENT_OTP_TEMPLATE_ID: blankAsUnset(z.string().min(1).optional()),
   WA_AGENT_OTP_TEMPLATE: blankAsUnset(z.string().min(1).optional()),
   WA_AGENT_OTP_LANGUAGE: z.string().min(1).default('en'),
+  /** The proposal-link template (`proposal_share`): body.1 name, body.2 number, body.3 company, button.0.1 token. */
+  WA_AGENT_PROPOSAL_TEMPLATE_ID: blankAsUnset(z.string().min(1).optional()),
+  WA_AGENT_PROPOSAL_TEMPLATE: blankAsUnset(z.string().min(1).optional()),
+  WA_AGENT_PROPOSAL_LANGUAGE: z.string().min(1).default('en'),
   WA_AGENT_BASE_URL: z.string().url().default('https://api.waagent.in/v1'),
   /** Demo only: every code is 123456. Refused in production. */
   OTP_DEV_MODE: z

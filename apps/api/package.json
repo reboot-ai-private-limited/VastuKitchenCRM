@@ -14,7 +14,8 @@
     "test": "vitest run",
     "seed": "tsx src/scripts/seed.ts",
     "seed:demo": "tsx src/scripts/seed-demo.ts",
-    "check:storage": "tsx src/scripts/check-storage.ts"
+    "check:storage": "tsx src/scripts/check-storage.ts",
+    "check:whatsapp": "tsx src/scripts/check-whatsapp.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.4",

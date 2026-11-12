@@ -1,4 +1,5 @@
 import {
+  DEFAULT_PROPOSAL_TEMPLATE_KEY,
   createProposalBodySchema,
   updateProposalBodySchema,
   type CreateProposalBodyDto,
@@ -41,6 +42,8 @@ export interface ProposalForm {
   terms: string;
   /** `YYYY-MM-DD` or empty. */
   validUntil: string;
+  /** Which template the proposal is laid out with. */
+  templateKey: string;
 }
 
 let seq = 0;
@@ -61,6 +64,7 @@ export const emptyForm = (): ProposalForm => ({
   notes: '',
   terms: '',
   validUntil: '',
+  templateKey: DEFAULT_PROPOSAL_TEMPLATE_KEY,
 });
 
 export const formFromProposal = (p: ProposalDto): ProposalForm => ({
@@ -78,6 +82,7 @@ export const formFromProposal = (p: ProposalDto): ProposalForm => ({
   notes: p.notes ?? '',
   terms: p.terms,
   validUntil: p.validUntil ? p.validUntil.slice(0, 10) : '',
+  templateKey: p.templateKey,
 });
 
 const num = (s: string): number => (s.trim() === '' ? Number.NaN : Number(s.replace(/,/g, '')));
@@ -132,6 +137,7 @@ export function buildBody(
     title: f.title.trim(),
     items,
     discount,
+    templateKey: f.templateKey,
     ...(f.terms.trim() ? { terms: f.terms.trim() } : {}),
   };
   const update = updateProposalBodySchema.safeParse({

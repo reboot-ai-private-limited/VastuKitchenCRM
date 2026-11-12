@@ -1,6 +1,6 @@
 'use client';
 
-import type { LeadDto, ProposalDto } from '@vastu/contracts';
+import { findBuiltinTemplate, DEFAULT_PROPOSAL_TEMPLATE_KEY, type LeadDto, type ProposalDto } from '@vastu/contracts';
 import { ArrowDown, ArrowUp, Plus, Save, Send, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
+import { useProposalTemplate } from '@/lib/api/proposal-templates';
 import { useCreateProposal, useDeleteProposal, useUpdateProposal } from '@/lib/api/proposals';
 import { formatINR } from '@/lib/format';
 import {
@@ -33,7 +34,8 @@ import {
   type ProposalForm,
 } from '@/lib/proposals';
 import { cn } from '@/lib/utils';
-import { ProposalDocument } from './proposal-document';
+import { TemplatePicker } from './render/template-picker';
+import { TemplateDocument } from './render/template-document';
 
 const MAX_ITEMS = 50;
 const signature = (f: ProposalForm) =>
@@ -69,6 +71,17 @@ export function ProposalBuilder({
   const create = useCreateProposal();
   const update = useUpdateProposal(proposal?.id ?? '');
   const remove = useDeleteProposal();
+  // The saved snapshot while the design is unchanged; otherwise the chosen one (built-ins are bundled).
+  const chosen = useProposalTemplate(
+    proposal?.templateKey === form.templateKey || findBuiltinTemplate(form.templateKey)
+      ? null
+      : form.templateKey,
+  );
+  const template =
+    (proposal?.templateKey === form.templateKey ? proposal.template : null) ??
+    findBuiltinTemplate(form.templateKey) ??
+    chosen.data ??
+    findBuiltinTemplate(DEFAULT_PROPOSAL_TEMPLATE_KEY)!;
   const saving = create.isPending || update.isPending;
   const dirty = saved === null || signature(form) !== saved;
 
@@ -209,6 +222,7 @@ export function ProposalBuilder({
           </Section>
 
           <Section title="Details">
+            <TemplatePicker value={form.templateKey} onChange={(k) => set('templateKey', k)} />
             <div>
               <Label htmlFor="p-title">Title</Label>
               <Input
@@ -410,7 +424,8 @@ export function ProposalBuilder({
           <p className="text-muted-foreground mb-2 text-xs font-medium">
             Live preview: what the customer will see
           </p>
-          <ProposalDocument
+          <TemplateDocument
+            template={template}
             doc={{
               number: proposal?.number,
               title: form.title.trim() || 'Untitled proposal',

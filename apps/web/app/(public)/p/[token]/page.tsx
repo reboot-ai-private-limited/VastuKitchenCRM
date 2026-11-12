@@ -1,7 +1,7 @@
 import type { PublicProposalDto } from '@vastu/contracts';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ProposalDocument } from '@/components/proposals/proposal-document';
+import { TemplateDocument } from '@/components/proposals/render/template-document';
 import { playfair } from '@/lib/fonts';
 import { PrintButton } from './print-button';
 import { SeenPing } from './seen-ping';
@@ -41,11 +41,12 @@ export default async function PublicProposalPage({
     <main
       className={`${playfair.variable} bg-secondary/60 min-h-dvh px-3 py-6 sm:px-6 sm:py-10 print:bg-white print:p-0`}
     >
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-[794px] space-y-4">
         <div className="flex justify-end print:hidden">
           <PrintButton />
         </div>
-        <ProposalDocument
+        <TemplateDocument
+          template={p.template}
           doc={{
             number: p.number,
             title: p.title,

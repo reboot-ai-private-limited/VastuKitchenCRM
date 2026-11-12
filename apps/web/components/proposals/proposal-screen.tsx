@@ -16,7 +16,7 @@ import { useLead } from '@/lib/api/leads';
 import { useDuplicateProposal, useProposal } from '@/lib/api/proposals';
 import { formatDate, formatTime, relativeAge } from '@/lib/format';
 import { ProposalBuilder } from './proposal-builder';
-import { ProposalDocument } from './proposal-document';
+import { TemplateDocument } from './render/template-document';
 import { SendFlow, copyLink } from './send-flow';
 
 const Loading = () => (
@@ -133,7 +133,8 @@ function SentView({ proposal: p, onShare }: { proposal: ProposalDto; onShare: ()
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <ProposalDocument
+        <TemplateDocument
+          template={p.template}
           doc={{
             number: p.number,
             title: p.title,

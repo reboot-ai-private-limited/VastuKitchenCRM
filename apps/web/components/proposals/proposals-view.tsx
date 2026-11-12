@@ -1,7 +1,7 @@
 'use client';
 
 import type { LeadDto, ProposalDto, ProposalStatus } from '@vastu/contracts';
-import { FileText, Plus, Search } from 'lucide-react';
+import { FileText, LayoutTemplate, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/table';
 import { useLeads } from '@/lib/api/leads';
 import { PROPOSAL_PAGE_SIZE, useProposals } from '@/lib/api/proposals';
+import { useAuth } from '@/lib/auth';
 import { formatINR, relativeAge } from '@/lib/format';
 import { DEFAULT_FILTERS, STATUS_LABEL, formatPhone } from '@/lib/leads';
 import { proposalChip } from '@/lib/proposals';
@@ -49,6 +50,7 @@ export function ProposalChipBadge({ p }: { p: Pick<ProposalDto, 'status' | 'firs
 }
 
 export function ProposalsView() {
+  const { user } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const status = (['DRAFT', 'SENT'] as const).find((s) => s === params.get('status')) ?? null;
@@ -73,9 +75,18 @@ export function ProposalsView() {
           data ? `${data.total} ${data.total === 1 ? 'proposal' : 'proposals'}` : undefined
         }
         actions={
-          <Button onClick={() => setPicking(true)}>
-            <Plus /> New proposal
-          </Button>
+          <>
+            {user?.role === 'ADMIN' && (
+              <Button asChild variant="outline">
+                <Link href="/proposals/templates">
+                  <LayoutTemplate /> Templates
+                </Link>
+              </Button>
+            )}
+            <Button onClick={() => setPicking(true)}>
+              <Plus /> New proposal
+            </Button>
+          </>
         }
       />
       <div className="flex flex-wrap items-center gap-2">

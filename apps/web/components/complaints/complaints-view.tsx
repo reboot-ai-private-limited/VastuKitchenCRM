@@ -1,7 +1,7 @@
 'use client';
 
-import { COMPLAINT_STATUSES, type ComplaintDto } from '@vastu/contracts';
-import { LifeBuoy, Plus } from 'lucide-react';
+import { type ComplaintDto } from '@vastu/contracts';
+import { Eye, EyeOff, FolderOpen, LifeBuoy, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -18,31 +18,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  COMPLAINT_PAGE_SIZE,
-  useComplaintCounts,
-  useComplaints,
-  useProjectOptions,
-} from '@/lib/api/complaints';
+import { useComplaintsAll, useProjectOptions } from '@/lib/api/complaints';
 import { useAuth } from '@/lib/auth';
-import { relativeAge } from '@/lib/format';
 import {
-  COMPLAINT_STATUS_LABEL,
   canRaiseComplaint,
   complaintFiltersToSearch,
   parseComplaintFilters,
-  snippet,
   type ComplaintFilters,
 } from '@/lib/complaints';
 import { cn } from '@/lib/utils';
+import { ComplaintPanel } from './complaint-panel';
+import { ComplaintTile, isActiveForMe } from './complaint-tile';
 import { RaiseDialog } from './raise-dialog';
 
 const ALL = '__all__';
@@ -51,32 +37,56 @@ export function ReopenedChip({ count }: { count: number }) {
   return count > 0 ? <StatusBadge kind="tone" tone="orange" label={`Reopened ×${count}`} /> : null;
 }
 
+/** Where "Open project" takes you: the project's workspace with this complaint open, and a way back here. */
+export const complaintInProject = (c: Pick<ComplaintDto, 'id' | 'projectId'>): string =>
+  `/projects/${c.projectId}?tab=complaints&complaint=${c.id}&from=/complaints`;
+
 export function ComplaintsView() {
   const router = useRouter();
   const params = useSearchParams();
   const { user } = useAuth();
   const filters = useMemo(() => parseComplaintFilters(params), [params]);
   const [raising, setRaising] = useState(false);
-  const q = useComplaints(filters);
-  const counts = useComplaintCounts();
+  const [showResolved, setShowResolved] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const q = useComplaintsAll(filters);
   const projects = useProjectOptions();
   const data = q.data;
   const filtered = filters.mine || filters.projectId !== null;
+  // A technician who is only assigned may not open the project, so they get no link to it.
+  const canOpenProject = user?.role !== 'TECHNICIAN';
 
   const go = (patch: Partial<ComplaintFilters>) =>
     router.replace(`/complaints${complaintFiltersToSearch({ ...filters, page: 1, ...patch })}`, {
       scroll: false,
     });
-  const total = counts.data
-    ? COMPLAINT_STATUSES.reduce((n, s) => n + counts.data[s], 0)
-    : undefined;
+
+  const items = useMemo(() => data?.items ?? [], [data]);
+  const tucked = items.filter((c) => !isActiveForMe(c) && c.id !== openId).length;
+  const groups = useMemo(() => {
+    const byProject = new Map<string, { id: string; name: string; items: ComplaintDto[] }>();
+    for (const c of items) {
+      if (!(showResolved || isActiveForMe(c) || c.id === openId)) continue;
+      const g = byProject.get(c.projectId) ?? { id: c.projectId, name: c.projectName, items: [] };
+      g.items.push(c);
+      byProject.set(c.projectId, g);
+    }
+    // Projects with the most still-open complaints first; inside, newest first (the API order).
+    return [...byProject.values()].sort(
+      (a, b) =>
+        b.items.filter(isActiveForMe).length - a.items.filter(isActiveForMe).length ||
+        a.name.localeCompare(b.name),
+    );
+  }, [items, showResolved, openId]);
 
   return (
     <PageBody>
       <PageHeader
         title="Complaints"
         description={
-          data ? `${data.total} ${data.total === 1 ? 'complaint' : 'complaints'}` : undefined
+          data
+            ? `${items.filter(isActiveForMe).length} need attention${tucked ? ` · ${tucked} resolved` : ''}`
+            : undefined
         }
         actions={
           canRaiseComplaint(user?.role) && (
@@ -86,30 +96,6 @@ export function ComplaintsView() {
           )
         }
       />
-
-      <div role="tablist" aria-label="Status" className="-mx-1 flex gap-1 overflow-x-auto px-1">
-        {([null, ...COMPLAINT_STATUSES] as const).map((s) => {
-          const n = s === null ? total : counts.data?.[s];
-          const active = filters.status === s;
-          return (
-            <Button
-              key={s ?? 'all'}
-              role="tab"
-              aria-selected={active}
-              variant={active ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => go({ status: s })}
-            >
-              {s === null ? 'All' : COMPLAINT_STATUS_LABEL[s]}
-              {n !== undefined && (
-                <span className="tabular bg-card text-muted-foreground ml-1 rounded-full border px-1.5 text-xs">
-                  {n}
-                </span>
-              )}
-            </Button>
-          );
-        })}
-      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -142,75 +128,89 @@ export function ComplaintsView() {
             Clear
           </Button>
         )}
+        {tucked > 0 && (
+          <Button
+            variant="ghost"
+            className="ml-auto"
+            aria-pressed={showResolved}
+            onClick={() => setShowResolved((s) => !s)}
+          >
+            {showResolved ? <EyeOff /> : <Eye />} {showResolved ? 'Hide' : 'Show'} resolved (
+            {tucked})
+          </Button>
+        )}
       </div>
 
-      <div className="bg-card shadow-card overflow-hidden rounded-xl border">
-        {q.isError && !data ? (
+      {q.isError && !data ? (
+        <div className="bg-card shadow-card rounded-xl border">
           <ErrorState error={q.error} onRetry={() => q.refetch()} />
-        ) : q.isPending ? (
-          <div className="space-y-3 p-4" aria-hidden>
-            {Array.from({ length: 5 }, (_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : data && data.items.length === 0 ? (
+        </div>
+      ) : q.isPending ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-52 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="bg-card shadow-card rounded-xl border">
           <EmptyState
             icon={LifeBuoy}
             title={
-              filters.status || filtered ? 'No complaints match these filters' : 'No complaints'
+              filtered
+                ? 'No complaints match these filters'
+                : items.length > 0
+                  ? 'Nothing needs attention'
+                  : 'No complaints'
             }
             description={
-              filters.status || filtered
-                ? 'Try another tab or clear the filters.'
-                : 'Nothing has been raised. That is good news.'
+              filtered
+                ? 'Clear the filters to see more.'
+                : items.length > 0
+                  ? 'Use “Show resolved” to see finished ones.'
+                  : 'Nothing has been raised. That is good news.'
             }
           />
-        ) : data ? (
-          <>
-            <Table className={cn(q.isPlaceholderData && 'opacity-60 transition-opacity')}>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Complaint</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Assigned to</TableHead>
-                  <TableHead className="hidden sm:table-cell">Raised</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.items.map((c) => (
-                  <ComplaintRow key={c.id} c={c} />
-                ))}
-              </TableBody>
-            </Table>
-            {data.totalPages > 1 && (
-              <div className="flex items-center justify-between gap-3 border-t px-4 py-2.5">
-                <p className="text-muted-foreground tabular text-xs">
-                  {(data.page - 1) * COMPLAINT_PAGE_SIZE + 1}–
-                  {Math.min(data.page * COMPLAINT_PAGE_SIZE, data.total)} of {data.total}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={data.page <= 1}
-                    onClick={() => go({ page: data.page - 1 })}
-                  >
-                    Previous
+        </div>
+      ) : (
+        <div className={cn('space-y-8', q.isPlaceholderData && 'opacity-60 transition-opacity')}>
+          {groups.map((g) => (
+            <section key={g.id} aria-label={g.name} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
+                  {g.name}{' '}
+                  <span className="text-muted-foreground tabular font-normal">
+                    · {g.items.length}
+                  </span>
+                </h2>
+                {canOpenProject && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/projects/${g.id}?tab=complaints&from=/complaints`}>
+                      <FolderOpen /> Open project
+                    </Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={data.page >= data.totalPages}
-                    onClick={() => go({ page: data.page + 1 })}
-                  >
-                    Next
-                  </Button>
-                </div>
+                )}
               </div>
-            )}
-          </>
-        ) : null}
-      </div>
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {g.items.map((c) =>
+                  c.id === openId ? (
+                    <li key={c.id} className="sm:col-span-2 xl:col-span-3">
+                      <div className="bg-card shadow-card rounded-xl border">
+                        <ComplaintPanel
+                          id={c.id}
+                          onCollapse={() => setOpenId(null)}
+                          {...(canOpenProject ? { projectHref: complaintInProject(c) } : {})}
+                        />
+                      </div>
+                    </li>
+                  ) : (
+                    <ComplaintTile key={c.id} complaint={c} onOpen={() => setOpenId(c.id)} />
+                  ),
+                )}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
       {canRaiseComplaint(user?.role) && (
         <RaiseDialog
           open={raising}
@@ -219,36 +219,5 @@ export function ComplaintsView() {
         />
       )}
     </PageBody>
-  );
-}
-
-function ComplaintRow({ c }: { c: ComplaintDto }) {
-  return (
-    <TableRow>
-      <TableCell className="max-w-0 min-w-56 whitespace-normal">
-        <Link
-          href={`/complaints/${c.id}`}
-          className="focus-visible:ring-ring rounded-sm font-semibold outline-none hover:underline focus-visible:ring-2"
-        >
-          {c.projectName}
-        </Link>
-        <span className="text-muted-foreground block text-xs">{c.customer.name}</span>
-        <span className="text-muted-foreground mt-0.5 block truncate text-xs">
-          {snippet(c.description)}
-        </span>
-      </TableCell>
-      <TableCell>
-        <span className="inline-flex flex-wrap items-center gap-1.5">
-          <StatusBadge kind="complaint" value={c.status} />
-          <ReopenedChip count={c.reopenCount} />
-        </span>
-      </TableCell>
-      <TableCell className="text-muted-foreground hidden lg:table-cell">
-        {c.assignedTo?.name ?? 'Unassigned'}
-      </TableCell>
-      <TableCell className="text-muted-foreground hidden sm:table-cell">
-        {relativeAge(c.createdAt)}
-      </TableCell>
-    </TableRow>
   );
 }

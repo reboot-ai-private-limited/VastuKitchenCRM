@@ -36,6 +36,22 @@ export const useComplaints = (f: ComplaintFilters) =>
     placeholderData: keepPreviousData,
   });
 
+/** Every complaint the caller may see (up to 100), for the grouped page: no paging, filtered on the server by who/where. */
+export const useComplaintsAll = (f: Pick<ComplaintFilters, 'mine' | 'projectId'>) =>
+  useQuery({
+    queryKey: ['complaints', 'list', 'all', f],
+    queryFn: ({ signal }) =>
+      api<PaginatedDto<ComplaintDto>>('/complaints', {
+        query: {
+          pageSize: 100,
+          projectId: f.projectId,
+          assignedTo: f.mine ? 'me' : undefined,
+        },
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+  });
+
 export const useComplaintCounts = () =>
   useQuery({
     queryKey: ['complaints', 'counts'],

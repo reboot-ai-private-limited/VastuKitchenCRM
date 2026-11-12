@@ -37,7 +37,10 @@ import { ProposalDocument } from './proposal-document';
 
 const MAX_ITEMS = 50;
 const signature = (f: ProposalForm) =>
-  JSON.stringify({ ...f, items: f.items.map((i) => [i.title, i.description, i.quantity, i.unitPrice]) });
+  JSON.stringify({
+    ...f,
+    items: f.items.map((i) => [i.title, i.description, i.quantity, i.unitPrice]),
+  });
 
 /**
  * Left: the form. Right: the proposal exactly as the customer will see it, updating as you type.

@@ -64,6 +64,11 @@ import { Feed, FeedViewToggle } from './feed';
 import { CloseDialog, EditProjectDialog, InviteDialog, MembersDialog } from './project-dialogs';
 
 type Dialog = 'edit' | 'members' | 'close' | 'invite' | 'complaint' | null;
+/** Pages that may send you into a project; the back link returns to them. */
+const BACK_LINKS = [
+  { href: '/complaints', label: 'Complaints' },
+  { href: '/todos', label: 'My to-dos' },
+];
 const SECTIONS: readonly WorkspaceSection[] = ['feed', 'todos', 'complaints', 'docs'];
 
 export function ProjectDetail({ id }: { id: string }) {
@@ -76,6 +81,9 @@ export function ProjectDetail({ id }: { id: string }) {
   const wanted = params.get('tab');
   const todoParam = params.get('todo');
   const complaintParam = params.get('complaint');
+  // Opened from the Complaints or My to-dos page: the back link goes there (same-site paths only).
+  const from = params.get('from');
+  const back = BACK_LINKS.find((b) => from === b.href) ?? { href: '/projects', label: 'Projects' };
   const setParams = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) {
@@ -120,10 +128,10 @@ export function ProjectDetail({ id }: { id: string }) {
       <aside className="flex shrink-0 flex-col border-b md:w-60 md:border-r md:border-b-0">
         <div className="p-3 pb-1 md:p-4 md:pb-2">
           <Link
-            href="/projects"
+            href={back.href}
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
           >
-            <ArrowLeft className="size-3.5" aria-hidden /> Projects
+            <ArrowLeft className="size-3.5" aria-hidden /> {back.label}
           </Link>
         </div>
         {!can.summaryOnly && (

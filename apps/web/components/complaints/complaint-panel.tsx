@@ -1,7 +1,8 @@
 'use client';
 
 import type { ComplaintDto } from '@vastu/contracts';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, FolderOpen } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { ErrorState } from '@/components/common/error-state';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useComplaint } from '@/lib/api/complaints';
 import { formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { AssignDialog, CloseDialog, ReopenDialog, ResolveDialog } from './complaint-actions';
 import { ComplaintThread } from './complaint-thread';
 import { ReopenedChip } from './complaints-view';
@@ -69,9 +71,12 @@ export function ComplaintActions({ complaint: c }: { complaint: ComplaintDto }) 
 export function ComplaintBody({
   complaint: c,
   onCollapse,
+  projectHref,
 }: {
   complaint: ComplaintDto;
   onCollapse?: () => void;
+  /** Where "Open project" goes. Omit when already inside the project. */
+  projectHref?: string;
 }) {
   return (
     <div className="space-y-4">
@@ -82,12 +87,19 @@ export function ComplaintBody({
           {c.customer.name}
           {c.raisedBy && c.raisedBy.id !== c.customer.id ? ` · raised by ${c.raisedBy.name}` : ''}
         </span>
+        {projectHref && (
+          <Button variant="outline" size="sm" className="ml-auto" asChild>
+            <Link href={projectHref}>
+              <FolderOpen /> Open project
+            </Link>
+          </Button>
+        )}
         {onCollapse && (
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label="Collapse"
-            className="text-muted-foreground ml-auto"
+            className={cn('text-muted-foreground', !projectHref && 'ml-auto')}
             onClick={onCollapse}
           >
             <ChevronUp />
@@ -114,7 +126,15 @@ export function ComplaintBody({
 }
 
 /** A complaint loaded by id and opened in place (the project's Complaints tab). */
-export function ComplaintPanel({ id, onCollapse }: { id: string; onCollapse: () => void }) {
+export function ComplaintPanel({
+  id,
+  onCollapse,
+  projectHref,
+}: {
+  id: string;
+  onCollapse: () => void;
+  projectHref?: string;
+}) {
   const q = useComplaint(id);
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
   if (q.isPending)
@@ -126,7 +146,7 @@ export function ComplaintPanel({ id, onCollapse }: { id: string; onCollapse: () 
     );
   return (
     <div className="p-4">
-      <ComplaintBody complaint={q.data} onCollapse={onCollapse} />
+      <ComplaintBody complaint={q.data} onCollapse={onCollapse} projectHref={projectHref} />
     </div>
   );
 }

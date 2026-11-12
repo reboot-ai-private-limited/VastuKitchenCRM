@@ -2,7 +2,7 @@
 
 import type { ImageDto, ProjectDto, TodoCommentDto, TodoDto } from '@vastu/contracts';
 import { MAX_TODO_IMAGES } from '@vastu/contracts';
-import { CheckCircle2, RotateCcw, Send, Trash2, X } from 'lucide-react';
+import { Check, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ErrorState } from '@/components/common/error-state';
@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Sheet,
   SheetContent,
@@ -41,7 +41,9 @@ import {
   useUpdateTodo,
 } from '@/lib/api/todos';
 import { useAuth } from '@/lib/auth';
-import { formatDate, formatTime, initials, relativeAge } from '@/lib/format';
+import { formatDate, initials, relativeAge } from '@/lib/format';
+import { RowTime } from '@/components/projects/feed-rows';
+import { cn } from '@/lib/utils';
 import { MAX_IMAGES_PER_COMMENT } from '@/lib/upload';
 import { DueBadge } from './todo-bits';
 
@@ -163,11 +165,13 @@ function Body({
   }
 
   return (
-    <div className="space-y-5 px-4 pb-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={todo.completed ? 'outline' : 'default'}
-          size="sm"
+    <div className="space-y-6 px-4 pb-6">
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={todo.completed !== null}
+          aria-label={todo.completed ? 'Reopen this to-do' : 'Mark this to-do done'}
           disabled={toggle.isPending || !user}
           onClick={() =>
             user &&
@@ -176,111 +180,126 @@ function Body({
               { onError: (e) => fail(e, 'Couldn’t update the to-do.') },
             )
           }
-        >
-          {todo.completed ? (
-            <>
-              <RotateCcw /> Reopen
-            </>
-          ) : (
-            <>
-              <CheckCircle2 /> Mark done
-            </>
+          className={cn(
+            'focus-visible:ring-ring mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg border-2 transition-colors outline-none focus-visible:ring-2',
+            todo.completed
+              ? 'border-success bg-success text-white'
+              : 'border-border hover:border-primary text-transparent hover:text-primary/40',
           )}
-        </Button>
-        <DueBadge todo={todo} />
-        {todo.completed && (
-          <span className="text-success text-xs">
-            Done by {todo.completed.by.name} · {relativeAge(todo.completed.at)}
-          </span>
-        )}
+        >
+          <Check className="size-5" aria-hidden />
+        </button>
+        <div className="min-w-0 flex-1">
+          <Input
+            id="td-title"
+            aria-label="Title"
+            value={title}
+            maxLength={200}
+            aria-invalid={title.trim() === ''}
+            onChange={(e) => setTitle(e.target.value)}
+            className="h-auto border-transparent bg-transparent px-1 py-0.5 text-xl font-semibold shadow-none focus-visible:border-input"
+          />
+          {todo.completed && (
+            <p className="text-success mt-1 px-1 text-xs">
+              Done by {todo.completed.by.name} · {relativeAge(todo.completed.at)}
+            </p>
+          )}
+        </div>
         {todo.canDelete && (
           <Button
             variant="ghost"
-            size="sm"
-            className="text-danger ml-auto"
+            size="icon-sm"
+            aria-label="Delete to-do"
+            className="text-muted-foreground hover:text-danger"
             onClick={() => setConfirmDelete(true)}
           >
-            <Trash2 /> Delete
+            <Trash2 />
           </Button>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="td-title">Title</Label>
-        <Input
-          id="td-title"
-          value={title}
-          maxLength={200}
-          aria-invalid={title.trim() === ''}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="td-notes">Notes</Label>
-        <Textarea
-          id="td-notes"
-          rows={4}
-          value={notes}
-          maxLength={5000}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="td-due">Due date</Label>
-          <Input id="td-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-        </div>
-        {due && (
-          <Button variant="ghost" size="sm" onClick={() => setDue('')}>
-            <X /> Clear
-          </Button>
-        )}
-      </div>
-
-      <PeoplePicker
-        legend="Assigned to"
-        members={members}
-        chosen={assignees}
-        onChange={(id, on) => pick(assignees, setAssignees, id, on)}
-        prefix="as"
-      />
-      <PeoplePicker
-        legend="When done, also tell"
-        hint="The person who created it is always told."
-        members={members}
-        chosen={notify}
-        onChange={(id, on) => pick(notify, setNotify, id, on)}
-        prefix="nt"
-      />
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Photos</p>
-        {kept.length > 0 && (
-          <div className="space-y-2">
-            <PhotoGrid images={kept} />
-            <div className="flex flex-wrap gap-1.5">
-              {kept.map((i, n) => (
-                <Button
-                  key={i.publicId}
-                  variant="outline"
-                  size="xs"
-                  onClick={() => setKept(kept.filter((k) => k.publicId !== i.publicId))}
-                >
-                  <X /> Remove photo {n + 1}
-                </Button>
-              ))}
-            </div>
+      <dl className="space-y-4 text-sm">
+        <Row label="Assigned to">
+          <PeopleRow
+            members={members}
+            chosen={assignees}
+            empty="Nobody yet"
+            onChange={(id, on) => pick(assignees, setAssignees, id, on)}
+          />
+        </Row>
+        <Row label="Due on">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              id="td-due"
+              aria-label="Due date"
+              type="date"
+              value={due}
+              onChange={(e) => setDue(e.target.value)}
+              className="w-auto"
+            />
+            {due && (
+              <Button variant="ghost" size="xs" onClick={() => setDue('')}>
+                <X /> Clear
+              </Button>
+            )}
+            <DueBadge todo={todo} />
           </div>
+        </Row>
+        <Row label="When done, notify">
+          <PeopleRow
+            members={members}
+            chosen={notify}
+            empty="Just the person who added it"
+            onChange={(id, on) => pick(notify, setNotify, id, on)}
+          />
+        </Row>
+        <Row label="Notes">
+          <Textarea
+            aria-label="Notes"
+            rows={3}
+            value={notes}
+            maxLength={5000}
+            placeholder="Add notes…"
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </Row>
+        <Row label="Photos">
+          <div className="space-y-2">
+            {kept.length > 0 && (
+              <div className="space-y-2">
+                <PhotoGrid images={kept} />
+                <div className="flex flex-wrap gap-1.5">
+                  {kept.map((i, n) => (
+                    <Button
+                      key={i.publicId}
+                      variant="outline"
+                      size="xs"
+                      onClick={() => setKept(kept.filter((k) => k.publicId !== i.publicId))}
+                    >
+                      <X /> Remove photo {n + 1}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <PhotoAttach
+              items={up.items}
+              problem={up.problem}
+              max={Math.max(0, MAX_TODO_IMAGES - kept.length)}
+              onAdd={up.add}
+              onRemove={up.remove}
+              onRetry={up.retry}
+            />
+          </div>
+        </Row>
+        {todo.createdBy && (
+          <Row label="Added by">
+            <span className="text-muted-foreground">
+              {todo.createdBy.name} on {formatDate(todo.createdAt)}
+            </span>
+          </Row>
         )}
-        <PhotoAttach
-          items={up.items}
-          problem={up.problem}
-          max={Math.max(0, MAX_TODO_IMAGES - kept.length)}
-          onAdd={up.add}
-          onRemove={up.remove}
-          onRetry={up.retry}
-        />
-      </div>
+      </dl>
 
       {error && (
         <p role="alert" className="text-danger text-sm">
@@ -340,85 +359,121 @@ function Body({
   );
 }
 
-function PeoplePicker({
-  legend,
-  hint,
+/** One label and its value, Basecamp style: the label is small and muted above on phones, beside on wider panels. */
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+      <dt className="text-muted-foreground pt-1.5 text-xs font-semibold sm:text-sm">{label}</dt>
+      <dd className="min-w-0">{children}</dd>
+    </div>
+  );
+}
+
+/** The chosen people as chips; a popover holds the checklist, so the panel stays short. */
+function PeopleRow({
   members,
   chosen,
+  empty,
   onChange,
-  prefix,
 }: {
-  legend: string;
-  hint?: string;
   members: Member[];
   chosen: string[];
+  empty: string;
   onChange: (id: string, on: boolean) => void;
-  prefix: string;
 }) {
+  const people = members.filter((m) => chosen.includes(m.id));
   return (
-    <fieldset className="space-y-1.5">
-      <legend className="text-sm font-medium">{legend}</legend>
-      {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
-      {members.length === 0 ? (
-        <p className="text-muted-foreground text-xs">Add staff to the project team first.</p>
-      ) : (
-        <ul className="grid gap-1 sm:grid-cols-2">
-          {members.map((m) => (
-            <li key={m.id} className="flex items-center gap-2">
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-muted focus-visible:ring-ring flex min-h-9 w-full flex-wrap items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none focus-visible:ring-2"
+        >
+          {people.length === 0 ? (
+            <span className="text-muted-foreground">{empty}</span>
+          ) : (
+            people.map((m) => (
+              <span key={m.id} className="inline-flex items-center gap-1.5">
+                <Avatar className="size-6">
+                  <AvatarFallback className="text-[9px]">{initials(m.name)}</AvatarFallback>
+                </Avatar>
+                {m.name}
+              </span>
+            ))
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 space-y-1 p-2">
+        {members.length === 0 ? (
+          <p className="text-muted-foreground p-1 text-xs">Add staff to the project team first.</p>
+        ) : (
+          members.map((m) => (
+            <label
+              key={m.id}
+              className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+            >
               <Checkbox
-                id={`${prefix}-${m.id}`}
                 checked={chosen.includes(m.id)}
                 onCheckedChange={(c) => onChange(m.id, c === true)}
               />
-              <Label htmlFor={`${prefix}-${m.id}`} className="cursor-pointer font-normal">
-                {m.name}
-              </Label>
-            </li>
-          ))}
-        </ul>
-      )}
-    </fieldset>
+              {m.name}
+            </label>
+          ))
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
 function Discussion({ todoId, projectId }: { todoId: string; projectId: string }) {
   const q = useTodoComments(todoId);
+  const { user } = useAuth();
   const [text, setText] = useState('');
   const up = useImageUploader(projectId, MAX_IMAGES_PER_COMMENT);
   const create = useCreateTodoComment(todoId);
   const del = useDeleteTodoComment(todoId);
   const empty = text.trim() === '' && up.images.length === 0;
 
+  function send() {
+    create.mutate(
+      {
+        ...(text.trim() ? { text: text.trim() } : {}),
+        ...(up.images.length ? { images: up.images } : {}),
+      },
+      {
+        onSuccess: () => {
+          setText('');
+          up.reset();
+        },
+        onError: (e) => fail(e, 'Couldn’t post your comment.'),
+      },
+    );
+  }
+
   return (
-    <section aria-label="Discussion" className="space-y-3 border-t pt-4">
-      <h3 className="text-sm font-semibold">Discussion</h3>
+    <section aria-label="Discussion" className="border-t">
       {q.isPending ? (
-        <Skeleton className="h-12 w-full" />
+        <Skeleton className="mt-4 h-12 w-full" />
       ) : q.isError ? (
         <ErrorState error={q.error} onRetry={() => q.refetch()} />
-      ) : q.data.length === 0 ? (
-        <p className="text-muted-foreground text-xs">No comments yet.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul>
           {q.data.map((c: TodoCommentDto) => (
-            <li key={c.id} className="flex gap-2.5">
-              <Avatar className="size-7">
+            <li key={c.id} className="group flex gap-3 border-b py-4">
+              <RowTime iso={c.createdAt} />
+              <Avatar className="size-8 shrink-0">
                 <AvatarFallback className="text-[10px]">{initials(c.author.name)}</AvatarFallback>
               </Avatar>
-              <div className="bg-muted min-w-0 flex-1 rounded-lg px-3 py-2">
-                <div className="flex items-baseline gap-2">
-                  <p className="truncate text-xs font-semibold">{c.author.name}</p>
-                  <time
-                    dateTime={c.createdAt}
-                    title={`${formatDate(c.createdAt)}, ${formatTime(c.createdAt)}`}
-                    className="text-muted-foreground text-xs"
-                  >
+              <div className="min-w-0 flex-1">
+                <p className="flex items-baseline gap-2">
+                  <span className="font-semibold">{c.author.name}</span>
+                  <time dateTime={c.createdAt} className="text-muted-foreground text-xs sm:hidden">
                     {relativeAge(c.createdAt)}
                   </time>
                   {c.canDelete && (
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-danger ml-auto text-xs"
+                      className="text-muted-foreground hover:text-danger ml-auto text-xs md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                       disabled={del.isPending}
                       onClick={() =>
                         del.mutate(c.id, { onError: (e) => fail(e, 'Couldn’t delete.') })
@@ -427,8 +482,8 @@ function Discussion({ todoId, projectId }: { todoId: string; projectId: string }
                       Delete
                     </button>
                   )}
-                </div>
-                {c.text && <p className="mt-0.5 text-sm whitespace-pre-line">{c.text}</p>}
+                </p>
+                {c.text && <p className="whitespace-pre-line">{c.text}</p>}
                 {c.images.length > 0 && (
                   <div className="mt-2 max-w-xs">
                     <PhotoGrid images={c.images} />
@@ -439,49 +494,39 @@ function Discussion({ todoId, projectId }: { todoId: string; projectId: string }
           ))}
         </ul>
       )}
-      <div className="space-y-2">
-        <div className="flex items-end gap-2">
-          <Textarea
-            aria-label="Write a comment"
-            placeholder="Write a comment…"
-            rows={1}
-            value={text}
-            maxLength={2000}
-            className="min-h-9 flex-1"
-            onChange={(e) => setText(e.target.value)}
-          />
-          <Button
-            size="icon"
-            aria-label="Send comment"
-            disabled={empty || up.busy || create.isPending}
-            onClick={() =>
-              create.mutate(
-                {
-                  ...(text.trim() ? { text: text.trim() } : {}),
-                  ...(up.images.length ? { images: up.images } : {}),
-                },
-                {
-                  onSuccess: () => {
-                    setText('');
-                    up.reset();
-                  },
-                  onError: (e) => fail(e, 'Couldn’t post your comment.'),
-                },
-              )
-            }
-          >
-            <Send />
-          </Button>
+      <div className="space-y-2 py-4">
+        <div className="flex items-start gap-3 sm:pl-[4.75rem]">
+          <Avatar className="size-8 shrink-0">
+            <AvatarFallback className="text-[10px]">{initials(user?.name ?? '?')}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1 space-y-2">
+            <Textarea
+              aria-label="Write a comment"
+              placeholder="Add a comment here…"
+              rows={1}
+              value={text}
+              maxLength={2000}
+              className="min-h-9 border-dashed bg-transparent"
+              onChange={(e) => setText(e.target.value)}
+            />
+            <PhotoAttach
+              compact
+              items={up.items}
+              problem={up.problem}
+              max={MAX_IMAGES_PER_COMMENT}
+              onAdd={up.add}
+              onRemove={up.remove}
+              onRetry={up.retry}
+            />
+            {!empty && (
+              <div className="flex justify-end">
+                <Button size="sm" disabled={up.busy || create.isPending} onClick={send}>
+                  {create.isPending ? 'Posting…' : up.busy ? 'Uploading…' : 'Comment'}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-        <PhotoAttach
-          compact
-          items={up.items}
-          problem={up.problem}
-          max={MAX_IMAGES_PER_COMMENT}
-          onAdd={up.add}
-          onRemove={up.remove}
-          onRetry={up.retry}
-        />
       </div>
     </section>
   );

@@ -1,8 +1,8 @@
 'use client';
 
-import type { PostVisibility } from '@vastu/contracts';
-import { Eye, Lock, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import type { PostVisibility, TimelineItemDto } from '@vastu/contracts';
+import { Eye, Layers, MessageSquare } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
@@ -13,15 +13,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useImageUploader } from '@/hooks/use-image-uploader';
 import { ApiError } from '@/lib/api/client';
-import { useCreatePost, usePosts } from '@/lib/api/projects';
+import { useCreatePost, usePosts, useTimeline } from '@/lib/api/projects';
+import { describeProjectActivity } from '@/lib/project-activity';
 import { MAX_IMAGES_PER_POST } from '@/lib/upload';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/lib/auth';
+import { initials } from '@/lib/format';
+import { ActivityRow } from './feed-rows';
 import { PhotoAttach } from './photos';
 import { PostCard } from './post-card';
 
 /**
- * Client | Team switch (staff only), composer, posts newest first. A customer only ever has the Client
- * feed. New posts default to Team, so nothing reaches the customer by accident.
+ * A calm timeline, oldest at the top and the composer at the bottom, like a chat. Staff choose between
+ * "Everything" (all posts plus team activity) and "Client view" (only what the customer sees). A
+ * customer only ever has the client view. New posts default to team-only, so nothing reaches the
+ * customer by accident.
  */
 export function Feed({
   projectId,
@@ -39,46 +46,120 @@ export function Feed({
   finalDeliveryRequested: boolean;
   onFinalDeliveryDone: () => void;
 }) {
-  const [tab, setTab] = useState<PostVisibility>('CLIENT');
+  const [tab, setTab] = useState<PostVisibility>('TEAM');
   const visibility: PostVisibility = seesTeam ? tab : 'CLIENT';
-  const q = usePosts(projectId, visibility);
-  const posts = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const everything = seesTeam && visibility === 'TEAM';
+  const posts = usePosts(projectId, 'CLIENT', !everything);
+  const timeline = useTimeline(projectId, everything);
+  const q = everything ? timeline : posts;
+
+  // The API pages newest first; the screen reads oldest first.
+  const newestFirst: TimelineItemDto[] = everything
+    ? (timeline.data?.pages.flatMap((p) => p.items) ?? [])
+    : (posts.data?.pages.flatMap((p) => p.items) ?? []).map((post) => ({
+        kind: 'POST' as const,
+        at: post.createdAt,
+        post,
+      }));
+  const items = [...newestFirst].reverse();
+
+  // Land on the newest end when the feed first appears and after you post.
+  const bottom = useRef<HTMLDivElement>(null);
+  const [scrollTick, setScrollTick] = useState(0);
+  const landed = useRef(false);
+  useEffect(() => {
+    if (q.isPending) landed.current = false;
+    else if (!landed.current) {
+      landed.current = true;
+      bottom.current?.scrollIntoView({ block: 'end' });
+    }
+  }, [q.isPending, visibility]);
+  useEffect(() => {
+    if (scrollTick > 0) bottom.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }, [scrollTick, newestFirst.length]);
 
   return (
-    <div className="mx-auto w-full max-w-170 space-y-4">
+    <div className="mx-auto w-full max-w-170 space-y-3">
       {seesTeam && (
-        <div
-          role="tablist"
-          aria-label="Feed"
-          className="bg-card shadow-card inline-flex rounded-lg border p-0.5"
-        >
-          {(['CLIENT', 'TEAM'] as const).map((v) => (
-            <Button
-              key={v}
-              role="tab"
-              aria-selected={tab === v}
-              variant={tab === v ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setTab(v)}
-            >
-              {v === 'CLIENT' ? <Eye /> : <Lock />} {v === 'CLIENT' ? 'Client' : 'Team'}
-            </Button>
-          ))}
+        <div className="flex items-center justify-between gap-3">
+          <div
+            role="tablist"
+            aria-label="Feed"
+            className="bg-secondary inline-flex rounded-lg p-0.5 text-sm"
+          >
+            {(['TEAM', 'CLIENT'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={tab === v}
+                onClick={() => setTab(v)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors',
+                  tab === v ? 'bg-card shadow-card' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {v === 'TEAM' ? <Layers className="size-3.5" /> : <Eye className="size-3.5" />}
+                {v === 'TEAM' ? 'Everything' : 'Client view'}
+              </button>
+            ))}
+          </div>
+          <p className="text-muted-foreground hidden text-xs sm:block">
+            {visibility === 'CLIENT'
+              ? 'Exactly what the customer sees.'
+              : 'Team notes and activity are only visible to staff.'}
+          </p>
         </div>
       )}
-      {seesTeam && (
-        <p
-          className={cn(
-            'rounded-md px-3 py-2 text-xs',
-            visibility === 'CLIENT'
-              ? 'bg-info-soft text-info'
-              : 'bg-secondary text-muted-foreground',
+
+      {q.isPending ? (
+        <div className="space-y-4" aria-hidden>
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : q.isError ? (
+        <div className="bg-card shadow-card rounded-xl border">
+          <ErrorState error={q.error} onRetry={() => q.refetch()} />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="bg-card shadow-card rounded-xl border">
+          <EmptyState
+            icon={MessageSquare}
+            title="No posts yet"
+            description={closed ? undefined : 'Share an update or a photo to get started.'}
+          />
+        </div>
+      ) : (
+        <>
+          {q.hasNextPage && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              disabled={q.isFetchingNextPage}
+              onClick={() => q.fetchNextPage()}
+            >
+              {q.isFetchingNextPage ? 'Loading…' : 'Load older'}
+            </Button>
           )}
-        >
-          {visibility === 'CLIENT'
-            ? 'Visible to the customer.'
-            : 'Only staff on this project can see this tab.'}
-        </p>
+          <ul>
+            {items.map((it) =>
+              it.kind === 'POST' ? (
+                <PostCard
+                  key={`p${it.post.id}`}
+                  projectId={projectId}
+                  post={it.post}
+                  closed={closed}
+                  isCustomer={isCustomer}
+                />
+              ) : (
+                <ActivityRow key={`a${it.activity.id}`} iso={it.at}>
+                  <ActivityLine activity={it.activity} />
+                </ActivityRow>
+              ),
+            )}
+          </ul>
+        </>
       )}
 
       {closed ? (
@@ -91,51 +172,28 @@ export function Feed({
           projectId={projectId}
           isCustomer={isCustomer}
           finalDelivery={finalDeliveryRequested}
-          onPosted={onFinalDeliveryDone}
+          onPosted={() => {
+            onFinalDeliveryDone();
+            setScrollTick((t) => t + 1);
+          }}
         />
       )}
-
-      {q.isPending ? (
-        <div className="space-y-3" aria-hidden>
-          <Skeleton className="h-40 w-full rounded-xl" />
-          <Skeleton className="h-40 w-full rounded-xl" />
-        </div>
-      ) : q.isError ? (
-        <div className="bg-card shadow-card rounded-xl border">
-          <ErrorState error={q.error} onRetry={() => q.refetch()} />
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="bg-card shadow-card rounded-xl border">
-          <EmptyState
-            icon={MessageSquare}
-            title="No posts yet"
-            description={closed ? undefined : 'Share an update or a photo to get started.'}
-          />
-        </div>
-      ) : (
-        <>
-          {posts.map((p) => (
-            <PostCard
-              key={p.id}
-              projectId={projectId}
-              post={p}
-              closed={closed}
-              isCustomer={isCustomer}
-            />
-          ))}
-          {q.hasNextPage && (
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={q.isFetchingNextPage}
-              onClick={() => q.fetchNextPage()}
-            >
-              {q.isFetchingNextPage ? 'Loading…' : 'Load older posts'}
-            </Button>
-          )}
-        </>
-      )}
+      <div ref={bottom} />
     </div>
+  );
+}
+
+function ActivityLine({
+  activity,
+}: {
+  activity: Extract<TimelineItemDto, { kind: 'ACTIVITY' }>['activity'];
+}) {
+  const d = describeProjectActivity(activity);
+  return (
+    <>
+      <span className="text-foreground font-medium">{d.who}</span> {d.what}
+      {d.subject && <>: {d.subject}</>}
+    </>
   );
 }
 
@@ -150,6 +208,8 @@ function Composer({
   finalDelivery: boolean;
   onPosted: () => void;
 }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(finalDelivery);
   const [text, setText] = useState('');
   // Team by default for staff; the toggle is explicit. Customers' posts are always Client.
   const [toClient, setToClient] = useState(false);
@@ -175,6 +235,7 @@ function Composer({
           setToClient(false);
           setAsFinal(false);
           up.reset();
+          setOpen(false);
           onPosted();
         },
         onError: (e) =>
@@ -183,12 +244,34 @@ function Composer({
     );
   }
 
+  function cancel() {
+    up.discard();
+    setText('');
+    setToClient(false);
+    setAsFinal(false);
+    setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="hover:bg-muted/50 focus-visible:ring-ring flex w-full items-center gap-3 rounded-lg border-t px-1 py-4 text-left outline-none focus-visible:ring-2 sm:pl-[4.75rem]"
+      >
+        <Avatar className="size-9 shrink-0">
+          <AvatarFallback>{initials(user?.name ?? '?')}</AvatarFallback>
+        </Avatar>
+        <span className="text-muted-foreground">
+          {isCustomer ? 'Write to the team…' : 'Add a post here…'}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <section
-      className={cn(
-        'bg-card shadow-card space-y-3 rounded-xl border p-4',
-        asFinal && 'border-success/40',
-      )}
+      className={cn('space-y-3 border-t py-4 sm:pl-[4.75rem]', asFinal && 'border-success/40')}
       aria-label="New post"
     >
       {asFinal && (
@@ -200,6 +283,7 @@ function Composer({
       <Textarea
         aria-label="Write an update"
         placeholder={isCustomer ? 'Write to the team…' : 'Share an update…'}
+        autoFocus
         rows={3}
         value={text}
         maxLength={5000}
@@ -237,13 +321,18 @@ function Composer({
             </div>
           </div>
         )}
-        <Button
-          disabled={empty || needsPhoto || up.busy || create.isPending}
-          onClick={post}
-          title={needsPhoto ? 'A final delivery needs a photo' : undefined}
-        >
-          {create.isPending ? 'Posting…' : up.busy ? 'Uploading…' : 'Post'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" disabled={create.isPending} onClick={cancel}>
+            Cancel
+          </Button>
+          <Button
+            disabled={empty || needsPhoto || up.busy || create.isPending}
+            onClick={post}
+            title={needsPhoto ? 'A final delivery needs a photo' : undefined}
+          >
+            {create.isPending ? 'Posting…' : up.busy ? 'Uploading…' : 'Post'}
+          </Button>
+        </div>
       </div>
       {!isCustomer && (
         <p className="text-muted-foreground text-xs">

@@ -97,7 +97,8 @@ export function ProjectsView() {
             aria-pressed={showClosed}
             onClick={() => setShowClosed((s) => !s)}
           >
-            {showClosed ? <EyeOff /> : <Eye />} {showClosed ? 'Hide' : 'Show'} closed ({closed.length})
+            {showClosed ? <EyeOff /> : <Eye />} {showClosed ? 'Hide' : 'Show'} closed (
+            {closed.length})
           </Button>
         )}
       </div>

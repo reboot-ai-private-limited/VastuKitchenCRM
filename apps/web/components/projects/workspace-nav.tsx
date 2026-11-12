@@ -1,16 +1,15 @@
 'use client';
 
-import { FileText, LifeBuoy, ListChecks, MessagesSquare, Activity, type LucideIcon } from 'lucide-react';
+import { FileText, LifeBuoy, ListChecks, MessagesSquare, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type WorkspaceSection = 'feed' | 'todos' | 'complaints' | 'docs' | 'activity';
+export type WorkspaceSection = 'feed' | 'todos' | 'complaints' | 'docs';
 
 const ITEMS: Array<{ id: WorkspaceSection; label: string; icon: LucideIcon }> = [
   { id: 'feed', label: 'Chat', icon: MessagesSquare },
   { id: 'todos', label: 'To-do', icon: ListChecks },
   { id: 'complaints', label: 'Complaints', icon: LifeBuoy },
   { id: 'docs', label: 'Docs', icon: FileText },
-  { id: 'activity', label: 'Activity', icon: Activity },
 ];
 
 /**

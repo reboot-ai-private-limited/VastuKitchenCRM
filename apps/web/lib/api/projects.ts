@@ -84,8 +84,9 @@ export const useJourney = (id: string, enabled: boolean) =>
   });
 
 /** One feed tab, newest first, "Load older" via the cursor. */
-export const usePosts = (id: string, visibility: PostVisibility) =>
+export const usePosts = (id: string, visibility: PostVisibility, enabled = true) =>
   useInfiniteQuery({
+    enabled,
     queryKey: ['projects', 'posts', id, visibility],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>

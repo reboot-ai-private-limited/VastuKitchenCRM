@@ -46,7 +46,6 @@ import { RaiseDialog } from '@/components/complaints/raise-dialog';
 import { DocsTab } from '@/components/docs/docs-tab';
 import { TodosTab } from '@/components/todos/todos-tab';
 import { canRaiseComplaint } from '@/lib/complaints';
-import { ActivityTab } from './activity-tab';
 import { ComplaintsTab } from './complaints-tab';
 import { WorkspaceNav, type WorkspaceSection } from './workspace-nav';
 import { DesignStageChip } from './design-stage-chip';
@@ -54,7 +53,7 @@ import { Feed } from './feed';
 import { CloseDialog, EditProjectDialog, InviteDialog, MembersDialog } from './project-dialogs';
 
 type Dialog = 'edit' | 'members' | 'close' | 'invite' | 'complaint' | null;
-const SECTIONS: readonly WorkspaceSection[] = ['feed', 'todos', 'complaints', 'docs', 'activity'];
+const SECTIONS: readonly WorkspaceSection[] = ['feed', 'todos', 'complaints', 'docs'];
 
 export function ProjectDetail({ id }: { id: string }) {
   const { user } = useAuth();
@@ -88,7 +87,7 @@ export function ProjectDetail({ id }: { id: string }) {
 
   const p = q.data;
   const can = projectPermissions(user?.role, user?.id, p);
-  const allowed = SECTIONS.filter((t) => (t === 'todos' || t === 'activity' ? can.seesTeam : true));
+  const allowed = SECTIONS.filter((t) => (t === 'todos' ? can.seesTeam : true));
   // Chat is what opens by default.
   const tab: WorkspaceSection = allowed.find((t) => t === wanted) ?? 'feed';
   const setTab = (t: string) => setParams({ tab: t === 'feed' ? null : t, todo: null });
@@ -214,11 +213,6 @@ export function ProjectDetail({ id }: { id: string }) {
                   isAdmin={can.isAdmin}
                   isCustomer={can.isCustomer}
                 />
-              )}
-              {tab === 'activity' && can.seesTeam && (
-                <div className="bg-card shadow-card overflow-hidden rounded-xl border">
-                  <ActivityTab projectId={p.id} active />
-                </div>
               )}
             </div>
           </>

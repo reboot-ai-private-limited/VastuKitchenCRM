@@ -5,6 +5,9 @@ import type { CustomerInvite, NewCustomerInvite } from '../../domain/invite.enti
 import type { InviteRepositoryPort } from '../../domain/invite.repository.port.js';
 import type { Designation } from '../../domain/designation.entity.js';
 import type { DesignationRepositoryPort } from '../../domain/designation.repository.port.js';
+import type { NewOtpChallenge, OtpChallenge } from '../../domain/otp.entity.js';
+import type { OtpRepositoryPort } from '../../domain/otp.repository.port.js';
+import type { OtpSenderPort } from '../../domain/otpSender.port.js';
 import type { PasswordHasherPort } from '../../domain/passwordHasher.port.js';
 import type { NewSession, Session } from '../../domain/session.entity.js';
 import type { SessionRepositoryPort } from '../../domain/session.repository.port.js';
@@ -197,4 +200,50 @@ export async function addUser(users: FakeUsers, over: Partial<NewUser> = {}) {
     active: true,
     ...over,
   });
+}
+
+export class FakeOtps implements OtpRepositoryPort {
+  rows: OtpChallenge[] = [];
+  private seq = 0;
+  constructor(private readonly clock: () => Date = () => new Date()) {}
+  async replaceForUser(c: NewOtpChallenge) {
+    for (const r of this.rows) if (r.userId === c.userId && !r.usedAt) r.usedAt = this.clock();
+    const row: OtpChallenge = {
+      ...c,
+      id: `o${++this.seq}`,
+      attempts: 0,
+      usedAt: null,
+      createdAt: this.clock(),
+    };
+    this.rows.push(row);
+    return row;
+  }
+  async latestForUser(userId: string) {
+    return [...this.rows].reverse().find((r) => r.userId === userId) ?? null;
+  }
+  async findLive(userId: string, now: Date) {
+    return (
+      [...this.rows]
+        .reverse()
+        .find((r) => r.userId === userId && !r.usedAt && r.expiresAt > now) ?? null
+    );
+  }
+  async recordFailure(id: string) {
+    const r = this.rows.find((x) => x.id === id);
+    if (!r) return Number.MAX_SAFE_INTEGER;
+    return ++r.attempts;
+  }
+  async consume(id: string, now: Date) {
+    const r = this.rows.find((x) => x.id === id);
+    if (!r || r.usedAt || r.expiresAt <= now) return false;
+    r.usedAt = now;
+    return true;
+  }
+}
+
+export class FakeOtpSender implements OtpSenderPort {
+  sent: Array<{ phone: string; code: string }> = [];
+  async send(phone: string, code: string) {
+    this.sent.push({ phone, code });
+  }
 }

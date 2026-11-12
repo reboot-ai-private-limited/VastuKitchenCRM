@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { RoleName } from '@vastu/contracts';
 import { env } from '@/config/env.js';
+import { logger } from '@/shared/logging/logger.js';
 import { SessionIssuer } from './application/services/sessionIssuer.js';
 import { ChangePasswordUseCase } from './application/usecases/changePassword.usecase.js';
 import {
@@ -20,6 +21,7 @@ import {
 } from './application/usecases/designations.usecase.js';
 import { GetUserUseCase } from './application/usecases/getUser.usecase.js';
 import { ListUsersUseCase } from './application/usecases/listUsers.usecase.js';
+import { RequestOtpUseCase, VerifyOtpUseCase, DEV_OTP_CODE } from './application/usecases/otp.usecase.js';
 import { LoginUseCase } from './application/usecases/login.usecase.js';
 import { LogoutUseCase } from './application/usecases/logout.usecase.js';
 import { RefreshSessionUseCase } from './application/usecases/refreshSession.usecase.js';
@@ -30,6 +32,8 @@ import { CryptoTokenGenerator } from './infrastructure/cryptoTokenGenerator.adap
 import { JwtAccessTokenSigner } from './infrastructure/jwtAccessTokenSigner.adapter.js';
 import { MongoDesignationRepository } from './infrastructure/mongoDesignation.adapter.js';
 import { MongoInviteRepository } from './infrastructure/mongoInvite.adapter.js';
+import { MongoOtpRepository } from './infrastructure/mongoOtp.adapter.js';
+import { ConsoleOtpSender, WaAgentOtpSender } from './infrastructure/waAgentOtpSender.adapter.js';
 import { MongoSessionRepository } from './infrastructure/mongoSession.adapter.js';
 import { MongoUserRepository } from './infrastructure/mongoUser.adapter.js';
 import {
@@ -38,6 +42,8 @@ import {
   makeLogoutController,
   makeMeController,
   makeRedeemInviteController,
+  makeRequestOtpController,
+  makeVerifyOtpController,
   makeRefreshController,
 } from './interface/auth.controller.js';
 import { buildAuthRouter } from './interface/auth.route.js';
@@ -81,6 +87,26 @@ export function buildIdentityContainer(): IdentityContainer {
   const hasher = new BcryptPasswordHasher(env.BCRYPT_COST);
   const signer = new JwtAccessTokenSigner();
   const tokens = new CryptoTokenGenerator();
+  const otps = new MongoOtpRepository();
+  const waConfigured =
+    env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && env.WA_AGENT_OTP_TEMPLATE;
+  if (!waConfigured) {
+    logger.warn(
+      env.OTP_DEV_MODE
+        ? 'WA AGENT is not configured: login codes print in this console and are always 123456'
+        : 'WA AGENT is not configured: login codes print in this console',
+    );
+  }
+  const otpSender =
+    env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && env.WA_AGENT_OTP_TEMPLATE
+      ? new WaAgentOtpSender({
+          apiKey: env.WA_AGENT_API_KEY,
+          phoneNumberId: env.WA_AGENT_PHONE_NUMBER_ID,
+          template: env.WA_AGENT_OTP_TEMPLATE,
+          language: env.WA_AGENT_OTP_LANGUAGE,
+          baseUrl: env.WA_AGENT_BASE_URL,
+        })
+      : new ConsoleOtpSender();
 
   // 2. Use cases, depending only on ports
   const issuer = new SessionIssuer(sessions, signer, tokens, {
@@ -88,6 +114,14 @@ export function buildIdentityContainer(): IdentityContainer {
     customerDays: env.CUSTOMER_REFRESH_TTL_DAYS,
   });
   const login = new LoginUseCase(users, hasher, issuer);
+  const requestOtp = new RequestOtpUseCase(
+    users,
+    otps,
+    otpSender,
+    tokens,
+    env.OTP_DEV_MODE ? DEV_OTP_CODE : null,
+  );
+  const verifyOtp = new VerifyOtpUseCase(users, otps, tokens, issuer);
   const refresh = new RefreshSessionUseCase(
     sessions,
     users,
@@ -163,6 +197,8 @@ export function buildIdentityContainer(): IdentityContainer {
           me: makeMeController(getUser),
           changePassword: makeChangePasswordController(changePassword),
           redeemInvite: makeRedeemInviteController(redeemInvite),
+          requestOtp: makeRequestOtpController(requestOtp),
+          verifyOtp: makeVerifyOtpController(verifyOtp),
         }),
       );
       router.use(

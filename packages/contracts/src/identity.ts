@@ -40,6 +40,17 @@ export const CLIENT_HEADER = 'x-client';
 export const loginBodySchema = z.object({ phone: phoneSchema, password: z.string().min(1) });
 export type LoginBodyDto = z.infer<typeof loginBodySchema>;
 
+/** Step 1 of OTP sign-in: ask for a code to be sent to this phone. */
+export const otpRequestBodySchema = z.object({ phone: phoneSchema });
+export type OtpRequestBodyDto = z.infer<typeof otpRequestBodySchema>;
+
+/** Step 2: the 6-digit code that arrived. */
+export const otpVerifyBodySchema = z.object({
+  phone: phoneSchema,
+  code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code'),
+});
+export type OtpVerifyBodyDto = z.infer<typeof otpVerifyBodySchema>;
+
 /** Mobile only. A browser sends the refresh token as a cookie instead. */
 export const refreshBodySchema = z.object({ refreshToken: z.string().min(1).optional() });
 export type RefreshBodyDto = z.infer<typeof refreshBodySchema>;

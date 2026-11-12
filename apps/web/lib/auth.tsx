@@ -29,6 +29,9 @@ interface AuthContextValue {
   user: UserDto | null;
   login(phone: string, password: string): Promise<UserDto>;
   redeemInvite(token: string): Promise<UserDto>;
+  /** Asks for a login code to be sent. Answers the same for every number. */
+  requestOtp(phone: string): Promise<void>;
+  verifyOtp(phone: string, code: string): Promise<UserDto>;
   logout(): Promise<void>;
 }
 
@@ -122,6 +125,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [accept],
   );
 
+  const requestOtp = useCallback(async (phone: string) => {
+    await api('/identity/auth/otp/request', { method: 'POST', body: { phone }, anonymous: true });
+  }, []);
+
+  const verifyOtp = useCallback(
+    async (phone: string, code: string) =>
+      accept(
+        await api<LoginResponseDto>('/identity/auth/otp/verify', {
+          method: 'POST',
+          body: { phone, code },
+          anonymous: true,
+        }),
+      ),
+    [accept],
+  );
+
   const logout = useCallback(async () => {
     try {
       await api('/identity/auth/logout', { method: 'POST' });
@@ -136,8 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient, router]);
 
   const value = useMemo(
-    () => ({ status, user, login, redeemInvite, logout }),
-    [status, user, login, redeemInvite, logout],
+    () => ({ status, user, login, redeemInvite, requestOtp, verifyOtp, logout }),
+    [status, user, login, redeemInvite, requestOtp, verifyOtp, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

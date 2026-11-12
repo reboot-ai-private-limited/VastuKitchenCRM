@@ -7,6 +7,8 @@ import {
   loginBodySchema,
   loginResponseSchema,
   logoutBodySchema,
+  otpRequestBodySchema,
+  otpVerifyBodySchema,
   redeemInviteBodySchema,
   refreshBodySchema,
   authTokensSchema,
@@ -124,6 +126,54 @@ const attemptsLimiter = rateLimit({
   },
 });
 
+openApiRegistry.registerPath({
+  method: 'post',
+  path: '/api/identity/auth/otp/request',
+  tags: TAG,
+  summary: 'Send a 6-digit login code to a phone number (WhatsApp)',
+  description:
+    'Always answers 200 with the same message, whether or not the number has an account. The code lasts 5 minutes; one every 30 seconds.',
+  request: { body: { content: { 'application/json': { schema: otpRequestBodySchema } } } },
+  responses: { 200: okResponse('Acknowledged', z.object({})), 429: errorResponse('Too many requests') },
+});
+openApiRegistry.registerPath({
+  method: 'post',
+  path: '/api/identity/auth/otp/verify',
+  tags: TAG,
+  summary: 'Sign in with the code that was sent',
+  request: {
+    headers: clientHeader,
+    body: { content: { 'application/json': { schema: otpVerifyBodySchema } } },
+  },
+  responses: {
+    200: okResponse('Signed in', loginResponseSchema),
+    401: errorResponse('Code is wrong, expired or used (5 wrong tries burn the code)'),
+  },
+});
+
+/** Code requests: 5 per phone number and 20 per IP per 10 minutes, every request counted. */
+const otpWindow = {
+  windowMs: 10 * 60 * 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Parameters<typeof buildErrorBody>[0], res: import('express').Response) => {
+    res.status(429).json(
+      buildErrorBody(req, {
+        statusCode: 429,
+        code: 'RATE_LIMITED',
+        message: 'Too many code requests. Please wait a few minutes and try again.',
+      }),
+    );
+  },
+};
+const otpByPhone = rateLimit({
+  ...otpWindow,
+  limit: 5,
+  keyGenerator: (req) => `phone:${String((req.body as { phone?: unknown })?.phone ?? '')}`,
+  validate: false,
+});
+const otpByIp = rateLimit({ ...otpWindow, limit: 20 });
+
 export interface AuthControllers {
   login: RequestHandler;
   refresh: RequestHandler;
@@ -131,11 +181,26 @@ export interface AuthControllers {
   me: RequestHandler;
   changePassword: RequestHandler;
   redeemInvite: RequestHandler;
+  requestOtp: RequestHandler;
+  verifyOtp: RequestHandler;
 }
 
 export function buildAuthRouter(c: AuthControllers): Router {
   const router = Router();
   router.post('/login', attemptsLimiter, validate({ body: loginBodySchema }), c.login);
+  router.post(
+    '/otp/request',
+    otpByIp,
+    validate({ body: otpRequestBodySchema }),
+    otpByPhone,
+    c.requestOtp,
+  );
+  router.post(
+    '/otp/verify',
+    attemptsLimiter,
+    validate({ body: otpVerifyBodySchema }),
+    c.verifyOtp,
+  );
   router.post('/refresh', c.refresh);
   router.post('/logout', c.logout);
   router.get('/me', authenticate, c.me);

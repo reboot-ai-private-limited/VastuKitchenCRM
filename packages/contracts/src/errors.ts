@@ -7,6 +7,8 @@ export const FAULT_CODES = [
   'CONFLICT',
   /** Login failed — deliberately one code for "no such user", "wrong password", "no login" and "inactive". */
   'INVALID_CREDENTIALS',
+  /** A login code that is wrong, expired, used up or never sent — one code for all of those. */
+  'INVALID_OTP',
   /** An invite or refresh token that is expired, used or unknown. */
   'TOKEN_INVALID',
   /** Too many attempts in a short time (429). */

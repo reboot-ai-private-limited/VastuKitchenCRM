@@ -48,6 +48,21 @@ const schema = z.object({
   CLOUDINARY_FOLDER: z.string().min(1).default('vastu'),
 
   /**
+   * One-time codes for login, sent as a WhatsApp authentication template through WA AGENT. Optional
+   * at boot: without them codes are printed to the API console instead (development only).
+   */
+  WA_AGENT_API_KEY: blankAsUnset(z.string().min(1).optional()),
+  WA_AGENT_PHONE_NUMBER_ID: blankAsUnset(z.string().min(1).optional()),
+  WA_AGENT_OTP_TEMPLATE: blankAsUnset(z.string().min(1).optional()),
+  WA_AGENT_OTP_LANGUAGE: z.string().min(1).default('en'),
+  WA_AGENT_BASE_URL: z.string().url().default('https://api.waagent.in/v1'),
+  /** Demo only: every code is 123456. Refused in production. */
+  OTP_DEV_MODE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+
+  /**
    * The business's own timezone (IANA name). A to-do "due on the 14th" is overdue when the 14th has
    * ended HERE, not in UTC. Default: India.
    */
@@ -98,4 +113,8 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+if (env.NODE_ENV === 'production' && env.OTP_DEV_MODE) {
+  console.error('OTP_DEV_MODE must not be enabled in production.');
+  process.exit(1);
+}
 export const isProduction = env.NODE_ENV === 'production';

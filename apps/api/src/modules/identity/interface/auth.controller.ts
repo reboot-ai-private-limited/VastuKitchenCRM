@@ -5,6 +5,7 @@ import { asyncHandler } from '@/shared/http/asyncHandler.js';
 import { requireClientKind } from '@/shared/http/client.util.js';
 import { sendSuccess } from '@/shared/http/response.util.js';
 import type { ChangePasswordUseCase } from '../application/usecases/changePassword.usecase.js';
+import type { RequestOtpUseCase, VerifyOtpUseCase } from '../application/usecases/otp.usecase.js';
 import type { RedeemInviteUseCase } from '../application/usecases/customers.usecase.js';
 import type { GetUserUseCase } from '../application/usecases/getUser.usecase.js';
 import type { LoginUseCase } from '../application/usecases/login.usecase.js';
@@ -72,6 +73,26 @@ export function makeRedeemInviteController(useCase: RedeemInviteUseCase): Reques
   return asyncHandler(async (req, res) => {
     const client = requireClientKind(req);
     const session = await useCase.execute(req.body.token, client);
+    const body: LoginResponseDto = {
+      ...deliverTokens(res, client, session),
+      user: toUserDto(session.user, session.user.role),
+    };
+    sendSuccess(req, res, body, 'Signed in.');
+  });
+}
+
+export function makeRequestOtpController(useCase: RequestOtpUseCase): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    await useCase.execute(req.body.phone);
+    // The same answer for every number, so this cannot be used to look up who has an account.
+    sendSuccess(req, res, {}, 'If that number has an account, a code is on its way.');
+  });
+}
+
+export function makeVerifyOtpController(useCase: VerifyOtpUseCase): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    const client = requireClientKind(req);
+    const session = await useCase.execute(req.body, client);
     const body: LoginResponseDto = {
       ...deliverTokens(res, client, session),
       user: toUserDto(session.user, session.user.role),

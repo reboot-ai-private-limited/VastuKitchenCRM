@@ -2,7 +2,7 @@
 
 import { MAX_COMPLAINT_IMAGES } from '@vastu/contracts';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PhotoAttach } from '@/components/projects/photos';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ export function RaiseDialog({
         ? items[0]!.id
         : '');
   const up = useComplaintUploader(() => signRaiseUpload(projectId), MAX_COMPLAINT_IMAGES);
+  const sent = useRef(false);
   const ready = projectId !== '' && description.trim() !== '' && !up.busy;
 
   function close(o: boolean) {
@@ -61,7 +62,9 @@ export function RaiseDialog({
       setPicked('');
       setDescription('');
       setError(null);
-      up.reset();
+      if (sent.current) up.reset();
+      else up.discard();
+      sent.current = false;
     }
     onOpenChange(o);
   }
@@ -77,6 +80,7 @@ export function RaiseDialog({
       {
         onSuccess: (c) => {
           toast.success('Complaint raised');
+          sent.current = true;
           close(false);
           router.push(`/complaints/${c.id}`);
         },

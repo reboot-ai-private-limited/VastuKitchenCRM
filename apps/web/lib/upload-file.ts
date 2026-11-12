@@ -1,4 +1,5 @@
 import type { UploadTicketDto } from '@vastu/contracts';
+import { openRelay } from './upload';
 
 /** What storage answered for a document (`auto/upload`): the id and size we register with the API. */
 export interface UploadedFile {
@@ -7,7 +8,7 @@ export interface UploadedFile {
 }
 
 /**
- * Sends one document straight to storage with a signed ticket (never through our API). `fields` first,
+ * Sends one document to storage with a signed ticket, relayed by our API. `fields` first,
  * then the file. Like lib/upload.ts but for documents: no width/height, and `bytes` falls back to the
  * file's own size because raw uploads may omit it.
  */
@@ -21,7 +22,6 @@ export function uploadFileToTicket(
     for (const [k, v] of Object.entries(ticket.fields)) form.append(k, v);
     form.append(ticket.fileField, file);
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', ticket.url);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
     xhr.onerror = () => reject(new Error('Upload failed. Check your connection and retry.'));
     xhr.onabort = () => reject(new Error('Upload cancelled.'));
@@ -44,6 +44,6 @@ export function uploadFileToTicket(
         reject(new Error('The file couldn’t be uploaded. Try again.'));
       }
     };
-    xhr.send(form);
+    openRelay(xhr, ticket.url).then(() => xhr.send(form), reject);
   });
 }

@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import type { AppContainers } from './container.js';
+import { buildUploadRelayRouter } from './shared/storage/uploadRelay.route.js';
 
 /** Mounts every module's router under /api/<module>. */
 export function buildApiRouter(containers: AppContainers): Router {
   const router = Router();
   router.use('/health', containers.health.buildRouter());
+  router.use('/uploads', buildUploadRelayRouter());
   router.use('/settings', containers.settings.buildRouter());
   router.use('/identity', containers.identity.buildRouter());
   router.use('/notifications', containers.notifications.buildRouter());

@@ -22,6 +22,8 @@ export interface StoragePort {
   signFileUpload(folder: string, now?: Date): UploadTicketDto;
   /** URLs for a stored file: where to view it, a preview (images only) and a forced download. */
   fileUrls(publicId: string, kind: 'IMAGE' | 'FILE'): FileUrls;
+  /** Removes an uploaded asset (a cancelled upload). Missing assets are not an error. */
+  deleteAsset(publicId: string): Promise<void>;
   /** The environment-specific root every folder starts with (e.g. `vastu-dev`). */
   readonly rootFolder: string;
 }

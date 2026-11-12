@@ -4,7 +4,7 @@ import type { ImageInputDto, UploadTicketDto } from '@vastu/contracts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UploadItem } from '@/hooks/use-image-uploader';
 import { ApiError } from '@/lib/api/client';
-import { imageProblem, uploadToTicket } from '@/lib/upload';
+import { deleteUpload, imageProblem, uploadToTicket } from '@/lib/upload';
 
 let seq = 0;
 
@@ -51,6 +51,7 @@ export function useComplaintUploader(sign: () => Promise<UploadTicketDto>, max: 
             const image: ImageInputDto = await uploadToTicket(ticket, i.file, (f) =>
               patch(i.id, { progress: f }),
             );
+            if (!itemsRef.current.some((x) => x.id === i.id)) return deleteUpload(image.publicId);
             patch(i.id, { status: 'done', progress: 1, image });
           } catch (e) {
             patch(i.id, {
@@ -99,6 +100,7 @@ export function useComplaintUploader(sign: () => Promise<UploadTicketDto>, max: 
     setItems((cur) => {
       const gone = cur.find((i) => i.id === id);
       if (gone) URL.revokeObjectURL(gone.preview);
+      if (gone?.image) deleteUpload(gone.image.publicId);
       return cur.filter((i) => i.id !== id);
     });
   }, []);
@@ -113,6 +115,14 @@ export function useComplaintUploader(sign: () => Promise<UploadTicketDto>, max: 
     [patch, run],
   );
 
+  /** The composer was dismissed without sending: remove every photo that was already uploaded. */
+  const discard = useCallback(() => {
+    itemsRef.current.forEach((i) => i.image && deleteUpload(i.image.publicId));
+    itemsRef.current.forEach((i) => URL.revokeObjectURL(i.preview));
+    setItems([]);
+    setProblem(null);
+  }, []);
+
   const reset = useCallback(() => {
     itemsRef.current.forEach((i) => URL.revokeObjectURL(i.preview));
     setItems([]);
@@ -126,6 +136,7 @@ export function useComplaintUploader(sign: () => Promise<UploadTicketDto>, max: 
     remove,
     retry,
     reset,
+    discard,
     images: items.flatMap((i) => (i.status === 'done' && i.image ? [i.image] : [])),
     busy: items.some((i) => i.status === 'uploading'),
   };

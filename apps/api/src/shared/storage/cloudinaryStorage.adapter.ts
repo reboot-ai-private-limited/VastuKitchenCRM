@@ -90,6 +90,32 @@ export class CloudinaryStorage implements StoragePort {
     };
   }
 
+  /**
+   * Signed `destroy`. Photos are `image` assets; other documents were stored as `raw`, so when
+   * nothing is found as an image we try raw. Cloudinary answers `{ result: 'ok' | 'not found' }`.
+   */
+  async deleteAsset(publicId: string): Promise<void> {
+    for (const type of ['image', 'raw'] as const) {
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const signature = signParams({ public_id: publicId, timestamp }, this.config.apiSecret);
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${this.config.cloudName}/${type}/destroy`,
+        {
+          method: 'POST',
+          body: new URLSearchParams({
+            public_id: publicId,
+            timestamp,
+            api_key: this.config.apiKey,
+            signature,
+          }),
+        },
+      );
+      if (!res.ok) throw AppError.unavailable('Could not remove the file. Try again.');
+      const body = (await res.json()) as { result?: string };
+      if (body.result === 'ok') return;
+    }
+  }
+
   imageUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'> {
     const base = `https://res.cloudinary.com/${this.config.cloudName}/image/upload`;
     // f_auto/q_auto: the right format and quality per device. Thumbs are capped at 480px wide.
@@ -122,5 +148,9 @@ export class UnconfiguredStorage implements StoragePort {
 
   fileUrls(publicId: string): FileUrls {
     return { url: publicId, thumbUrl: null, downloadUrl: publicId };
+  }
+
+  async deleteAsset(): Promise<void> {
+    /* nothing was ever uploaded */
   }
 }

@@ -346,6 +346,10 @@ export class FakeSender implements AlertSenderPort {
 
 export class FakeStorage implements StoragePort {
   readonly rootFolder = 'vastu-test';
+  readonly deleted: string[] = [];
+  async deleteAsset(publicId: string): Promise<void> {
+    this.deleted.push(publicId);
+  }
   signImageUpload(folder: string) {
     return {
       url: 'https://storage.test/upload',

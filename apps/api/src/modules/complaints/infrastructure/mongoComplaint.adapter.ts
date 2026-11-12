@@ -13,17 +13,33 @@ import { ComplaintModel, type ComplaintDoc } from './complaint.schemas.js';
 const oid = (v: string) => new Types.ObjectId(v);
 const idOrNull = (v: { toString(): string } | null): string | null => (v ? v.toString() : null);
 
-const toComplaint = (d: HydratedDocument<ComplaintDoc>): Complaint => ({
+/**
+ * Copies the fields one by one. Spreading a Mongoose sub-document (`{ ...i }`) returns its internals
+ * (`$__`, `_doc`…) and loses `publicId`, which is how complaint photos once went missing.
+ */
+const toImageRef = (i: {
+  publicId: string;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+}) => ({
+  publicId: i.publicId,
+  width: i.width,
+  height: i.height,
+  bytes: i.bytes,
+});
+
+export const toComplaint = (d: HydratedDocument<ComplaintDoc>): Complaint => ({
   id: d.id as string,
   projectId: d.projectId.toString(),
   customerId: d.customerId.toString(),
   description: d.description,
-  images: d.images.map((i) => ({ ...i })),
+  images: d.images.map(toImageRef),
   status: d.status,
   raisedById: idOrNull(d.raisedById),
   assignedToId: idOrNull(d.assignedToId),
   resolutionNote: d.resolutionNote,
-  resolutionImages: d.resolutionImages.map((i) => ({ ...i })),
+  resolutionImages: d.resolutionImages.map(toImageRef),
   createdAt: d.createdAt,
   activeSince: d.activeSince,
   assignedAt: d.assignedAt,
@@ -41,7 +57,7 @@ const toComplaint = (d: HydratedDocument<ComplaintDoc>): Complaint => ({
     id: m._id.toString(),
     authorId: m.authorId.toString(),
     text: m.text,
-    images: m.images.map((i) => ({ ...i })),
+    images: m.images.map(toImageRef),
     createdAt: m.createdAt,
   })),
 });

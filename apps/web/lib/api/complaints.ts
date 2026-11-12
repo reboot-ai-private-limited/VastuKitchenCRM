@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  AddComplaintCommentBodyDto,
   AssignComplaintBodyDto,
   CloseComplaintBodyDto,
   ComplaintCountsDto,
@@ -113,3 +114,30 @@ export const signRaiseUpload = (projectId: string) =>
   api<UploadTicketDto>('/complaints/uploads/sign', { method: 'POST', body: { projectId } });
 export const signResolveUpload = (complaintId: string) =>
   api<UploadTicketDto>(`/complaints/${complaintId}/uploads/sign`, { method: 'POST', body: {} });
+
+/** The conversation: the API answers with the whole complaint, so every view of it refreshes together. */
+function afterComplaintChange(qc: ReturnType<typeof useQueryClient>, id: string) {
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['complaints', 'detail', id] }),
+      qc.invalidateQueries({ queryKey: ['complaints', 'list'] }),
+    ]);
+}
+
+export function useAddComplaintComment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AddComplaintCommentBodyDto) =>
+      api<ComplaintDto>(`/complaints/${id}/comments`, { method: 'POST', body }),
+    onSuccess: afterComplaintChange(qc, id),
+  });
+}
+
+export function useDeleteComplaintComment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) =>
+      api<ComplaintDto>(`/complaints/${id}/comments/${commentId}`, { method: 'DELETE' }),
+    onSuccess: afterComplaintChange(qc, id),
+  });
+}

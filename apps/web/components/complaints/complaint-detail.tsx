@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/lib/api/client';
 import { useComplaint } from '@/lib/api/complaints';
-import { describeComplaintEvent } from '@/lib/complaints';
-import { formatDate, formatTime, relativeAge } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { AssignDialog, CloseDialog, ReopenDialog, ResolveDialog } from './complaint-actions';
+import { ComplaintThread } from './complaint-thread';
 import { ReopenedChip } from './complaints-view';
 
 type Dialog = 'assign' | 'resolve' | 'reopen' | 'close' | null;
@@ -111,31 +111,9 @@ export function ComplaintDetail({ id }: { id: string }) {
               </section>
             )}
 
-          <section className="bg-card shadow-card overflow-hidden rounded-xl border">
-            <h2 className="border-b px-4 py-3 text-sm font-semibold">History</h2>
-            <ol className="divide-y">
-              {c.history.map((e, i) => {
-                const { title, note } = describeComplaintEvent(e);
-                return (
-                  <li key={`${e.type}-${e.at}-${i}`} className="flex gap-3 px-4 py-3">
-                    <span aria-hidden className="bg-primary mt-1.5 size-2 shrink-0 rounded-full" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{title}</p>
-                      {note && (
-                        <p className="text-muted-foreground text-xs whitespace-pre-line">{note}</p>
-                      )}
-                    </div>
-                    <time
-                      dateTime={e.at}
-                      className="text-muted-foreground shrink-0 text-xs"
-                      title={`${formatDate(e.at)}, ${formatTime(e.at)}`}
-                    >
-                      {relativeAge(e.at)}
-                    </time>
-                  </li>
-                );
-              })}
-            </ol>
+          <section className="bg-card shadow-card space-y-3 rounded-xl border p-4">
+            <h2 className="text-sm font-semibold">Conversation</h2>
+            <ComplaintThread complaint={c} />
           </section>
         </div>
 

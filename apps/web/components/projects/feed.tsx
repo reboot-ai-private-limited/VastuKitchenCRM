@@ -1,6 +1,6 @@
 'use client';
 
-import type { PostVisibility, TimelineItemDto } from '@vastu/contracts';
+import type { ComplaintDto, PostVisibility, TimelineItemDto } from '@vastu/contracts';
 import { Eye, Layers, MessageSquare, Send } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -13,6 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useImageUploader } from '@/hooks/use-image-uploader';
 import { ApiError } from '@/lib/api/client';
+import { ComplaintCard } from '@/components/complaints/complaint-card';
+import { useComplaints } from '@/lib/api/complaints';
+import { DEFAULT_COMPLAINT_FILTERS } from '@/lib/complaints';
 import { useCreatePost, usePosts, useTimeline } from '@/lib/api/projects';
 import { describeProjectActivity } from '@/lib/project-activity';
 import { MAX_IMAGES_PER_POST } from '@/lib/upload';
@@ -60,7 +63,11 @@ export function Feed({
         at: post.createdAt,
         post,
       }));
-  const items = [...newestFirst].reverse();
+  // Complaints live in the chat as cards (their own lines are inside the card, so the plain
+  // "raised / assigned / closed a complaint" activity lines would only repeat them).
+  const complaints = useComplaints({ ...DEFAULT_COMPLAINT_FILTERS, projectId });
+  const stream = buildStream(newestFirst, complaints.data?.items ?? [], q.hasNextPage === true);
+  const items = stream;
 
   // The feed scrolls inside its pane. It opens at the newest end; scrolling up loads older posts.
   const scroller = useRef<HTMLDivElement>(null);
@@ -74,12 +81,13 @@ export function Feed({
     });
 
   useLayoutEffect(() => {
-    if (q.isPending) landed.current = false;
+    // Wait for the complaint cards too: they change the height above the newest post.
+    if (q.isPending || complaints.isPending) landed.current = false;
     else if (!landed.current) {
       landed.current = true;
       toBottom(false);
     }
-  }, [q.isPending, visibility]);
+  }, [q.isPending, complaints.isPending, visibility]);
 
   // Older posts arrive above: keep what you were reading where it was.
   useLayoutEffect(() => {
@@ -88,11 +96,11 @@ export function Feed({
       el.scrollTop += el.scrollHeight - heightBefore.current;
       heightBefore.current = null;
     }
-  }, [newestFirst.length]);
+  }, [items.length]);
 
   useEffect(() => {
     if (scrollTick > 0) toBottom(true);
-  }, [scrollTick, newestFirst.length]);
+  }, [scrollTick, items.length]);
 
   const loadOlder = () => {
     const el = scroller.current;
@@ -146,6 +154,8 @@ export function Feed({
                       closed={closed}
                       isCustomer={isCustomer}
                     />
+                  ) : it.kind === 'COMPLAINT' ? (
+                    <ComplaintCard key={`c${it.complaint.id}`} complaint={it.complaint} />
                   ) : (
                     <ActivityRow key={`a${it.activity.id}`} iso={it.at}>
                       <ActivityLine activity={it.activity} />
@@ -180,6 +190,28 @@ export function Feed({
       </div>
     </div>
   );
+}
+
+type StreamItem = TimelineItemDto | { kind: 'COMPLAINT'; at: string; complaint: ComplaintDto };
+
+/**
+ * Posts and activity (newest first, as the API pages them) plus the project's complaints, as one
+ * oldest-first list. While older pages are still to load, complaints older than what is on screen
+ * wait for them, so a card never appears out of place.
+ */
+function buildStream(
+  newestFirst: TimelineItemDto[],
+  complaints: ComplaintDto[],
+  moreToLoad: boolean,
+): StreamItem[] {
+  const oldestShown = newestFirst.length > 0 ? newestFirst[newestFirst.length - 1]!.at : null;
+  const base = newestFirst.filter(
+    (it) => !(it.kind === 'ACTIVITY' && it.activity.type.startsWith('COMPLAINT_')),
+  );
+  const cards = complaints
+    .filter((c) => !moreToLoad || oldestShown === null || c.createdAt >= oldestShown)
+    .map((complaint): StreamItem => ({ kind: 'COMPLAINT', at: complaint.createdAt, complaint }));
+  return [...base, ...cards].sort((a, b) => a.at.localeCompare(b.at));
 }
 
 /** Everything | Client view: staff only. Sits in the project's top bar. */

@@ -15,6 +15,7 @@ export function buildApiRouter(containers: AppContainers): Router {
   router.use('/projects', containers.projects.buildRouter());
   router.use('/public/proposals', containers.proposals.buildPublicRouter());
   router.use('/complaints', containers.complaints.buildRouter());
+  router.use('/customers', containers.customers.buildRouter());
   router.use('/attendance', containers.hr.buildAttendanceRouter());
   router.use('/salary', containers.hr.buildSalaryRouter());
   router.use('/dashboard', containers.dashboard.buildRouter());

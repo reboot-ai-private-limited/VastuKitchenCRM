@@ -109,7 +109,7 @@ export interface LeadsPublicContract {
   addCustomerLead(
     actor: LeadActor,
     input: { name: string; phone: string; city: string | null; customerId: string },
-  ): Promise<{ lead: CustomerLead; created: boolean }>;
+  ): Promise<{ lead: CustomerLead; outcome: 'created' | 'linked' | 'existing' }>;
   /** Puts an existing customer's lead back into the pipeline for a new project. */
   startNewProject(actor: LeadActor, customerId: string): Promise<CustomerLead>;
 }

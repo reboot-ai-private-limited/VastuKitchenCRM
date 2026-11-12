@@ -72,7 +72,7 @@ export class FindCustomerLeadUseCase {
  *  - no lead yet: one is created as WON (they are already a customer), without making a project;
  *  - a lead exists without an account: it is linked, and if it is still open, its win will make a
  *    project (`newProjectRequested`);
- *  - a lead exists that already belongs to this customer: nothing changes.
+ *  - a lead exists that already belongs to this customer: nothing changes (`existing`).
  */
 export class AddCustomerLeadUseCase {
   constructor(
@@ -84,18 +84,18 @@ export class AddCustomerLeadUseCase {
   async execute(
     actor: Actor,
     input: { name: string; phone: string; city: string | null; customerId: string },
-  ): Promise<{ lead: CustomerLead; created: boolean }> {
+  ): Promise<{ lead: CustomerLead; outcome: 'created' | 'linked' | 'existing' }> {
     const existing = await this.leads.findByPhone(input.phone);
     if (existing) {
       if (existing.customerId && existing.customerId !== input.customerId) {
         throw AppError.conflict('This phone number belongs to another customer.');
       }
-      if (existing.customerId) return { lead: toCustomerLead(existing), created: false };
+      if (existing.customerId) return { lead: toCustomerLead(existing), outcome: 'existing' };
       const linked = await this.leads.update(existing.id, {
         customerId: input.customerId,
         newProjectRequested: existing.status !== 'WON',
       });
-      return { lead: toCustomerLead(linked ?? existing), created: false };
+      return { lead: toCustomerLead(linked ?? existing), outcome: 'linked' };
     }
 
     const now = this.now();
@@ -121,7 +121,7 @@ export class AddCustomerLeadUseCase {
       at: now,
       data: { source: lead.source },
     });
-    return { lead: toCustomerLead(lead), created: true };
+    return { lead: toCustomerLead(lead), outcome: 'created' };
   }
 }
 

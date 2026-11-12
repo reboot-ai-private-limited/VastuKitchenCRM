@@ -14,6 +14,7 @@ export * from './auth.js';
 export * from './health.js';
 export * from './identity.js';
 export * from './leads.js';
+export * from './customers.js';
 export * from './proposals.js';
 export * from './notifications.js';
 export * from './uploads.js';

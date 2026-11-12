@@ -33,7 +33,7 @@ describe('adding a customer by hand', () => {
   it('creates their lead as WON from "Existing customer", owned by the Sales person, without a project', async () => {
     const { w, add } = setup();
     const r = await add.execute(sales1, person);
-    expect(r.created).toBe(true);
+    expect(r.outcome).toBe('created');
     expect(w.leads.rows[0]).toMatchObject({
       status: 'WON',
       source: 'EXISTING_CUSTOMER',
@@ -49,7 +49,7 @@ describe('adding a customer by hand', () => {
     const { w, add } = setup();
     await addLead(w, { phone: person.phone, status: 'PROPOSAL_SENT' });
     const r = await add.execute(admin, person);
-    expect(r.created).toBe(false);
+    expect(r.outcome).toBe('linked');
     expect(w.leads.rows).toHaveLength(1);
     // Still open: when it is won, it makes the customer's project.
     expect(w.leads.rows[0]).toMatchObject({ customerId: 'cust-sen', newProjectRequested: true });
@@ -59,7 +59,7 @@ describe('adding a customer by hand', () => {
     const { w, add } = setup();
     await add.execute(admin, person);
     const again = await add.execute(admin, person);
-    expect(again.created).toBe(false);
+    expect(again.outcome).toBe('existing');
     expect(w.leads.rows).toHaveLength(1);
     await expect(
       add.execute(admin, { ...person, customerId: 'someone-else' }),

@@ -13,6 +13,7 @@ export const SOURCE_LABEL: Record<LeadSource, string> = {
   JUSTDIAL: 'Justdial',
   WALK_IN: 'Walk-in',
   REFERRAL: 'Referral',
+  EXISTING_CUSTOMER: 'Existing customer',
   OTHER: 'Other',
 };
 

@@ -5,6 +5,7 @@ import { buildNotificationsContainer } from '@/modules/notifications/notificatio
 import { buildProjectsContainer } from '@/modules/projects/projects.container.js';
 import { buildProposalsContainer } from '@/modules/proposals/proposals.container.js';
 import { buildSettingsContainer } from '@/modules/settings/settings.container.js';
+import { buildCustomersContainer } from '@/modules/customers/customers.container.js';
 import { buildComplaintsContainer } from '@/modules/complaints/complaints.container.js';
 import { buildDashboardContainer } from '@/modules/dashboard/dashboard.container.js';
 import { buildHrContainer } from '@/modules/hr/hr.container.js';
@@ -26,6 +27,7 @@ export interface AppContainers {
   todos: ReturnType<typeof buildTodosContainer>;
   docs: ReturnType<typeof buildDocsContainer>;
   complaints: ReturnType<typeof buildComplaintsContainer>;
+  customers: ReturnType<typeof buildCustomersContainer>;
   hr: ReturnType<typeof buildHrContainer>;
   dashboard: ReturnType<typeof buildDashboardContainer>;
   reminders: ReturnType<typeof buildRemindersContainer>;
@@ -78,6 +80,11 @@ export function buildContainers(): AppContainers {
     notifications: notifications.contract,
     storage,
   });
+  const customers = buildCustomersContainer({
+    leads: leads.contract,
+    projects: projects.contract,
+    identity: identity.contract,
+  });
   const hr = buildHrContainer({ identity: identity.contract, settings: settings.contract });
   const reminders = buildRemindersContainer({
     leads: leads.contract,
@@ -111,6 +118,7 @@ export function buildContainers(): AppContainers {
     todos,
     docs,
     complaints,
+    customers,
     hr,
     dashboard,
     reminders,

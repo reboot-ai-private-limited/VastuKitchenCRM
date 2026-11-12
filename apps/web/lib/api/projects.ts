@@ -48,6 +48,18 @@ export const useProjects = (f: ProjectFilters, enabled = true) =>
     enabled,
   });
 
+/** The projects grid: everything the person may open, one page, searched on the server. */
+export const useProjectGrid = (search: string) =>
+  useQuery({
+    queryKey: ['projects', 'grid', search],
+    queryFn: ({ signal }) =>
+      api<PaginatedDto<ProjectDto>>('/projects', {
+        query: { pageSize: 100, search: search || undefined },
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+  });
+
 /** Projects of one lead: a summary any lead owner may list (never the feeds). */
 export const useLeadProjects = (leadId: string, enabled = true) =>
   useQuery({

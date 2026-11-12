@@ -12,6 +12,7 @@ export function buildApiRouter(containers: AppContainers): Router {
   router.use('/notifications', containers.notifications.buildRouter());
   router.use('/leads', containers.leads.buildRouter());
   router.use('/proposals', containers.proposals.buildRouter());
+  router.use('/proposal-templates', containers.proposals.buildTemplatesRouter());
   router.use('/projects', containers.projects.buildRouter());
   router.use('/public/proposals', containers.proposals.buildPublicRouter());
   router.use('/complaints', containers.complaints.buildRouter());

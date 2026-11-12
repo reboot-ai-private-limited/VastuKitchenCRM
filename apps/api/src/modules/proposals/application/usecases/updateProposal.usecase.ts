@@ -10,6 +10,7 @@ import {
 import type { ActorRef } from '../../domain/leadsGateway.port.js';
 import type { ProposalRepositoryPort } from '../../domain/proposal.repository.port.js';
 import type { ProposalAccess } from '../services/proposalSupport.js';
+import type { TemplateResolver } from '../services/templateResolver.js';
 
 export const ALREADY_SENT =
   'This proposal was already sent and can no longer be changed. Duplicate it to make a new version.';
@@ -18,6 +19,7 @@ export class UpdateProposalUseCase {
   constructor(
     private readonly access: ProposalAccess,
     private readonly proposals: ProposalRepositoryPort,
+    private readonly templates: TemplateResolver,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -31,6 +33,11 @@ export class UpdateProposalUseCase {
     if (input.notes !== undefined) patch.notes = input.notes;
     if (input.terms !== undefined) patch.terms = input.terms;
     if (input.validUntil !== undefined) patch.validUntil = input.validUntil;
+    if (input.templateKey !== undefined) {
+      const chosen = await this.templates.resolve(input.templateKey);
+      patch.templateKey = chosen.key;
+      patch.template = chosen.template;
+    }
     if (input.siteAddress !== undefined) {
       patch.customer = { ...current.customer, siteAddress: input.siteAddress };
     }

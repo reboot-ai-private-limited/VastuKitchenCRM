@@ -43,6 +43,8 @@ export class DuplicateProposalUseCase {
       total: source.total,
       notes: source.notes,
       terms: source.terms,
+      templateKey: source.templateKey,
+      template: source.template,
       validUntil: null,
       token: this.tokens.generate(),
       sentAt: null,

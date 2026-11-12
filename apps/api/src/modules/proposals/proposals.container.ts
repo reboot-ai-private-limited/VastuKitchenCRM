@@ -25,6 +25,16 @@ import {
   DeleteProposalUseCase,
   UpdateProposalUseCase,
 } from './application/usecases/updateProposal.usecase.js';
+import { TemplateResolver } from './application/services/templateResolver.js';
+import {
+  CreateTemplateUseCase,
+  DeleteTemplateUseCase,
+  DuplicateTemplateUseCase,
+  GetTemplateUseCase,
+  ListTemplatesUseCase,
+  UpdateTemplateUseCase,
+} from './application/usecases/templates.usecase.js';
+import { MongoProposalTemplateStore } from './infrastructure/mongoProposalTemplate.adapter.js';
 import { SettingsGateway } from './infrastructure/settings.adapter.js';
 import { AppEventsProposalEvents } from './infrastructure/appEventsProposalEvents.adapter.js';
 import { CryptoPublicToken } from './infrastructure/cryptoPublicToken.adapter.js';
@@ -44,6 +54,8 @@ import {
   makeSendController,
   makeUpdateController,
 } from './interface/proposals.controller.js';
+import { makeTemplateControllers } from './interface/templates.controller.js';
+import { buildTemplatesRouter } from './interface/templates.route.js';
 import { buildProposalsRouter, buildPublicProposalsRouter } from './interface/proposals.route.js';
 import type { ProposalsPublicContract } from './proposals.public.js';
 
@@ -51,6 +63,8 @@ export interface ProposalsContainer {
   contract: ProposalsPublicContract;
   /** Staff routes, mounted at /api/proposals. */
   buildRouter: () => Router;
+  /** Template gallery and editor routes, mounted at /api/proposal-templates. */
+  buildTemplatesRouter: () => Router;
   /** No-login customer routes, mounted at /api/public/proposals. */
   buildPublicRouter: () => Router;
 }
@@ -77,14 +91,16 @@ export function buildProposalsContainer({
   const directory = new IdentityUserDirectory(identity);
   const proposalEvents = new AppEventsProposalEvents(events);
   const proposalSettings = new SettingsGateway(settings);
+  const templateStore = new MongoProposalTemplateStore();
 
   // 2. Services and use cases, depending only on ports
   const links = new ProposalLinks(env.WEB_BASE_URL);
   const access = new ProposalAccess(proposals, gateway);
   const views = new ProposalViewBuilder(directory, links);
+  const templates = new TemplateResolver(templateStore);
 
-  const create = new CreateProposalUseCase(proposals, gateway, numbers, tokens, proposalSettings);
-  const update = new UpdateProposalUseCase(access, proposals);
+  const create = new CreateProposalUseCase(proposals, gateway, numbers, tokens, proposalSettings, templates);
+  const update = new UpdateProposalUseCase(access, proposals, templates);
   const remove = new DeleteProposalUseCase(access, proposals);
   const get = new GetProposalUseCase(access, views);
   const list = new ListProposalsUseCase(proposals, gateway, views);
@@ -93,6 +109,15 @@ export function buildProposalsContainer({
   const reminderQueries = new ProposalReminderQueriesUseCase(proposals);
   const getPublic = new GetPublicProposalUseCase(proposals, directory, proposalSettings);
   const recordSeen = new RecordProposalSeenUseCase(proposals, gateway, proposalEvents);
+
+  const templateControllers = makeTemplateControllers({
+    list: new ListTemplatesUseCase(templateStore),
+    get: new GetTemplateUseCase(templates),
+    create: new CreateTemplateUseCase(templateStore),
+    update: new UpdateTemplateUseCase(templateStore, templates),
+    remove: new DeleteTemplateUseCase(templateStore, templates),
+    duplicate: new DuplicateTemplateUseCase(templateStore, templates),
+  });
 
   const insights = new MongoProposalInsights();
 
@@ -115,6 +140,7 @@ export function buildProposalsContainer({
         duplicate: makeDuplicateController(duplicate, views),
         send: makeSendController(send),
       }),
+    buildTemplatesRouter: () => buildTemplatesRouter(templateControllers),
     buildPublicRouter: () =>
       buildPublicProposalsRouter({
         get: makePublicGetController(getPublic),

@@ -2,6 +2,12 @@ import { AppError } from '@/shared/errors/AppError.js';
 import type { ProposalSeenEvent } from '@/shared/events/appEvents.js';
 import type { ActorRef, LeadInfo, LeadsGatewayPort } from '../../domain/leadsGateway.port.js';
 import type { NumberSequencePort } from '../../domain/numberSequence.port.js';
+import type { ProposalTemplate } from '@vastu/contracts';
+import type {
+  NewCustomTemplate,
+  ProposalTemplateStorePort,
+} from '../../domain/proposalTemplate.store.port.js';
+import { TemplateResolver } from '../services/templateResolver.js';
 import type { NewProposal, Proposal, ProposalPatch } from '../../domain/proposal.entity.js';
 import type { ProposalEventsPort } from '../../domain/proposalEvents.port.js';
 import type {
@@ -98,6 +104,34 @@ export class FakeProposals implements ProposalRepositoryPort {
   }
 }
 
+export class FakeTemplateStore implements ProposalTemplateStorePort {
+  rows: ProposalTemplate[] = [];
+  private seq = 0;
+  async listCustom() {
+    return this.rows;
+  }
+  async findCustom(key: string) {
+    return this.rows.find((t) => t.key === key) ?? null;
+  }
+  async createCustom(t: NewCustomTemplate) {
+    const created: ProposalTemplate = { ...t, key: `tpl_${++this.seq}` };
+    this.rows.push(created);
+    return created;
+  }
+  async replaceCustom(key: string, t: NewCustomTemplate) {
+    const i = this.rows.findIndex((x) => x.key === key);
+    if (i < 0) return null;
+    this.rows[i] = { ...t, key };
+    return this.rows[i]!;
+  }
+  async deleteCustom(key: string) {
+    const i = this.rows.findIndex((x) => x.key === key);
+    if (i < 0) return false;
+    this.rows.splice(i, 1);
+    return true;
+  }
+}
+
 export class FakeNumbers implements NumberSequencePort {
   private seqs = new Map<number, number>();
   async next(year: number) {
@@ -188,6 +222,8 @@ export function world(now: () => Date = () => new Date('2026-11-10T10:00:00Z')) 
   const tokens = new FakeTokens();
   const links = new ProposalLinks('https://admin.example.com/');
   const settings = new FakeSettings();
+  const templateStore = new FakeTemplateStore();
+  const templates = new TemplateResolver(templateStore);
   const access = new ProposalAccess(proposals, gateway);
   const views = new ProposalViewBuilder(directory, links);
   return {
@@ -201,6 +237,8 @@ export function world(now: () => Date = () => new Date('2026-11-10T10:00:00Z')) 
     access,
     views,
     settings,
+    templateStore,
+    templates,
     now,
   };
 }

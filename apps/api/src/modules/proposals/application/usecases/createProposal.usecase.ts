@@ -10,6 +10,7 @@ import type { NumberSequencePort } from '../../domain/numberSequence.port.js';
 import type { ProposalRepositoryPort } from '../../domain/proposal.repository.port.js';
 import type { PublicTokenPort } from '../../domain/publicToken.port.js';
 import type { ProposalSettingsPort } from '../../domain/settings.port.js';
+import type { TemplateResolver } from '../services/templateResolver.js';
 
 export function formatNumber(year: number, seq: number): string {
   return `VK-${year}-${String(seq).padStart(4, '0')}`;
@@ -22,6 +23,7 @@ export class CreateProposalUseCase {
     private readonly numbers: NumberSequencePort,
     private readonly tokens: PublicTokenPort,
     private readonly settings: ProposalSettingsPort,
+    private readonly templates: TemplateResolver,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -30,6 +32,7 @@ export class CreateProposalUseCase {
     const now = this.now();
     assertNotInPast(input.validUntil, now);
 
+    const chosen = await this.templates.resolve(input.templateKey);
     const items = buildItems(input.items);
     const { subtotal, total } = computeTotals(items, input.discount);
 
@@ -50,6 +53,8 @@ export class CreateProposalUseCase {
       total,
       notes: input.notes ?? null,
       terms: input.terms ?? (await this.settings.defaultTerms()),
+      templateKey: chosen.key,
+      template: chosen.template,
       validUntil: input.validUntil ?? null,
       token: this.tokens.generate(),
       sentAt: null,

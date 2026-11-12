@@ -1,5 +1,10 @@
 import { isValidObjectId, type HydratedDocument } from 'mongoose';
-import type { NewProposal, Proposal, ProposalPatch } from '../domain/proposal.entity.js';
+import {
+  templateOrDefault,
+  type NewProposal,
+  type Proposal,
+  type ProposalPatch,
+} from '../domain/proposal.entity.js';
 import type {
   ProposalListFilter,
   ProposalRepositoryPort,
@@ -32,6 +37,7 @@ function toEntity(doc: HydratedDocument<ProposalDoc>): Proposal {
     total: doc.total,
     notes: doc.notes,
     terms: doc.terms,
+    ...templateOrDefault(doc.templateKey, doc.template),
     validUntil: doc.validUntil,
     token: doc.token,
     sentAt: doc.sentAt,

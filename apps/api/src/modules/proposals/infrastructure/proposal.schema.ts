@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Model, type Types } from 'mongoose';
-import { PROPOSAL_STATUSES } from '@vastu/contracts';
+import { PROPOSAL_STATUSES, type ProposalTemplate } from '@vastu/contracts';
 
 export interface ProposalDoc {
   number: string;
@@ -19,6 +19,9 @@ export interface ProposalDoc {
   total: number;
   notes: string | null;
   terms: string;
+  /** Absent on proposals made before templates existed. */
+  templateKey?: string | null;
+  template?: ProposalTemplate | null;
   validUntil: Date | null;
   token: string;
   sentAt: Date | null;
@@ -65,6 +68,8 @@ const schema = new Schema<ProposalDoc>(
     total: { type: Number, required: true },
     notes: { type: String, default: null },
     terms: { type: String, required: true },
+    templateKey: { type: String, default: null },
+    template: { type: Schema.Types.Mixed, default: null },
     validUntil: { type: Date, default: null },
     token: { type: String, required: true, unique: true },
     sentAt: { type: Date, default: null },

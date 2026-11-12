@@ -20,9 +20,10 @@ function setup() {
       w.numbers,
       w.tokens,
       w.settings,
+      w.templates,
       w.now,
     ),
-    update: new UpdateProposalUseCase(w.access, w.proposals, w.now),
+    update: new UpdateProposalUseCase(w.access, w.proposals, w.templates, w.now),
     remove: new DeleteProposalUseCase(w.access, w.proposals),
     send: new SendProposalUseCase(
       w.access,
@@ -288,6 +289,7 @@ describe('public page and seen tracking', () => {
       w.numbers,
       w.tokens,
       w.settings,
+      w.templates,
       () => t,
     );
     const send = new SendProposalUseCase(

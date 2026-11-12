@@ -1,4 +1,10 @@
-import type { ProposalItemInputDto, ProposalStatus } from '@vastu/contracts';
+import {
+  DEFAULT_PROPOSAL_TEMPLATE_KEY,
+  findBuiltinTemplate,
+  type ProposalItemInputDto,
+  type ProposalStatus,
+  type ProposalTemplate,
+} from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 
 export interface ProposalItem {
@@ -32,6 +38,9 @@ export interface Proposal {
   total: number;
   notes: string | null;
   terms: string;
+  /** The template chosen, and a frozen copy of it: editing or deleting the template never changes this proposal. */
+  templateKey: string;
+  template: ProposalTemplate;
   validUntil: Date | null;
   /** Unguessable; the public link is built from it. Stored as-is so the SAME link can be resent. */
   token: string;
@@ -58,6 +67,8 @@ export type ProposalPatch = Partial<
     | 'notes'
     | 'terms'
     | 'validUntil'
+    | 'templateKey'
+    | 'template'
   >
 >;
 
@@ -98,4 +109,19 @@ export function assertNotInPast(validUntil: Date | undefined | null, now: Date):
       { path: ['validUntil'], message: 'Must not be in the past' },
     ]);
   }
+}
+
+/**
+ * Proposals made before templates existed carry none. They read as the default built-in template,
+ * so old links keep working with no data migration.
+ */
+export function templateOrDefault(
+  key: string | null | undefined,
+  template: ProposalTemplate | null | undefined,
+): { templateKey: string; template: ProposalTemplate } {
+  if (key && template) return { templateKey: key, template };
+  return {
+    templateKey: DEFAULT_PROPOSAL_TEMPLATE_KEY,
+    template: findBuiltinTemplate(DEFAULT_PROPOSAL_TEMPLATE_KEY)!,
+  };
 }

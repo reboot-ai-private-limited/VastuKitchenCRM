@@ -22,6 +22,8 @@ export function toProposalDto({
     total: p.total,
     notes: p.notes,
     terms: p.terms,
+    templateKey: p.templateKey,
+    template: p.template,
     validUntil: iso(p.validUntil),
     publicUrl,
     sentAt: iso(p.sentAt),
@@ -53,6 +55,7 @@ export function toPublicProposalDto({
     total: p.total,
     notes: p.notes,
     terms: p.terms,
+    template: p.template,
     company: {
       name: company.name,
       tagline: company.tagline,

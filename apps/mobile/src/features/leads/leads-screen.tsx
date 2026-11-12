@@ -14,10 +14,12 @@ import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NetworkError } from '@/lib/api/client';
+import { PendingSyncBadge } from '@/offline';
 import { useSession } from '@/lib/auth/session';
 import { STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
-import { useLeadsList } from './use-leads';
+import { leadKey, useLeadsList } from './use-leads';
 
 function LeadRow({ lead, index }: { lead: LeadDto; index: number }) {
   const router = useRouter();
@@ -41,6 +43,7 @@ function LeadRow({ lead, index }: { lead: LeadDto; index: number }) {
           <View style={styles.rowTop}>
             <Badge label={STATUS_LABEL[lead.status]} t={STATUS_TONE[lead.status]} />
             {lead.isStuck ? <Badge label="Stuck" t="danger" /> : null}
+            <PendingSyncBadge filter={(i) => i.entityKey === leadKey(lead.id)} />
           </View>
         </Card>
       </PressableScale>
@@ -54,7 +57,8 @@ export function LeadsScreen() {
   const { user } = useSession();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<LeadStatus | undefined>();
-  const q = useLeadsList(search.trim(), status);
+  const debounced = useDebouncedValue(search.trim(), 350);
+  const q = useLeadsList(debounced, status);
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'SALES' || user?.role === 'OFFICE';
 

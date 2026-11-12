@@ -41,6 +41,11 @@ export class MongoDeviceRepository implements DeviceRepositoryPort {
     return (await DeviceModel.deleteOne({ _id: id, userId })).deletedCount === 1;
   }
 
+  async removeAllFor(userId: string) {
+    if (!isValidObjectId(userId)) return 0;
+    return (await DeviceModel.deleteMany({ userId })).deletedCount;
+  }
+
   async tokensFor(userId: string) {
     if (!isValidObjectId(userId)) return [];
     return (await DeviceModel.find({ userId }).select('token')).map((d) => d.token);

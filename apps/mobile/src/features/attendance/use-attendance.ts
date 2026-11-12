@@ -5,7 +5,8 @@ import {
   getMyAttendanceMonth,
   getUserAttendanceMonth,
 } from '@/lib/api/endpoints/attendance';
-import { businessDate, businessMonth } from '@/lib/format';
+import { session } from '@/lib/auth/session';
+import { businessMonth } from '@/lib/format';
 import { enqueueOutbox, usePendingOutbox, type AttendancePayload } from '@/offline';
 import { getLocationFix, LocationUnavailableError } from './use-location-fix';
 
@@ -44,7 +45,7 @@ export function usePunchAttendance() {
       const payload: AttendancePayload = fix.ok ? { location: fix.location } : {};
       return enqueueOutbox({
         type: kind === 'in' ? 'attendance.checkin' : 'attendance.checkout',
-        entityKey: `attendance:${businessDate()}`,
+        entityKey: `attendance:${session.getState().user?.id ?? 'me'}`,
         payload,
       });
     },

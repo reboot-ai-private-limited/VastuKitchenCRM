@@ -15,6 +15,7 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { getMe } from '@/lib/api/endpoints/auth';
 import { session, useSession } from '@/lib/auth/session';
+import { UpdateBanner, useAppConfigBootstrap, useAppGate } from '@/lib/app-config';
 import { queryClient } from '@/lib/query/client';
 import { useOutboxRunner } from '@/offline';
 
@@ -23,6 +24,9 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const { status } = useSession();
   useOutboxRunner();
+  useAppConfigBootstrap();
+  // A forced update or maintenance mode replaces every other screen (never set while offline).
+  const blocked = useAppGate() !== null;
   const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -61,12 +65,19 @@ export default function RootLayout() {
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
             <StatusBar style="dark" />
+            <UpdateBanner />
             <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-              <Stack.Protected guard={status === 'signedOut'}>
+              <Stack.Protected guard={blocked}>
+                <Stack.Screen name="app-update" />
+              </Stack.Protected>
+              <Stack.Protected guard={!blocked && status === 'signedOut'}>
                 <Stack.Screen name="(auth)" />
+              </Stack.Protected>
+              {/* Reachable when signed in too, so the screen can offer to sign out first. */}
+              <Stack.Protected guard={!blocked}>
                 <Stack.Screen name="invite/[token]" />
               </Stack.Protected>
-              <Stack.Protected guard={status === 'signedIn'}>
+              <Stack.Protected guard={!blocked && status === 'signedIn'}>
                 <Stack.Screen name="(app)" />
               </Stack.Protected>
             </Stack>

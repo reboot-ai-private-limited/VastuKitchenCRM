@@ -25,7 +25,18 @@ const nextConfig: NextConfig = {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/api/:path*` }];
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // Android App Links verification file (apps/web/public/.well-known/assetlinks.json, see
+      // docs/mobile/07-app-links.md). Must be application/json, served directly (no redirect).
+      {
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/json' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+        ],
+      },
+    ];
   },
   images: { remotePatterns: [{ protocol: 'https', hostname: 'res.cloudinary.com' }] },
   turbopack: { root: path.resolve(import.meta.dirname, '../..') },

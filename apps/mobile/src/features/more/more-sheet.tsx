@@ -9,12 +9,13 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { moreItemsForUser, ROLE_LABEL } from '@/constants/roles';
 import { colors, space } from '@/constants/theme';
-import { confirmSignOut } from '@/lib/auth/sign-out';
+import { useConfirmSignOut } from '@/lib/auth/sign-out';
 import { useSession } from '@/lib/auth/session';
 import { formatPhone } from '@/lib/format';
 import { moreSheet, useMoreSheetOpen } from './more-store';
 
 export function MoreMenuContent({ onNavigate }: { onNavigate?: () => void }) {
+  const confirmSignOut = useConfirmSignOut();
   const { user } = useSession();
   const router = useRouter();
   const items = moreItemsForUser(user);

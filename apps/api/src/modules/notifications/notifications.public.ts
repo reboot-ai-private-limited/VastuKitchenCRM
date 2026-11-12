@@ -14,4 +14,6 @@ export interface NotifyInput {
 export interface NotificationsPublicContract {
   /** `created` is false when `dedupeKey` was already delivered to that person. */
   notify(input: NotifyInput): Promise<{ created: boolean }>;
+  /** Drops every push device of a user (called when the account is deactivated or deleted). */
+  removeDevicesFor(userId: string): Promise<void>;
 }

@@ -5,7 +5,8 @@ let opened: Promise<SQLite.SQLiteDatabase> | null = null;
 let chain: Promise<unknown> = Promise.resolve();
 
 function open(): Promise<SQLite.SQLiteDatabase> {
-  return (opened ??= (async () => {
+  if (opened) return opened;
+  const p = (async () => {
     const d = await SQLite.openDatabaseAsync('vk-outbox.db');
     await d.execAsync(`
       PRAGMA journal_mode = WAL;
@@ -26,8 +27,17 @@ function open(): Promise<SQLite.SQLiteDatabase> {
       CREATE INDEX IF NOT EXISTS outbox_user ON outbox(user_id, created_seq);
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     `);
+    // Schema version for future migrations: bump it and add "if (v < N)" steps here.
+    const row = await d.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+    if ((row?.user_version ?? 0) < 1) await d.execAsync('PRAGMA user_version = 1');
     return d;
-  })());
+  })();
+  opened = p;
+  // A failed open must not be cached forever.
+  p.catch(() => {
+    if (opened === p) opened = null;
+  });
+  return p;
 }
 
 /** Run `fn` against the database, strictly one call at a time. */

@@ -1,4 +1,6 @@
 import type {
+  AssignLeadBodyDto,
+  UpdateLeadBodyDto,
   CallDto,
   ChangeLeadStatusBodyDto,
   CreateLeadBodyDto,
@@ -68,3 +70,9 @@ export const recordVisit = (id: string, body: RecordVisitBodyDto) =>
 
 export const listVisits = (id: string, signal?: AbortSignal) =>
   request<VisitDto[]>('GET', `/leads/${encodeURIComponent(id)}/visits`, undefined, { signal });
+
+export const updateLead = (id: string, body: UpdateLeadBodyDto) =>
+  request<LeadDto>('PATCH', `/leads/${encodeURIComponent(id)}`, body);
+
+export const assignLead = (id: string, body: AssignLeadBodyDto) =>
+  request<LeadDto>('POST', `/leads/${encodeURIComponent(id)}/assign`, body);

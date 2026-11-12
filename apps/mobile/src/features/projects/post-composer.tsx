@@ -23,6 +23,10 @@ type Props = {
   /** A new post (can choose who sees it) or a reply on a post. */
   kind: 'post' | 'reply';
   onCancel?: () => void;
+  /** Staff on an open project may post a Final delivery (photos required, always client-visible). */
+  allowFinalDelivery?: boolean;
+  /** Changing this number switches the composer into Final delivery mode (used by the Close flow). */
+  finalDeliveryRequest?: number;
   /** Resolves when the server accepted it; the composer then clears itself. */
   onSubmit: (body: CreatePostBodyDto & CreateCommentBodyDto) => Promise<unknown>;
 };
@@ -33,14 +37,30 @@ function describe(e: unknown): string {
   return 'Something went wrong. Try again.';
 }
 
-export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel }: Props) {
+export function PostComposer({
+  projectId,
+  placeholder,
+  kind,
+  onSubmit,
+  onCancel,
+  allowFinalDelivery,
+  finalDeliveryRequest,
+}: Props) {
   const photos = usePhotoAttachments(projectId, kind === 'post' ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT);
   const [text, setText] = useState('');
-  const [visibility, setVisibility] = useState<PostVisibility>('TEAM');
+  const [pickedVisibility, setVisibility] = useState<PostVisibility>('TEAM');
+  const [final, setFinal] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const visibility: PostVisibility = final ? 'CLIENT' : pickedVisibility;
 
-  const hasContent = text.trim().length > 0 || photos.images.length > 0;
+  const [seenRequest, setSeenRequest] = useState(finalDeliveryRequest ?? 0);
+  if ((finalDeliveryRequest ?? 0) !== seenRequest) {
+    setSeenRequest(finalDeliveryRequest ?? 0);
+    setFinal(true);
+  }
+
+  const hasContent = final ? photos.images.length > 0 : text.trim().length > 0 || photos.images.length > 0;
   const canSend = hasContent && photos.uploadsDone && !photos.busy && !sending;
 
   const send = async () => {
@@ -53,10 +73,13 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
         ...(trimmed ? { text: trimmed } : {}),
         images: photos.images,
         visibility,
-        kind: 'UPDATE',
+        kind: final ? 'FINAL_DELIVERY' : 'UPDATE',
       });
       setText('');
       photos.clear();
+      // The audience is never sticky: every new post starts as Team only.
+      setVisibility('TEAM');
+      setFinal(false);
     } catch (e) {
       setError(describe(e));
     } finally {
@@ -65,9 +88,10 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
   };
 
   const shownError = error ?? photos.problem;
+  const tinted = kind === 'post' && visibility === 'CLIENT';
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, tinted && styles.clientTint]}>
       {photos.items.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space[2] }}>
           {photos.items.map((a) => (
@@ -113,6 +137,7 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
             return (
               <PressableScale
                 key={v}
+                disabled={final}
                 onPress={() => setVisibility(v)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
@@ -128,7 +153,31 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
               </PressableScale>
             );
           })}
+          {allowFinalDelivery ? (
+            <PressableScale
+              onPress={() => setFinal((f) => !f)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: final }}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: final ? tone.success.bg : colors.muted,
+                  borderColor: final ? tone.success.fg : 'transparent',
+                },
+              ]}
+            >
+              <Feather name="check-circle" size={13} color={final ? tone.success.fg : colors.mutedForeground} />
+              <Text variant="caption" numberOfLines={1} color={final ? tone.success.fg : colors.mutedForeground}>
+                Final delivery
+              </Text>
+            </PressableScale>
+          ) : null}
         </View>
+      ) : null}
+      {final ? (
+        <Text variant="caption" muted>
+          Final delivery is visible to the customer and needs at least one photo.
+        </Text>
       ) : null}
 
       {shownError ? (
@@ -145,7 +194,6 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
             placeholder={placeholder}
             placeholderTextColor={colors.placeholder}
             multiline
-            autoFocus
             style={[styles.input, { flex: 0, minHeight: 72, textAlignVertical: 'top' }]}
           />
           <View style={styles.replyActions}>
@@ -165,27 +213,27 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
           </View>
         </>
       ) : (
-      <View style={styles.row}>
-        <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
-          <Feather name="camera" size={22} color={colors.mutedForeground} />
-        </PressableScale>
-        <PressableScale
-          onPress={() => void photos.pickFromGallery()}
-          accessibilityLabel="Attach photos"
-          style={styles.icon}
-        >
-          <Feather name="image" size={22} color={colors.mutedForeground} />
-        </PressableScale>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.placeholder}
-          multiline
-          style={styles.input}
-        />
-        <Button title="Send" onPress={() => void send()} loading={sending} disabled={!canSend} />
-      </View>
+        <View style={styles.row}>
+          <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
+            <Feather name="camera" size={22} color={colors.mutedForeground} />
+          </PressableScale>
+          <PressableScale
+            onPress={() => void photos.pickFromGallery()}
+            accessibilityLabel="Attach photos"
+            style={styles.icon}
+          >
+            <Feather name="image" size={22} color={colors.mutedForeground} />
+          </PressableScale>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={tinted ? 'Message the customer and team' : placeholder}
+            placeholderTextColor={colors.placeholder}
+            multiline
+            style={styles.input}
+          />
+          <Button title={final ? 'Post' : 'Send'} onPress={() => void send()} loading={sending} disabled={!canSend} />
+        </View>
       )}
     </View>
   );
@@ -193,6 +241,7 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
 
 const styles = StyleSheet.create({
   wrap: { gap: space[2] },
+  clientTint: { backgroundColor: tone.success.bg, borderRadius: radius.lg, padding: space[2] },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: space[1] },
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -205,6 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.input,
+    backgroundColor: colors.background,
     fontFamily: font.regular,
     fontSize: 16,
     color: colors.foreground,
@@ -212,7 +262,7 @@ const styles = StyleSheet.create({
   thumbBox: { width: 72, height: 72, borderRadius: radius.md, overflow: 'hidden' },
   thumb: { width: 72, height: 72, backgroundColor: colors.muted },
   overlay: {
-    ...StyleSheet.absoluteFill as object,
+    ...(StyleSheet.absoluteFill as object),
     backgroundColor: 'rgba(15, 28, 26, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -231,6 +281,7 @@ const styles = StyleSheet.create({
   visibilityRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: space[2],
   },
   chip: {

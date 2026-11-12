@@ -2,6 +2,8 @@ import type React from 'react';
 import { useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter, type Href } from 'expo-router';
+import { PressableScale } from '@/components/ui/pressable-scale';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { STAFF_ROLES, type StaffRole, type UserDto } from '@vastu/contracts';
 import { Avatar } from '@/components/ui/avatar';
@@ -25,8 +27,16 @@ import { useTeam } from './use-team';
 
 /** Read-only staff directory for Admin & HR. Never displays `fixedSalary` (00-principles-and-scope.md §5). */
 function StaffCard({ member }: { member: UserDto }) {
+  const router = useRouter();
   return (
     <Reveal>
+      <PressableScale
+        onPress={() =>
+          router.push({ pathname: '/attendance/[userId]', params: { userId: member.id } } as Href)
+        }
+        scaleTo={0.98}
+        accessibilityLabel={`${member.name}, view attendance`}
+      >
       <Card style={styles.card}>
         <Avatar name={member.name} size={40} />
         <View style={{ flex: 1, gap: 2 }}>
@@ -52,6 +62,7 @@ function StaffCard({ member }: { member: UserDto }) {
           onPress={() => void openLink(whatsappUrlFor(member.phone))}
         />
       </Card>
+      </PressableScale>
     </Reveal>
   );
 }

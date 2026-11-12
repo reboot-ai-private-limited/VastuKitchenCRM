@@ -1,10 +1,12 @@
 import { Stack } from 'expo-router';
 import { AppHeader } from '@/components/ui/app-header';
 import { useSession } from '@/lib/auth/session';
+import { usePush } from '@/lib/push/use-push';
 
 export default function AppLayout() {
   const { user } = useSession();
   const isCustomer = user?.role === 'CUSTOMER';
+  usePush();
 
   return (
     <Stack
@@ -20,6 +22,8 @@ export default function AppLayout() {
         <Stack.Screen name="(staff)" />
         <Stack.Screen name="proposals/index" />
         <Stack.Screen name="proposals/[id]" />
+        <Stack.Screen name="proposals/new" />
+        <Stack.Screen name="proposals/edit/[id]" />
         <Stack.Screen name="customers/[id]" />
         <Stack.Screen name="leads/new" />
         <Stack.Screen name="leads/[id]" />
@@ -27,6 +31,7 @@ export default function AppLayout() {
         <Stack.Screen name="attendance/board" />
         <Stack.Screen name="attendance/[userId]" />
         <Stack.Screen name="todos/[id]" />
+        <Stack.Screen name="projects/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={isCustomer}>
         <Stack.Screen name="(customer)" />

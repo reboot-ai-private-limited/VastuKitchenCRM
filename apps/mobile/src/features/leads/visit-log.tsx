@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
 import { timeAgo } from '@/lib/format';
-import { useLeadVisits, useRecordVisit } from './use-leads';
+import { PendingSyncBadge } from '@/offline';
+import { useLeadVisits, usePendingForLead, useRecordVisit } from './use-leads';
 
 type Fix = { latitude: number; longitude: number; accuracy: number | null };
 type FixState =
@@ -23,6 +24,7 @@ const num = (v: string) => (v.trim() === '' ? NaN : Number(v));
 export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }) {
   const visits = useLeadVisits(leadId);
   const record = useRecordVisit(leadId);
+  const pending = usePendingForLead(leadId, 'visit.log');
   const [open, setOpen] = useState(false);
   const [fix, setFix] = useState<FixState>({ s: 'idle' });
   const [manual, setManual] = useState(false);
@@ -85,10 +87,10 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
       return setError('Wait for the location, or enter it manually.');
     }
     setError(null);
-    // TODO(outbox): enqueue with the captured `at` when offline (useRecordVisit hook holds the same marker).
+    // Queued with the time of the tap (`at`); never auto-retried if the outcome is unknown.
     record.mutate(
       { at: new Date(), latitude, longitude, ...(note.trim() ? { note: note.trim() } : {}) },
-      { onSuccess: () => setOpen(false), onError: (e) => setError(e.message) },
+      { onSuccess: () => setOpen(false), onError: (e) => setError(e instanceof Error ? e.message : 'Could not save the visit') },
     );
   };
 
@@ -123,12 +125,26 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
         </Text>
         {canAdd ? <Button title="Check in" size="sm" onPress={begin} /> : null}
       </View>
+      {pending.length > 0 ? (
+        <Card style={{ gap: space[3] }}>
+          {pending.map((p) => (
+            <View key={p.id} style={{ gap: 2 }}>
+              <Text variant="caption" muted>
+                You · {timeAgo(new Date(p.capturedAt).toISOString())}
+              </Text>
+              <PendingSyncBadge filter={(i) => i.id === p.id} />
+            </View>
+          ))}
+        </Card>
+      ) : null}
       {visits.isPending ? (
         <Text muted>Loading visits...</Text>
       ) : visits.isError ? (
-        <Text muted>Could not load visits.</Text>
+        <Text muted onPress={() => void visits.refetch()}>Could not load visits. Tap to retry.</Text>
       ) : visits.data.length === 0 ? (
-        <Text muted>No visits yet.{canAdd ? ' Check in when you reach the site.' : ''}</Text>
+        pending.length > 0 ? null : (
+          <Text muted>No visits yet.{canAdd ? ' Check in when you reach the site.' : ''}</Text>
+        )
       ) : (
         <Card style={{ gap: space[3] }}>
           {visits.data.map((v) => (

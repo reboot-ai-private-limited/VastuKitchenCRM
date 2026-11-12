@@ -7,6 +7,7 @@ import {
   MarkReadUseCase,
   RegisterDeviceUseCase,
   RemoveDeviceUseCase,
+  RemoveUserDevicesUseCase,
   NotifyUseCase,
 } from './application/usecases/notifications.usecases.js';
 import { ExpoPushSender } from './infrastructure/expoPushSender.adapter.js';
@@ -43,6 +44,7 @@ export function buildNotificationsContainer(): NotificationsContainer {
   const markAllRead = new MarkAllReadUseCase(notifications);
   const registerDevice = new RegisterDeviceUseCase(devices);
   const removeDevice = new RemoveDeviceUseCase(devices);
+  const removeUserDevices = new RemoveUserDevicesUseCase(devices);
 
   return {
     contract: {
@@ -55,6 +57,9 @@ export function buildNotificationsContainer(): NotificationsContainer {
           ref: input.ref ?? null,
           dedupeKey: input.dedupeKey ?? null,
         }),
+      removeDevicesFor: async (userId) => {
+        await removeUserDevices.execute(userId);
+      },
     },
     buildRouter: () =>
       buildNotificationsRouter({

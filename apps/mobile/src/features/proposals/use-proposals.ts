@@ -1,6 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProposalDto, ProposalStatus, SendProposalWhatsappBodyDto } from '@vastu/contracts';
+import type { CreateProposalBodyDto, ProposalDto, ProposalStatus, UpdateProposalBodyDto, SendProposalWhatsappBodyDto } from '@vastu/contracts';
 import {
+  createProposal,
+  updateProposal,
   duplicateProposal,
   getProposal,
   listProposals,
@@ -8,10 +10,10 @@ import {
   sendProposalWhatsapp,
 } from '@/lib/api/endpoints/proposals';
 
-export const useProposalsList = (status?: ProposalStatus) =>
+export const useProposalsList = (status?: ProposalStatus, leadId?: string) =>
   useInfiniteQuery({
-    queryKey: ['proposals', 'list', { status }],
-    queryFn: ({ pageParam, signal }) => listProposals({ page: pageParam, status }, signal),
+    queryKey: ['proposals', 'list', { status, leadId }],
+    queryFn: ({ pageParam, signal }) => listProposals({ page: pageParam, status, leadId }, signal),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {
@@ -59,6 +61,28 @@ export function useDuplicateProposal(id: string) {
     mutationFn: () => duplicateProposal(id),
     onSuccess: (copy) => {
       qc.setQueryData(['proposals', 'detail', copy.id], copy);
+      void qc.invalidateQueries({ queryKey: ['proposals', 'list'] });
+    },
+  });
+}
+
+export function useCreateProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateProposalBodyDto) => createProposal(body),
+    onSuccess: (p) => {
+      qc.setQueryData(['proposals', 'detail', p.id], p);
+      void qc.invalidateQueries({ queryKey: ['proposals', 'list'] });
+    },
+  });
+}
+
+export function useUpdateProposal(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateProposalBodyDto) => updateProposal(id, body),
+    onSuccess: (p) => {
+      qc.setQueryData(['proposals', 'detail', id], p);
       void qc.invalidateQueries({ queryKey: ['proposals', 'list'] });
     },
   });

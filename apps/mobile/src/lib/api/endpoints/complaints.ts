@@ -84,3 +84,7 @@ export const deleteComplaintComment = (id: string, commentId: string) =>
     'DELETE',
     `/complaints/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`,
   );
+
+/** Upload ticket for photos on a message; works for anyone who can see the complaint (not just project members). */
+export const signCommentUpload = (id: string) =>
+  request<UploadTicketDto>('POST', `/complaints/${encodeURIComponent(id)}/comments/uploads/sign`, {});

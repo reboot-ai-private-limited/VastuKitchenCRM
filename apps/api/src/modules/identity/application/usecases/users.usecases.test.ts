@@ -151,3 +151,19 @@ describe('SetUserPasswordUseCase', () => {
     });
   });
 });
+
+describe('UpdateUserUseCase deactivation announces user.deactivated', () => {
+  it('emits only when an account is deactivated', async () => {
+    const { users, sessions, designations } = await setup();
+    const { createEventBus } = await import('@/shared/events/appEvents.js');
+    const events = createEventBus();
+    const seen: string[] = [];
+    events.on('user.deactivated', (e) => void seen.push(e.userId));
+    const update = new UpdateUserUseCase(users, designations, sessions, events);
+    const target = await addUser(users, { role: 'SALES', phone: '9876500077' });
+    await update.execute({ id: 'admin', role: 'ADMIN' }, target.id, { name: 'Renamed' });
+    await update.execute({ id: 'admin', role: 'ADMIN' }, target.id, { active: false });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(seen).toEqual([target.id]);
+  });
+});

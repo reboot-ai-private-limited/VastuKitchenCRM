@@ -17,9 +17,8 @@ import { Text } from '@/components/ui/text';
 import { ROLE_LABEL } from '@/constants/roles';
 import { colors, font, hit, radius, space } from '@/constants/theme';
 import { ApiError, NetworkError } from '@/lib/api/client';
-import { signResolveUpload } from '@/lib/api/endpoints/complaints';
+import { signCommentUpload, signResolveUpload } from '@/lib/api/endpoints/complaints';
 import { listUsers } from '@/lib/api/endpoints/users';
-import { signProjectUpload } from '@/lib/api/upload';
 import { timeAgo } from '@/lib/format';
 import { EVENT_LABEL, STATUS_LABEL, STATUS_TONE } from './complaint-meta';
 import {
@@ -55,7 +54,6 @@ export function ComplaintDetailScreen() {
   const [mode, setMode] = useState<ComplaintAction>('comment');
   const [text, setText] = useState('');
   const c = q.data;
-  const projectId = c?.projectId;
   const [kbOpen, setKbOpen] = useState(false);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKbOpen(true));
@@ -66,10 +64,10 @@ export function ComplaintDetailScreen() {
     };
   }, []);
 
-  // Resolution photos use the complaint's own ticket (resolver only); comment photos use the project's.
+  // Resolution photos use the resolver-only ticket; message photos use the complaint-scoped one (assignees need not be project members).
   const sign = useCallback(
-    () => (mode === 'resolve' ? signResolveUpload(id) : signProjectUpload(projectId ?? '')),
-    [mode, id, projectId],
+    () => (mode === 'resolve' ? signResolveUpload(id) : signCommentUpload(id)),
+    [mode, id],
   );
   const photos = useSignedAttachments(sign, 5);
   const canAttach = mode === 'comment' || mode === 'resolve';

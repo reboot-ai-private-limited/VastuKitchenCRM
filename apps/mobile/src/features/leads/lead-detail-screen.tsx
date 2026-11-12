@@ -1,66 +1,59 @@
 import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { changeLeadStatusBodySchema, type LeadStatus } from '@vastu/contracts';
+import { useQueryClient } from '@tanstack/react-query';
+import type { LeadStatus } from '@vastu/contracts';
 import { Badge } from '@/components/ui/badge';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space, tone } from '@/constants/theme';
+import { colors, radius, space, tone } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { formatPhone } from '@/lib/format';
+import { PendingSyncBadge } from '@/offline';
 import { useCallLogger } from './call-logger';
-import { VisitLog } from './visit-log';
 import { STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
-import { useChangeLeadStatus, useLeadDetail } from './use-leads';
+import { CallsSection, ProposalsSection, TimelineSection } from './lead-sections';
+import { AssignSheet, EditLeadSheet, StatusSheet } from './lead-sheets';
+import { leadKey, useLeadDetail } from './use-leads';
+import { VisitLog } from './visit-log';
 
 export function LeadDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const { user } = useSession();
   const q = useLeadDetail(id);
-  const change = useChangeLeadStatus(id);
   const callLogger = useCallLogger(id, q.data?.phone ?? '');
   const lead = q.data;
 
-  const [lostSheetOpen, setLostSheetOpen] = useState(false);
-  const [lostReason, setLostReason] = useState('');
-  const [lostError, setLostError] = useState<string | null>(null);
+  const [statusTarget, setStatusTarget] = useState<LeadStatus | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const isOffice = user?.role === 'OFFICE';
-  const canChangeStatus =
-    !isOffice &&
-    (user?.role === 'ADMIN' || user?.role === 'SALES') &&
-    (lead?.status !== 'WON' || user?.role === 'ADMIN');
+  const role = user?.role;
+  const isOffice = role === 'OFFICE';
+  const isAdmin = role === 'ADMIN';
+  const canWork = isAdmin || role === 'SALES'; // OFFICE is view/add only
+  const canChangeStatus = canWork && (lead?.status !== 'WON' || isAdmin);
 
   const open = (url: string) => void Linking.openURL(url);
   const wa = (phone: string) => `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`;
 
-  const handleConfirmLost = () => {
-    const parsed = changeLeadStatusBodySchema.safeParse({
-      status: 'LOST',
-      lostReason: lostReason.trim() || undefined,
-    });
-    if (!parsed.success) {
-      setLostError(parsed.error.issues[0]?.message ?? 'Give a reason when marking a lead as lost');
-      return;
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await qc.invalidateQueries({ queryKey: ['leads'] });
+      await qc.invalidateQueries({ queryKey: ['proposals', 'by-lead', id] });
+    } finally {
+      setRefreshing(false);
     }
-    setLostError(null);
-    change.mutate(parsed.data, {
-      onSuccess: () => {
-        setLostReason('');
-        setLostSheetOpen(false);
-      },
-      onError: (err) => {
-        setLostError(err.message);
-      },
-    });
   };
 
   let content;
@@ -97,24 +90,19 @@ export function LeadDetailScreen() {
           <View style={{ flexDirection: 'row', gap: space[2], marginTop: space[2], flexWrap: 'wrap' }}>
             <Badge label={STATUS_LABEL[lead.status]} t={STATUS_TONE[lead.status]} />
             {lead.isStuck ? <Badge label="Stuck" t="danger" /> : null}
+            <PendingSyncBadge filter={(i) => i.entityKey === leadKey(id)} />
           </View>
         </Reveal>
 
-        {/* OFFICE leads are view/add only: no call or visit actions (01-personas-and-navigation.md §2.6). */}
-        {!isOffice ? (
+        {/* OFFICE leads are view/add only: no call or visit actions (01-personas-and-navigation.md section 2.6). */}
+        {canWork ? (
           <Reveal index={1}>
             <View style={{ flexDirection: 'row', gap: space[3] }}>
               <View style={{ flex: 1 }}>
                 <Button title="Call" size="lg" onPress={callLogger.startCall} fullWidth />
               </View>
               <View style={{ flex: 1 }}>
-                <Button
-                  title="WhatsApp"
-                  size="lg"
-                  variant="outline"
-                  onPress={() => open(wa(lead.phone))}
-                  fullWidth
-                />
+                <Button title="WhatsApp" size="lg" variant="outline" onPress={() => open(wa(lead.phone))} fullWidth />
               </View>
             </View>
           </Reveal>
@@ -132,14 +120,21 @@ export function LeadDetailScreen() {
                   <Text>{v}</Text>
                 </View>
               ))}
+            {canWork || isAdmin ? (
+              <View style={{ flexDirection: 'row', gap: space[2], flexWrap: 'wrap' }}>
+                {canWork ? <Button title="Edit" size="sm" variant="outline" onPress={() => setEditOpen(true)} /> : null}
+                {isAdmin ? (
+                  <Button
+                    title={lead.assignedTo ? 'Reassign' : 'Assign'}
+                    size="sm"
+                    variant="outline"
+                    onPress={() => setAssignOpen(true)}
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </Card>
         </Reveal>
-
-        {!isOffice && (user?.role === 'ADMIN' || user?.role === 'SALES') ? (
-          <Reveal index={3}>
-            <VisitLog leadId={id} canAdd />
-          </Reveal>
-        ) : null}
 
         {canChangeStatus ? (
           <Reveal index={3}>
@@ -147,25 +142,16 @@ export function LeadDetailScreen() {
               Move to
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-              {STATUS_ORDER.filter((s): s is LeadStatus => s !== lead.status).map((s) => (
+              {STATUS_ORDER.filter((s) => s !== lead.status).map((s) => (
                 <PressableScale
                   key={s}
-                  disabled={change.isPending}
-                  onPress={() => {
-                    if (s === 'LOST') {
-                      setLostError(null);
-                      setLostSheetOpen(true);
-                    } else {
-                      change.mutate(s);
-                    }
-                  }}
+                  onPress={() => setStatusTarget(s)}
                   style={{
                     height: 38,
                     paddingHorizontal: 14,
                     borderRadius: radius.full,
                     backgroundColor: tone[STATUS_TONE[s]].bg,
                     justifyContent: 'center',
-                    opacity: change.isPending ? 0.5 : 1,
                   }}
                 >
                   <Text variant="caption" color={tone[STATUS_TONE[s]].fg}>
@@ -174,13 +160,21 @@ export function LeadDetailScreen() {
                 </PressableScale>
               ))}
             </View>
-            {change.isError ? (
-              <Text variant="caption" color={colors.destructive} style={{ marginTop: space[2] }}>
-                {change.error.message}
-              </Text>
-            ) : null}
           </Reveal>
         ) : null}
+
+        {canWork ? (
+          <>
+            <ProposalsSection leadId={id} canCreate />
+            <CallsSection leadId={id} onLog={callLogger.logManually} />
+            <VisitLog leadId={id} canAdd />
+          </>
+        ) : null}
+
+        <TimelineSection leadId={id} />
+
+        <EditLeadSheet lead={lead} visible={editOpen} onClose={() => setEditOpen(false)} />
+        {isAdmin ? <AssignSheet lead={lead} visible={assignOpen} onClose={() => setAssignOpen(false)} /> : null}
       </>
     );
   }
@@ -192,61 +186,19 @@ export function LeadDetailScreen() {
       />
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: space[4], paddingTop: space[1], paddingBottom: insets.bottom + space[8], gap: space[5] }}
+        contentContainerStyle={{
+          padding: space[4],
+          paddingTop: space[1],
+          paddingBottom: insets.bottom + space[8],
+          gap: space[5],
+        }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.primary} />}
       >
         {content}
       </ScrollView>
 
-      {callLogger.sheet}
-
-      <BottomSheet
-        visible={lostSheetOpen}
-        onClose={() => setLostSheetOpen(false)}
-        title="Mark lead as lost"
-        subtitle="Briefly record why this lead did not go ahead"
-        footer={
-          <Button
-            title="Mark as lost"
-            variant="destructive"
-            size="lg"
-            loading={change.isPending}
-            onPress={handleConfirmLost}
-            fullWidth
-          />
-        }
-      >
-        <View style={{ gap: space[2] }}>
-          <TextInput
-            value={lostReason}
-            onChangeText={setLostReason}
-            placeholder="e.g. Budget mismatch, went with carpenter, postponed"
-            placeholderTextColor={colors.placeholder}
-            multiline
-            style={styles.reasonInput}
-          />
-          {lostError ? (
-            <Text variant="caption" color={colors.destructive}>
-              {lostError}
-            </Text>
-          ) : null}
-        </View>
-      </BottomSheet>
+      {isOffice ? null : callLogger.sheet}
+      <StatusSheet leadId={id} target={statusTarget} onClose={() => setStatusTarget(null)} />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  reasonInput: {
-    minHeight: 88,
-    paddingHorizontal: space[3],
-    paddingVertical: space[3],
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.input,
-    backgroundColor: colors.background,
-    fontFamily: font.regular,
-    fontSize: 16,
-    color: colors.foreground,
-    textAlignVertical: 'top',
-  },
-});

@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { BlockError } from './block-error';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -96,6 +97,8 @@ export function DesignerTodayHome() {
           </View>
           {waitingQ.isPending ? (
             <Skeleton height={84} />
+          ) : waitingQ.isError && waitingQ.data === undefined ? (
+            <BlockError error={waitingQ.error} onRetry={() => void waitingQ.refetch()} />
           ) : (waitingQ.data?.items ?? []).length === 0 ? (
             <Card>
               <Text muted>No shared designs are waiting on customer approval.</Text>
@@ -143,6 +146,8 @@ export function DesignerTodayHome() {
           </View>
           {todosQ.isPending ? (
             <Skeleton height={90} />
+          ) : todosQ.isError && todosQ.data === undefined ? (
+            <BlockError error={todosQ.error} onRetry={() => void todosQ.refetch()} />
           ) : todos.length === 0 ? (
             <Card>
               <Text muted>No open to-dos assigned to you.</Text>
@@ -172,6 +177,8 @@ export function DesignerTodayHome() {
           </View>
           {complaintsQ.isPending ? (
             <Skeleton height={80} />
+          ) : complaintsQ.isError && complaintsQ.data === undefined ? (
+            <BlockError error={complaintsQ.error} onRetry={() => void complaintsQ.refetch()} />
           ) : (complaintsQ.data ?? []).length === 0 ? (
             <Card>
               <Text muted>No active complaints assigned to you.</Text>

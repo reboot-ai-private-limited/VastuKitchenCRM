@@ -6,24 +6,80 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "in.vastukitchen.app" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "in.vastukitchen.app"
+    },
     "android": {
       "package": "in.vastukitchen.app",
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
-      "allowBackup": false
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "allowBackup": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "REPLACE_WITH_WEB_HOST",
+              "pathPrefix": "/invite/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "REPLACE_WITH_WEB_HOST",
+              "pathPrefix": "/p/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-image",
-      ["expo-location", { "locationWhenInUsePermission": "Vastu Kitchen uses your location once, when you check in or out, to record where you are." }],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vastu Kitchen uses your location once, when you check in or out, to record where you are."
+        }
+      ],
       "expo-font",
       "expo-notifications",
       "expo-sqlite",
-      ["expo-splash-screen", { "backgroundColor": "#ffffff" }],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff"
+        }
+      ],
       "expo-status-bar",
-      ["expo-image-picker", { "photosPermission": "Vastu Kitchen needs your photos to attach them to project updates and complaints.", "cameraPermission": "Vastu Kitchen needs the camera to take site and design photos." }]
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Vastu Kitchen needs your photos to attach them to project updates and complaints.",
+          "cameraPermission": "Vastu Kitchen needs the camera to take site and design photos."
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

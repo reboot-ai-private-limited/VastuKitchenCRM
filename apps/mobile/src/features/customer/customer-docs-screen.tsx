@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type React from 'react';
 import { FlatList, Linking, RefreshControl, Share, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,13 +21,13 @@ import { listProjectFiles } from '@/lib/api/endpoints/docs';
 import { formatBytes, formatDate } from '@/lib/format';
 import { CustomerHeader, useActiveCustomerProject } from './customer-shell-shared';
 
-function SharedFileCard({ file, index }: { file: DocFileDto; index: number }) {
+function SharedFileCard({ file, index, highlighted }: { file: DocFileDto; index: number; highlighted?: boolean }) {
   const thumb = file.thumbUrl ?? file.previewUrl;
 
   return (
     <Reveal index={index}>
       <PressableScale onPress={() => void Linking.openURL(file.url)}>
-        <Card style={styles.fileCard}>
+        <Card style={[styles.fileCard, highlighted && { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}>
           {thumb ? (
             <Image source={{ uri: thumb }} style={styles.thumb} contentFit="cover" />
           ) : (
@@ -69,7 +70,7 @@ function SharedFileCard({ file, index }: { file: DocFileDto; index: number }) {
 }
 
 export function CustomerDocsScreen() {
-  const { projectId: paramProjectId } = useLocalSearchParams<{ projectId?: string }>();
+  const { projectId: paramProjectId, file: fileParam } = useLocalSearchParams<{ projectId?: string; file?: string }>();
   const insets = useSafeAreaInsets();
   const { projects, project, setProjectId, isPending: projectsPending } =
     useActiveCustomerProject(paramProjectId);
@@ -79,6 +80,13 @@ export function CustomerDocsScreen() {
     queryFn: ({ signal }) => listProjectFiles(project!.id, { shared: true }, signal),
     enabled: !!project?.id,
   });
+
+  const listRef = useRef<FlatList<DocFileDto>>(null);
+  const files = filesQ.data;
+  useEffect(() => {
+    const i = fileParam && files ? files.findIndex((f) => f.id === fileParam) : -1;
+    if (i >= 0) listRef.current?.scrollToIndex({ index: i, animated: true, viewPosition: 0.2 });
+  }, [fileParam, files]);
 
   let empty: React.ReactElement | undefined;
   if (projectsPending || filesQ.isPending) {
@@ -114,7 +122,9 @@ export function CustomerDocsScreen() {
 
   return (
     <FlatList
+      ref={listRef}
       style={styles.root}
+      onScrollToIndexFailed={() => undefined}
       contentContainerStyle={{
         paddingTop: insets.top + space[4],
         paddingHorizontal: space[4],
@@ -123,7 +133,9 @@ export function CustomerDocsScreen() {
       }}
       data={filesQ.data ?? []}
       keyExtractor={(f) => f.id}
-      renderItem={({ item, index }) => <SharedFileCard file={item} index={index} />}
+      renderItem={({ item, index }) => (
+        <SharedFileCard file={item} index={index} highlighted={item.id === fileParam} />
+      )}
       ListHeaderComponent={
         <View style={{ gap: space[3], paddingBottom: space[2] }}>
           <CustomerHeader

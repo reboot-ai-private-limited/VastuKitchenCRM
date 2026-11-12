@@ -83,6 +83,12 @@ const REGISTRY: SettingRegistry = {
     max: 100,
     integer: true,
   },
+  'app.android.minVersion': { group: 'App', label: 'A', description: 'd', type: 'text', default: '0.0.0' },
+  'app.android.recommendedVersion': { group: 'App', label: 'B', description: 'd', type: 'text', default: '0.0.0' },
+  'app.ios.minVersion': { group: 'App', label: 'C', description: 'd', type: 'text', default: '0.0.0' },
+  'app.ios.recommendedVersion': { group: 'App', label: 'D', description: 'd', type: 'text', default: '0.0.0' },
+  'app.maintenanceActive': { group: 'App', label: 'E', description: 'd', type: 'boolean', default: false },
+  'app.maintenanceMessage': { group: 'App', label: 'F', description: 'd', type: 'longText', default: 'm' },
   'proposals.defaultTerms': {
     group: 'Proposals',
     label: 'T',
@@ -220,7 +226,7 @@ describe('listing', () => {
     const { list, update } = setup();
     await update.execute('admin1', { 'leads.stuckDays': 5, 'company.name': 'Vaastu' });
     const all = await list.execute();
-    expect(all).toHaveLength(13);
+    expect(all).toHaveLength(19);
     const byKey = Object.fromEntries(all.map((s) => [s.key, s]));
     expect(byKey['leads.stuckDays']).toMatchObject({
       value: 5,

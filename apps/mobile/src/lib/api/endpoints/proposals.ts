@@ -1,4 +1,6 @@
 import type {
+  CreateProposalBodyDto,
+  UpdateProposalBodyDto,
   PaginatedDto,
   ProposalDto,
   ProposalStatus,
@@ -47,3 +49,10 @@ export const sendProposalWhatsapp = (id: string, body: SendProposalWhatsappBodyD
 /** Copies a (possibly frozen) proposal into a new DRAFT with its own number and link. */
 export const duplicateProposal = (id: string) =>
   request<ProposalDto>('POST', `/proposals/${encodeURIComponent(id)}/duplicate`, {});
+
+export const createProposal = (body: CreateProposalBodyDto) =>
+  request<ProposalDto>('POST', '/proposals', body);
+
+/** Drafts only. */
+export const updateProposal = (id: string, body: UpdateProposalBodyDto) =>
+  request<ProposalDto>('PATCH', `/proposals/${encodeURIComponent(id)}`, body);

@@ -41,6 +41,7 @@ export function AddLeadScreen() {
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [existingId, setExistingId] = useState<string | null>(null);
 
   const submit = () => {
     const parsed = createLeadBodySchema.safeParse({
@@ -55,11 +56,21 @@ export function AddLeadScreen() {
       return;
     }
     setError(null);
+    setExistingId(null);
     create.mutate(parsed.data, {
-      onSuccess: (lead) => {
-        router.replace({ pathname: '/leads/[id]', params: { id: lead.id } } as Href);
+      onSuccess: ({ lead }) => {
+        // Queued (offline): the lead is added when the connection returns.
+        if (lead) router.replace({ pathname: '/leads/[id]', params: { id: lead.id } } as Href);
+        else router.replace('/leads' as Href);
       },
       onError: (err) => {
+        const existing = (err instanceof ApiError ? (err.data as { existingLeadId?: unknown } | undefined) : undefined)
+          ?.existingLeadId;
+        if (err instanceof ApiError && err.status === 409 && typeof existing === 'string') {
+          setExistingId(existing);
+          setError('A lead with this phone number already exists.');
+          return;
+        }
         setError(
           err instanceof NetworkError
             ? 'Connection lost. Check your internet and try again.'
@@ -176,6 +187,15 @@ export function AddLeadScreen() {
           <Text variant="caption" color={colors.destructive}>
             {error}
           </Text>
+        ) : null}
+
+        {existingId ? (
+          <Button
+            title="Open existing lead"
+            variant="outline"
+            onPress={() => router.replace({ pathname: '/leads/[id]', params: { id: existingId } } as Href)}
+            fullWidth
+          />
         ) : null}
 
         <Button title="Save lead" size="lg" loading={create.isPending} onPress={submit} fullWidth />

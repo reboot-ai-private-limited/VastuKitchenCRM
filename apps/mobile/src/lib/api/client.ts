@@ -6,12 +6,23 @@ import { session } from '@/lib/auth/session';
 
 type Issue = { path?: unknown; message?: string };
 
+function retryAfterMs(res: Response): number | undefined {
+  const h = res.headers.get('retry-after');
+  if (!h) return undefined;
+  const secs = Number(h);
+  if (Number.isFinite(secs)) return Math.max(0, secs) * 1000;
+  const at = Date.parse(h);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : undefined;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
     message: string,
     readonly data?: unknown,
+    /** From the Retry-After header on 429/503, in ms. */
+    readonly retryAfterMs?: number,
   ) {
     super(message);
   }
@@ -85,6 +96,7 @@ async function send<T>(method: string, path: string, body: unknown, token: strin
           json?.message ??
           (res.status >= 500 ? 'Something went wrong on our side' : 'Request failed'),
         json?.data,
+        retryAfterMs(res),
       );
     }
     return json.data as T;

@@ -9,6 +9,8 @@ import type {
   PostVisibility,
   ProjectDto,
   ProjectStage,
+  TimelinePageDto,
+  TodoDto,
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
@@ -77,4 +79,57 @@ export const createComment = (projectId: string, postId: string, body: CreateCom
     'POST',
     `/projects/${encodeURIComponent(projectId)}/posts/${encodeURIComponent(postId)}/comments`,
     body,
+  );
+
+export const getTimeline = (id: string, before?: string, signal?: AbortSignal, limit = 30) =>
+  request<TimelinePageDto>(
+    'GET',
+    `/projects/${encodeURIComponent(id)}/timeline${qs({ before, limit })}`,
+    undefined,
+    { signal },
+  );
+
+export const listComments = (projectId: string, postId: string, signal?: AbortSignal) =>
+  request<CommentDto[]>(
+    'GET',
+    `/projects/${encodeURIComponent(projectId)}/posts/${encodeURIComponent(postId)}/comments`,
+    undefined,
+    { signal },
+  );
+
+export const deletePost = (projectId: string, postId: string) =>
+  request<unknown>('DELETE', `/projects/${encodeURIComponent(projectId)}/posts/${encodeURIComponent(postId)}`);
+
+export const deleteComment = (projectId: string, postId: string, commentId: string) =>
+  request<unknown>(
+    'DELETE',
+    `/projects/${encodeURIComponent(projectId)}/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+  );
+
+export const changeStage = (id: string, stage: 'DESIGN' | 'SITE') =>
+  request<ProjectDto>('POST', `/projects/${encodeURIComponent(id)}/stage`, { stage });
+
+export const changeDesignStage = (id: string, designStage: DesignStage) =>
+  request<ProjectDto>('PATCH', `/projects/${encodeURIComponent(id)}/design-stage`, { designStage });
+
+export const closeProject = (id: string) =>
+  request<ProjectDto>('POST', `/projects/${encodeURIComponent(id)}/close`, {});
+
+export const inviteCustomer = (customerId: string) =>
+  request<{ url: string; expiresAt: string }>(
+    'POST',
+    `/identity/customers/${encodeURIComponent(customerId)}/invite`,
+    {},
+  );
+
+export const listProjectTodos = (
+  projectId: string,
+  status: 'open' | 'done' | 'all' = 'open',
+  signal?: AbortSignal,
+) =>
+  request<TodoDto[]>(
+    'GET',
+    `/projects/${encodeURIComponent(projectId)}/todos${qs({ status })}`,
+    undefined,
+    { signal },
   );

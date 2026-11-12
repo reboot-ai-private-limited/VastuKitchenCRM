@@ -24,6 +24,14 @@ const DURATIONS = [
   { label: '15+ min', sec: 1200 },
 ] as const;
 
+/** For a manual log: when the call happened, as minutes ago. */
+const WHEN = [
+  { label: 'Just now', min: 0 },
+  { label: '15 min ago', min: 15 },
+  { label: '1 hour ago', min: 60 },
+  { label: '3 hours ago', min: 180 },
+] as const;
+
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <PressableScale
@@ -41,7 +49,9 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 
 /**
  * Dial with a tel: link, remember when we left, and open a "How did the call go?" sheet when the app
- * comes back to the foreground. Returns `startCall` for the Call button and the sheet element.
+ * comes back to the foreground. Returns `startCall` for the Call button, `logManually` for the
+ * "Log a call" fallback (a call made another way, or the sheet was dismissed) and the sheet element.
+ * The save is queued in the offline outbox, so it works without a connection.
  */
 export function useCallLogger(leadId: string, phone: string) {
   const record = useRecordCall(leadId);
@@ -52,6 +62,8 @@ export function useCallLogger(leadId: string, phone: string) {
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [manual, setManual] = useState(false);
+  const [whenMin, setWhenMin] = useState(0);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -68,6 +80,7 @@ export function useCallLogger(leadId: string, phone: string) {
   const startCall = useCallback(() => {
     startedAt.current = new Date();
     wentBackground.current = false;
+    setManual(false);
     setOutcome(null);
     setDurationSec(null);
     setNote('');
@@ -76,6 +89,17 @@ export function useCallLogger(leadId: string, phone: string) {
       startedAt.current = null;
     });
   }, [phone]);
+
+  const logManually = useCallback(() => {
+    startedAt.current = null;
+    setManual(true);
+    setWhenMin(0);
+    setOutcome(null);
+    setDurationSec(null);
+    setNote('');
+    setError(null);
+    setOpen(true);
+  }, []);
 
   const close = () => {
     setOpen(false);
@@ -88,8 +112,11 @@ export function useCallLogger(leadId: string, phone: string) {
     const sec = unanswered ? 0 : durationSec;
     if (sec === null) return setError('Pick roughly how long you talked.');
     // The API rejects a start time in the future; never send one.
-    const started =
-      startedAt.current && startedAt.current.getTime() <= Date.now() ? startedAt.current : new Date();
+    const started = manual
+      ? new Date(Date.now() - whenMin * 60_000)
+      : startedAt.current && startedAt.current.getTime() <= Date.now()
+        ? startedAt.current
+        : new Date();
     setError(null);
     record.mutate(
       {
@@ -99,7 +126,7 @@ export function useCallLogger(leadId: string, phone: string) {
         outcome,
         ...(note.trim() ? { note: note.trim() } : {}),
       },
-      { onSuccess: close, onError: (e) => setError(e.message) },
+      { onSuccess: close, onError: (e) => setError(e instanceof Error ? e.message : 'Could not save the call') },
     );
   };
 
@@ -108,11 +135,21 @@ export function useCallLogger(leadId: string, phone: string) {
     <BottomSheet
       visible={open}
       onClose={close}
-      title="How did the call go?"
+      title={manual ? 'Log a call' : 'How did the call go?'}
       subtitle="Log it so the lead history stays complete"
       footer={<Button title="Save call" size="lg" loading={record.isPending} onPress={save} fullWidth />}
     >
       <View style={{ gap: space[4] }}>
+        {manual ? (
+          <View style={{ gap: space[2] }}>
+            <Text variant="label">When</Text>
+            <View style={styles.chips}>
+              {WHEN.map((w) => (
+                <Chip key={w.min} label={w.label} active={whenMin === w.min} onPress={() => setWhenMin(w.min)} />
+              ))}
+            </View>
+          </View>
+        ) : null}
         <View style={{ gap: space[2] }}>
           <Text variant="label">Outcome</Text>
           <View style={styles.chips}>
@@ -154,7 +191,7 @@ export function useCallLogger(leadId: string, phone: string) {
     </BottomSheet>
   );
 
-  return { startCall, sheet };
+  return { startCall, logManually, sheet };
 }
 
 const styles = StyleSheet.create({

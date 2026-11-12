@@ -55,7 +55,15 @@ export const session = {
       } catch {
         user = null;
       }
-      emit(user ? { status: 'signedIn', user } : { status: 'signedOut', user: null });
+      if (!user) {
+        // Token without a usable cached user: unusable session, drop the token.
+        refreshToken = null;
+        await Promise.all([SecureStore.deleteItemAsync(RT_KEY), SecureStore.deleteItemAsync(USER_KEY)]).catch(
+          () => undefined,
+        );
+        return emit({ status: 'signedOut', user: null });
+      }
+      emit({ status: 'signedIn', user });
     } catch {
       refreshToken = null;
       emit({ status: 'signedOut', user: null });

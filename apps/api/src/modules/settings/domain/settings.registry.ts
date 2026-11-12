@@ -1,7 +1,18 @@
 import { COMPANY_PROFILE, DEFAULT_PROPOSAL_TERMS } from '@/config/company.js';
 import { env } from '@/config/env.js';
 import { parseWeeklyOff } from '@/shared/time/weeklyOff.js';
-import type { SettingRegistry } from './setting.entity.js';
+import { parseVersion } from '@/shared/app/appVersion.js';
+import type { SettingDefinition, SettingRegistry } from './setting.entity.js';
+
+const versionSetting = (label: string, description: string, def: string): SettingDefinition => ({
+  group: 'App',
+  label,
+  description,
+  type: 'text',
+  default: def,
+  maxLength: 20,
+  check: (text) => (parseVersion(text) ? null : 'Use a version like 1.2.3'),
+});
 
 /**
  * Every setting: its label, rules and default. Adding a setting = a line in
@@ -93,6 +104,41 @@ export const SETTINGS: SettingRegistry = {
     min: 1,
     max: 100,
     integer: true,
+  },
+  'app.android.minVersion': versionSetting(
+    'Android: oldest app version allowed',
+    'Android apps older than this are forced to update before they can be used. Example: 1.2.0. Leave 0.0.0 for no limit.',
+    env.APP_ANDROID_MIN_VERSION,
+  ),
+  'app.android.recommendedVersion': versionSetting(
+    'Android: newest app version',
+    'Android apps older than this see an "update available" banner (they still work).',
+    env.APP_ANDROID_RECOMMENDED_VERSION,
+  ),
+  'app.ios.minVersion': versionSetting(
+    'iPhone: oldest app version allowed',
+    'iPhone apps older than this are forced to update before they can be used.',
+    env.APP_IOS_MIN_VERSION,
+  ),
+  'app.ios.recommendedVersion': versionSetting(
+    'iPhone: newest app version',
+    'iPhone apps older than this see an "update available" banner (they still work).',
+    env.APP_IOS_RECOMMENDED_VERSION,
+  ),
+  'app.maintenanceActive': {
+    group: 'App',
+    label: 'Maintenance mode',
+    description: 'On: the mobile app shows the maintenance message instead of its screens.',
+    type: 'boolean',
+    default: false,
+  },
+  'app.maintenanceMessage': {
+    group: 'App',
+    label: 'Maintenance message',
+    description: 'Shown in the mobile app while maintenance mode is on.',
+    type: 'longText',
+    default: 'We are updating the system. Please try again in a few minutes.',
+    maxLength: 300,
   },
   'proposals.defaultTerms': {
     group: 'Proposals',

@@ -116,6 +116,15 @@ export class RemoveDeviceUseCase {
   }
 }
 
+/** Forgets every phone of a user who was deactivated or deleted, so nothing more is pushed to them. */
+export class RemoveUserDevicesUseCase {
+  constructor(private readonly devices: DeviceRepositoryPort) {}
+
+  execute(userId: string): Promise<number> {
+    return this.devices.removeAllFor(userId);
+  }
+}
+
 export class ListNotificationsUseCase {
   constructor(private readonly notifications: NotificationRepositoryPort) {}
 

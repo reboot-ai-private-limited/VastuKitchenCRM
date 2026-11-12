@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.vastukitchen.app",
+      "sha256_cert_fingerprints": [
+        "TODO:REPLACE_WITH_RELEASE_SHA256_FINGERPRINT (see docs/mobile/07-app-links.md; remove this line's placeholder, add one real fingerprint per signing key)"
+      ]
+    }
+  }
+]

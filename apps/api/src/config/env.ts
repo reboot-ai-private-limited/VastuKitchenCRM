@@ -87,6 +87,21 @@ const schema = z.object({
       }
     }, 'Not a valid timezone name'),
 
+  /**
+   * Mobile app update policy. The versions are only the DEFAULTS of the Admin-editable settings
+   * (Settings > App); the store/APK links are env-only. `0.0.0` means "no minimum".
+   */
+  APP_ANDROID_MIN_VERSION: z.string().default('0.0.0'),
+  APP_ANDROID_RECOMMENDED_VERSION: z.string().default('0.0.0'),
+  APP_IOS_MIN_VERSION: z.string().default('0.0.0'),
+  APP_IOS_RECOMMENDED_VERSION: z.string().default('0.0.0'),
+  APP_ANDROID_STORE_URL: blankAsUnset(z.string().url().optional()),
+  APP_ANDROID_APK_URL: blankAsUnset(z.string().url().optional()),
+  APP_IOS_STORE_URL: blankAsUnset(z.string().url().optional()),
+  /** How often the app polls for unread alerts / an open chat, in seconds. */
+  APP_POLL_UNREAD_SEC: z.coerce.number().int().min(10).max(3600).default(60),
+  APP_POLL_CHAT_SEC: z.coerce.number().int().min(5).max(600).default(15),
+
   /** Where customer invite links point (the web app). */
   WEB_BASE_URL: z.string().url().default('http://localhost:3001'),
 

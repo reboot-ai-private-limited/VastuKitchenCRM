@@ -1,5 +1,5 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { type ComponentRef, useCallback, useRef, useState } from 'react';
+import { type ComponentRef, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Platform,
   RefreshControl,
@@ -245,6 +245,11 @@ export function CustomerProjectScreen() {
   const projectIdForUpload = project?.id ?? '';
   const sign = useCallback(() => signProjectUpload(projectIdForUpload), [projectIdForUpload]);
   const photos = useSignedAttachments(sign, 5);
+  const clearPhotos = photos.clear;
+  useEffect(() => {
+    // Photos belong to the project they were uploaded for.
+    clearPhotos();
+  }, [projectIdForUpload, clearPhotos]);
 
   const sendPost = useMutation({
     mutationFn: (text: string) =>
@@ -273,6 +278,27 @@ export function CustomerProjectScreen() {
   });
 
   const posts = postsQ.data ?? [];
+
+  // Deep link `post`: fetch older pages until the post is loaded, then scroll to it.
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const feedY = useRef(0);
+  const postY = useRef(new Map<string, number>());
+  const scrolledTo = useRef<string | null>(null);
+  const targetPost = params.post;
+  const targetLoaded = !!targetPost && posts.some((p) => p.id === targetPost);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = postsQ;
+  useEffect(() => {
+    if (!targetPost || targetLoaded || !hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage();
+  }, [targetPost, targetLoaded, hasNextPage, isFetchingNextPage, fetchNextPage, posts.length]);
+  const maybeScroll = () => {
+    if (!targetPost || scrolledTo.current === targetPost) return;
+    const y = postY.current.get(targetPost);
+    if (y === undefined) return;
+    scrolledTo.current = targetPost;
+    scrollRef.current?.scrollTo({ y: Math.max(0, feedY.current + y - space[4]), animated: true });
+  };
+  useEffect(maybeScroll);
   const approvablePost = posts.find((p) => p.canApprove) ?? null;
 
   const focusAskChange = () => {
@@ -302,6 +328,7 @@ export function CustomerProjectScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingTop: insets.top + space[4],
@@ -407,7 +434,13 @@ export function CustomerProjectScreen() {
             </Reveal>
 
             {/* UPDATES FEED */}
-            <View style={{ gap: space[3] }}>
+            <View
+              style={{ gap: space[3] }}
+              onLayout={(e) => {
+                feedY.current = e.nativeEvent.layout.y;
+                maybeScroll();
+              }}
+            >
               <Text variant="caption" muted style={styles.eyebrow}>
                 UPDATES & MESSAGES
               </Text>
@@ -426,7 +459,14 @@ export function CustomerProjectScreen() {
                 </Card>
               ) : (
                 posts.map((post, idx) => (
-                  <Reveal key={post.id} index={idx}>
+                  <View
+                    key={post.id}
+                    onLayout={(e) => {
+                      postY.current.set(post.id, e.nativeEvent.layout.y);
+                      maybeScroll();
+                    }}
+                  >
+                  <Reveal index={idx}>
                     <ClientPostCard
                       post={post}
                       projectId={project.id}
@@ -434,6 +474,7 @@ export function CustomerProjectScreen() {
                       onApprovePress={(p) => setConfirmPost(p)}
                     />
                   </Reveal>
+                  </View>
                 ))
               )}
 
@@ -503,7 +544,10 @@ export function CustomerProjectScreen() {
       {/* DESIGN APPROVAL CONFIRMATION SHEET */}
       <BottomSheet
         visible={confirmPost !== null}
-        onClose={() => setConfirmPost(null)}
+        onClose={() => {
+          setConfirmPost(null);
+          approveMutation.reset();
+        }}
         title="Approve this design?"
         subtitle="Approving locks in the shared layout so our team can move forward with production."
         footer={

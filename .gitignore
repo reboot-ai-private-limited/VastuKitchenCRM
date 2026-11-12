@@ -25,3 +25,6 @@ android/app/build/
 .idea/
 .vscode/
 *.log
+
+# Expo bundle-check output
+.expo-export/

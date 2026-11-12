@@ -16,7 +16,7 @@ import { colors, font, radius, space } from '@/constants/theme';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { changePassword } from '@/lib/api/endpoints/auth';
 import { session, useSession } from '@/lib/auth/session';
-import { confirmSignOut } from '@/lib/auth/sign-out';
+import { useConfirmSignOut } from '@/lib/auth/sign-out';
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '@/lib/auth/support';
 import { formatPhone } from '@/lib/format';
 import { queryClient } from '@/lib/query/client';
@@ -27,10 +27,16 @@ export function ProfileScreen() {
   const [showPwForm, setShowPwForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const confirmSignOut = useConfirmSignOut();
   const [pwBusy, setPwBusy] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
 
   const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      setPwError('The new passwords do not match.');
+      return;
+    }
     const parsed = changePasswordBodySchema.safeParse({ currentPassword, newPassword });
     if (!parsed.success) {
       setPwError(parsed.error.issues[0]?.message ?? 'Check both password fields');
@@ -149,6 +155,15 @@ export function ProfileScreen() {
                       value={newPassword}
                       onChangeText={setNewPassword}
                       placeholder="New password (min 8 characters)"
+                      placeholderTextColor={colors.placeholder}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      style={styles.input}
+                    />
+                    <TextInput
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Confirm new password"
                       placeholderTextColor={colors.placeholder}
                       secureTextEntry
                       autoCapitalize="none"

@@ -40,7 +40,16 @@ export const attendanceDaySchema = z.object({
 });
 export type AttendanceDayDto = z.infer<typeof attendanceDaySchema>;
 
-export const checkInBodySchema = z.object({ location: locationSchema.optional() });
+/**
+ * Body of POST /attendance/check-in and /check-out. `capturedAt` is for a punch made offline and sent
+ * later: the moment the person actually tapped. The server accepts it only when it is not in the future
+ * (a few minutes of clock skew are allowed) and not older than 36 hours; otherwise 400. Without it
+ * the server clock decides. Replaying the same punch is harmless (one record per person per day).
+ */
+export const checkInBodySchema = z.object({
+  location: locationSchema.optional(),
+  capturedAt: z.string().datetime({ offset: true }).optional(),
+});
 export type CheckInBodyDto = z.infer<typeof checkInBodySchema>;
 
 /** Admin/HR sets or corrects one person's day. Times are ISO instants on that date. */

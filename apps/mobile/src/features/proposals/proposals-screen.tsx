@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Stack, useRouter, type Href } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ProposalDto, ProposalStatus } from '@vastu/contracts';
 import { Badge } from '@/components/ui/badge';
@@ -74,11 +74,17 @@ export function ProposalsScreen() {
 
 function ProposalsList() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { leadId: leadParam } = useLocalSearchParams<{ leadId?: string }>();
+  const [leadId, setLeadId] = useState<string | undefined>(leadParam || undefined);
   const [status, setStatus] = useState<ProposalStatus | undefined>();
-  const q = useProposalsList(status);
+  const q = useProposalsList(status, leadId);
 
   const header = (
     <View style={{ gap: space[2], paddingBottom: space[1] }}>
+      {leadId ? (
+        <Chip label="One lead only (tap to clear)" active onPress={() => setLeadId(undefined)} />
+      ) : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space[2] }}>
         {([undefined, 'SENT', 'DRAFT'] as const).map((s) => {
           const active = s === status;
@@ -126,6 +132,18 @@ function ProposalsList() {
           title: 'Proposals',
           headerShadowVisible: false,
           headerTintColor: colors.primary,
+          headerRight: () => (
+            <Button
+              title="New"
+              variant="ghost"
+              onPress={() =>
+                router.push({
+                  pathname: '/proposals/new',
+                  params: leadId ? { leadId } : {},
+                } as unknown as Href)
+              }
+            />
+          ),
         }}
       />
       <FlatList

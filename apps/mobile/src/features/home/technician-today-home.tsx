@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { BlockError } from './block-error';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,8 @@ export function TechnicianTodayHome() {
           </View>
           {complaintsQ.isPending ? (
             <Skeleton height={100} />
+          ) : complaintsQ.isError && complaintsQ.data === undefined ? (
+            <BlockError error={complaintsQ.error} onRetry={() => void complaintsQ.refetch()} />
           ) : (complaintsQ.data ?? []).length === 0 ? (
             <Card>
               <Text muted>No open service complaints assigned to you.</Text>
@@ -140,6 +143,8 @@ export function TechnicianTodayHome() {
           </View>
           {todosQ.isPending ? (
             <Skeleton height={88} />
+          ) : todosQ.isError && todosQ.data === undefined ? (
+            <BlockError error={todosQ.error} onRetry={() => void todosQ.refetch()} />
           ) : (todosQ.data ?? []).length === 0 ? (
             <Card>
               <Text muted>No open site to-dos right now.</Text>
@@ -169,6 +174,8 @@ export function TechnicianTodayHome() {
           </View>
           {projectsQ.isPending ? (
             <Skeleton height={84} />
+          ) : projectsQ.isError && projectsQ.data === undefined ? (
+            <BlockError error={projectsQ.error} onRetry={() => void projectsQ.refetch()} />
           ) : (projectsQ.data ?? []).length === 0 ? (
             <Card>
               <Text muted>No active projects assigned to you.</Text>

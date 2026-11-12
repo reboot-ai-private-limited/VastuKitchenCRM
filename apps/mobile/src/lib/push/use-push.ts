@@ -27,7 +27,9 @@ function wrapLogout() {
   wrapped = true;
   const original = session.clear.bind(session);
   session.clear = async () => {
-    await unregisterPush();
+    // Skip when the access token is stale (forced logout): unregistering would wait on a refresh
+    // that is itself waiting on this clear.
+    if (!session.needsRefresh()) await unregisterPush();
     await original();
   };
 }

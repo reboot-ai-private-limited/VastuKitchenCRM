@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ function AlertRow({ n, role }: { n: NotificationDto; role?: RoleName }) {
   const router = useRouter();
   const markRead = useMarkRead();
   const unread = n.readAt === null;
+  const [reason, setReason] = useState<string | null>(null);
   return (
     <Reveal>
       <PressableScale
@@ -28,6 +30,7 @@ function AlertRow({ n, role }: { n: NotificationDto; role?: RoleName }) {
           if (unread) markRead.mutate(n.id);
           const href = routeFor(n.ref, role);
           if (href) router.push(href);
+          else setReason(n.ref ? 'Your role cannot open this item.' : 'This alert has nothing to open.');
         }}
       >
         <Card style={{ flexDirection: 'row', gap: space[3], backgroundColor: unread ? colors.primarySoft : colors.card }}>
@@ -46,6 +49,11 @@ function AlertRow({ n, role }: { n: NotificationDto; role?: RoleName }) {
             <Text variant="caption" muted>
               {timeAgo(n.createdAt)}
             </Text>
+            {reason ? (
+              <Text variant="caption" style={{ color: colors.destructive }} accessibilityLiveRegion="polite">
+                {reason}
+              </Text>
+            ) : null}
           </View>
         </Card>
       </PressableScale>

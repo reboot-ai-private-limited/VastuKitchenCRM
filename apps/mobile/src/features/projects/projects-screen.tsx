@@ -14,6 +14,7 @@ import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NetworkError } from '@/lib/api/client';
 import { formatINR } from '@/lib/format';
 import { DESIGN_LABEL, DESIGN_TONE, STAGE_LABEL, STAGE_ORDER, STAGE_TONE } from './project-meta';
@@ -21,10 +22,11 @@ import { useProjectsList } from './use-projects';
 
 function ProjectRow({ project }: { project: ProjectDto }) {
   const router = useRouter();
+  const closed = project.stage === 'CLOSED';
   return (
     <Reveal>
       <PressableScale onPress={() => router.push({ pathname: '/projects/[id]', params: { id: project.id } })}>
-        <Card style={{ gap: space[2] }}>
+        <Card style={{ gap: space[2], opacity: closed ? 0.6 : 1 }}>
           <View style={styles.row}>
             <Text variant="section" numberOfLines={1} style={{ flex: 1 }}>
               {project.name}
@@ -33,7 +35,7 @@ function ProjectRow({ project }: { project: ProjectDto }) {
           </View>
           <Text muted numberOfLines={1}>
             {project.customer.name}
-            {project.value != null ? `  ·  ${formatINR(project.value)}` : ''}
+            {project.value != null && !closed ? `  ·  ${formatINR(project.value)}` : ''}
           </Text>
           <View style={styles.row}>
             <Badge label={STAGE_LABEL[project.stage]} t={STAGE_TONE[project.stage]} />
@@ -51,7 +53,12 @@ export function ProjectsScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [stage, setStage] = useState<ProjectStage | undefined>();
-  const q = useProjectsList(search.trim(), stage);
+  const [showClosed, setShowClosed] = useState(false);
+  const debounced = useDebouncedValue(search.trim(), 300);
+  const q = useProjectsList(debounced, stage);
+  const all = q.data ?? [];
+  const closedCount = all.filter((p) => p.stage === 'CLOSED').length;
+  const visible = showClosed || stage === 'CLOSED' ? all : all.filter((p) => p.stage !== 'CLOSED');
 
   const header = (
     <View style={{ gap: space[3], paddingBottom: space[2] }}>
@@ -83,6 +90,19 @@ export function ProjectsScreen() {
           );
         })}
       </ScrollView>
+      {stage !== 'CLOSED' ? (
+        <PressableScale
+          onPress={() => setShowClosed((v) => !v)}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: showClosed }}
+          style={styles.closedToggle}
+        >
+          <Feather name={showClosed ? 'eye' : 'eye-off'} size={16} color={colors.mutedForeground} />
+          <Text variant="caption" muted>
+            {showClosed ? 'Hide closed' : 'Show closed'} ({closedCount})
+          </Text>
+        </PressableScale>
+      ) : null}
     </View>
   );
 
@@ -110,8 +130,19 @@ export function ProjectsScreen() {
         <Button title="Retry" variant="outline" onPress={() => void q.refetch()} />
       </View>
     );
-  } else if (q.data.length === 0) {
-    body = <EmptyState icon="layers" message="No projects found." />;
+  } else if (visible.length === 0) {
+    body = (
+      <EmptyState
+        icon="layers"
+        message={
+          debounced
+            ? 'No projects match your search'
+            : closedCount > 0 && !showClosed
+              ? 'No ongoing projects. Closed projects are under Show closed.'
+              : 'No projects found.'
+        }
+      />
+    );
   }
 
   return (
@@ -123,7 +154,7 @@ export function ProjectsScreen() {
         paddingBottom: space[8],
         gap: space[3],
       }}
-      data={q.data ?? []}
+      data={visible}
       keyExtractor={(p) => p.id}
       renderItem={({ item }) => <ProjectRow project={item} />}
       ListHeaderComponent={header}
@@ -166,4 +197,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipActive: { backgroundColor: colors.primary },
+  closedToggle: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 40 },
 });

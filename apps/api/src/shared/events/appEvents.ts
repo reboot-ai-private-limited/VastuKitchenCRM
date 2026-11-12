@@ -38,7 +38,21 @@ export interface LeadAssignedEvent {
   byUserId: string;
 }
 
+export interface UserDeactivatedEvent {
+  userId: string;
+}
+
+export interface AccountDeletionRequestedEvent {
+  requestId: string;
+  userId: string;
+  name: string;
+  role: string;
+}
+
 export interface AppEventMap {
+  /** An account was deactivated (by an Admin, or by its owner asking for deletion). */
+  'user.deactivated': UserDeactivatedEvent;
+  'account.deletion-requested': AccountDeletionRequestedEvent;
   'lead.won': LeadWonEvent;
   'lead.assigned': LeadAssignedEvent;
   'proposal.seen': ProposalSeenEvent;

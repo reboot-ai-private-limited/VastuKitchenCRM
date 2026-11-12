@@ -39,6 +39,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const containers = buildContainers();
   registerSubscribers(containers);
   options.onContainers?.(containers);
+  app.use('/api', containers.app.versionGate());
   app.use('/api', buildApiRouter(containers));
   mountSwagger(app);
 

@@ -164,6 +164,16 @@ function ProposalDetail() {
                 </View>
               ) : null}
             </View>
+            {p.status === 'DRAFT' ? (
+              <Button
+                title="Edit draft"
+                variant="outline"
+                onPress={() =>
+                  router.push({ pathname: '/proposals/edit/[id]', params: { id: p.id } } as unknown as Href)
+                }
+                fullWidth
+              />
+            ) : null}
             <Button
               title="Duplicate as new draft"
               variant="ghost"
@@ -209,17 +219,38 @@ function ProposalDetail() {
                 <Text>{p.customer.siteAddress}</Text>
               </View>
             ) : null}
-            <View>
+            <View style={{ gap: 2 }}>
               <Text variant="caption" muted>
                 Customer engagement
               </Text>
-              <Text>
-                {p.status === 'DRAFT'
-                  ? 'Not sent yet'
-                  : p.seenCount > 0
-                    ? `Opened ${p.seenCount} time${p.seenCount === 1 ? '' : 's'} · last seen ${timeAgo(p.lastSeenAt!)}`
-                    : `Sent ${timeAgo(p.sentAt!)} · not opened yet`}
-              </Text>
+              {p.status === 'DRAFT' ? (
+                <Text>Not sent yet</Text>
+              ) : (
+                <>
+                  <Text>
+                    {p.sentAt ? `Sent ${formatDate(p.sentAt)} (${timeAgo(p.sentAt)})` : 'Sent'}
+                  </Text>
+                  {p.seenCount > 0 ? (
+                    <>
+                      <Text>
+                        Opened {p.seenCount} time{p.seenCount === 1 ? '' : 's'}
+                      </Text>
+                      {p.firstSeenAt ? (
+                        <Text variant="caption" muted>
+                          First opened {formatDate(p.firstSeenAt)} ({timeAgo(p.firstSeenAt)})
+                        </Text>
+                      ) : null}
+                      {p.lastSeenAt ? (
+                        <Text variant="caption" muted>
+                          Last opened {timeAgo(p.lastSeenAt)}
+                        </Text>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Text muted>Not opened yet</Text>
+                  )}
+                </>
+              )}
             </View>
             <PressableScale
               onPress={() => router.push({ pathname: '/leads/[id]', params: { id: p.leadId } } as Href)}

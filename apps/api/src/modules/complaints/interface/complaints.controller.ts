@@ -17,6 +17,7 @@ import type {
   ResolveComplaintUseCase,
   SignRaiseUploadUseCase,
   SignResolveUploadUseCase,
+  SignCommentUploadUseCase,
 } from '../application/usecases/complaints.usecases.js';
 import { toComplaintDto } from './complaints.mapper.js';
 
@@ -38,6 +39,12 @@ export const makeSignRaise = (uc: SignRaiseUploadUseCase): RequestHandler =>
   });
 
 export const makeSignResolve = (uc: SignResolveUploadUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    sendSuccess(req, res, await uc.execute(actorOf(req), id(req)), 'Upload ticket ready.');
+  });
+
+export const makeSignComment = (uc: SignCommentUploadUseCase): RequestHandler =>
   asyncHandler(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     sendSuccess(req, res, await uc.execute(actorOf(req), id(req)), 'Upload ticket ready.');

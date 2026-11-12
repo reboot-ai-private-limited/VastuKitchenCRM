@@ -1,5 +1,7 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useEffect, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { useNetInfo } from '@react-native-community/netinfo';
 import { StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -15,6 +17,12 @@ import { loginPassword, requestOtp, verifyOtp } from '@/lib/api/endpoints/auth';
 import { parseInviteToken } from '@/lib/auth/invite';
 import { consumeSessionExpired, session } from '@/lib/auth/session';
 
+const PHONE_KEY = 'auth.lastPhone';
+const OTP_TTL_S = 300;
+const MAX_TRIES = 5;
+
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
@@ -29,8 +37,31 @@ export function LoginScreen() {
     consumeSessionExpired() ? 'Session expired, sign in again.' : null,
   );
   const [cooldown, setCooldown] = useState(0);
+  const [validFor, setValidFor] = useState(0);
+  const [tries, setTries] = useState(0);
+  const net = useNetInfo();
+  const offline = net.isConnected === false;
   const [showInvite, setShowInvite] = useState(false);
   const [invite, setInvite] = useState('');
+
+  useEffect(() => {
+    SecureStore.getItemAsync(PHONE_KEY)
+      .then((v) => v && setPhone((cur) => cur || v))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (validFor <= 0) return;
+    const t = setTimeout(() => setValidFor((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [validFor]);
+
+  const rememberPhone = () => {
+    void SecureStore.setItemAsync(PHONE_KEY, phone).catch(() => undefined);
+  };
+
+  const locked = tries >= MAX_TRIES;
+  const expired = step === 'code' && validFor <= 0;
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -66,6 +97,9 @@ export function LoginScreen() {
     try {
       await requestOtp(parsed.data);
       setStep('code');
+      setCode('');
+      setTries(0);
+      setValidFor(OTP_TTL_S);
       setCooldown(30);
     } catch (e) {
       fail(e);
@@ -75,13 +109,28 @@ export function LoginScreen() {
   };
 
   const verify = async () => {
+    if (locked || expired) return;
     const parsed = otpVerifyBodySchema.safeParse({ phone, code });
     if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? 'Enter the 6-digit code');
     setBusy(true);
     setError(null);
     try {
-      await session.set(await verifyOtp(parsed.data));
+      const res = await verifyOtp(parsed.data);
+      rememberPhone();
+      await session.set(res);
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'INVALID_OTP') {
+        const n = tries + 1;
+        setTries(n);
+        setCode('');
+        setNotice(null);
+        setError(
+          n >= MAX_TRIES
+            ? 'Too many wrong codes. Send a new code.'
+            : 'That code is incorrect or has expired. Ask for a new one.',
+        );
+        return setBusy(false);
+      }
       fail(e);
       setBusy(false);
     }
@@ -95,7 +144,9 @@ export function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      await session.set(await loginPassword(parsed.data));
+      const res = await loginPassword(parsed.data);
+      rememberPhone();
+      await session.set(res);
     } catch (e) {
       fail(e);
       setBusy(false);
@@ -119,7 +170,13 @@ export function LoginScreen() {
             <PressableScale
               key={m}
               onPress={() => {
+                if (m === mode) return;
                 setMode(m);
+                setStep('phone');
+                setCode('');
+                setPassword('');
+                setTries(0);
+                setValidFor(0);
                 setError(null);
               }}
               style={[styles.segmentBtn, active && styles.segmentBtnActive]}
@@ -162,7 +219,10 @@ export function LoginScreen() {
                 style={styles.input}
               />
             </View>
-            <Button title="Sign in" onPress={signInWithPassword} loading={busy} fullWidth size="lg" />
+            <Button title="Sign in" onPress={signInWithPassword} loading={busy} disabled={offline} fullWidth size="lg" />
+            <Text variant="caption" muted>
+              Forgot your password? Ask your admin or HR to reset it, or sign in with a WhatsApp code.
+            </Text>
           </Animated.View>
         ) : step === 'phone' ? (
           <Animated.View key="phone" entering={FadeIn.duration(200)} style={{ gap: space[4] }}>
@@ -181,11 +241,17 @@ export function LoginScreen() {
                 style={styles.input}
               />
             </View>
-            <Button title="Send code" onPress={sendCode} loading={busy} disabled={cooldown > 0} fullWidth size="lg" />
+            <Button title="Send code" onPress={sendCode} loading={busy} disabled={cooldown > 0 || offline} fullWidth size="lg" />
+            <Text variant="caption" muted>
+              No code? Ask your admin.
+            </Text>
           </Animated.View>
         ) : (
           <Animated.View key="code" entering={FadeIn.duration(200)} style={{ gap: space[4] }}>
-            <Text muted>Enter the 6-digit code sent to +91 {phone}</Text>
+            <Text muted>Enter the 6-digit code sent on WhatsApp to +91 {phone}</Text>
+            <Text variant="caption" muted>
+              {expired ? 'This code has expired. Send a new one.' : `Code valid for ${mmss(validFor)}`}
+            </Text>
             <View style={styles.inputRow}>
               <TextInput
                 value={code}
@@ -195,15 +261,16 @@ export function LoginScreen() {
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
                 autoFocus
+                editable={!locked && !expired}
                 style={[styles.input, { letterSpacing: 8, textAlign: 'center' }]}
               />
             </View>
-            <Button title="Verify and sign in" onPress={verify} loading={busy} fullWidth size="lg" />
+            <Button title="Verify and sign in" onPress={verify} loading={busy} disabled={locked || expired || offline} fullWidth size="lg" />
             <Button
               title={cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
               variant="outline"
               onPress={sendCode}
-              disabled={cooldown > 0 || busy}
+              disabled={cooldown > 0 || busy || offline}
               fullWidth
             />
             <Button
@@ -218,6 +285,11 @@ export function LoginScreen() {
             />
           </Animated.View>
         )}
+        {offline ? (
+          <Text variant="caption" color={colors.mutedForeground}>
+            You are offline. Connect to the internet to sign in.
+          </Text>
+        ) : null}
         {notice && !error ? (
           <Text variant="caption" color={colors.mutedForeground}>
             {notice}

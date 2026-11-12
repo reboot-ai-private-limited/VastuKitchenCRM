@@ -15,7 +15,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, radius, shadow, space } from '@/constants/theme';
 import { CheckInCard } from '@/features/attendance/check-in-card';
+import { useCallLogger } from '@/features/leads/call-logger';
 import { STATUS_LABEL, STATUS_TONE } from '@/features/leads/lead-meta';
+import { leadKey } from '@/features/leads/use-leads';
+import { PendingSyncBadge } from '@/offline';
+import { BlockError } from './block-error';
 import { listLeads } from '@/lib/api/endpoints/leads';
 import { useSession } from '@/lib/auth/session';
 import { formatPhone, formatWeekdayDate, timeAgo } from '@/lib/format';
@@ -23,6 +27,8 @@ import { formatPhone, formatWeekdayDate, timeAgo } from '@/lib/format';
 function ActionLeadCard({ lead }: { lead: LeadDto }) {
   const router = useRouter();
   const digits = lead.phone.replace(/\D/g, '').slice(-10);
+  // Call goes through the call logger so the return-from-dialer sheet logs it (queued offline).
+  const callLogger = useCallLogger(lead.id, digits);
 
   return (
     <PressableScale
@@ -36,6 +42,7 @@ function ActionLeadCard({ lead }: { lead: LeadDto }) {
             </Text>
             {lead.isStuck ? <Badge label="Stuck" t="danger" /> : null}
             <Badge label={STATUS_LABEL[lead.status]} t={STATUS_TONE[lead.status]} />
+            <PendingSyncBadge filter={(i) => i.entityKey === leadKey(lead.id)} />
           </View>
           <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
             {formatPhone(lead.phone)}
@@ -48,7 +55,7 @@ function ActionLeadCard({ lead }: { lead: LeadDto }) {
         <IconButton
           icon="phone"
           label={`Call ${lead.name}`}
-          onPress={() => void Linking.openURL(`tel:${digits}`)}
+          onPress={callLogger.startCall}
         />
         <IconButton
           icon="message-circle"
@@ -56,6 +63,7 @@ function ActionLeadCard({ lead }: { lead: LeadDto }) {
           onPress={() => void Linking.openURL(`https://wa.me/91${digits}`)}
         />
       </Card>
+      {callLogger.sheet}
     </PressableScale>
   );
 }
@@ -126,6 +134,20 @@ export function SalesTodayHome() {
 
         <CheckInCard />
 
+        <PressableScale
+          onPress={() => router.push('/proposals' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Proposals"
+        >
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+            <Feather name="file-text" size={18} color={colors.primary} />
+            <Text variant="label" style={{ flex: 1 }}>
+              Proposals
+            </Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+          </Card>
+        </PressableScale>
+
         {/* STUCK & FOLLOW-UP */}
         <Reveal>
           <View style={{ gap: space[2] }}>
@@ -141,6 +163,13 @@ export function SalesTodayHome() {
             </View>
             {stuckQ.isPending || followUpQ.isPending ? (
               <Skeleton height={88} />
+            ) : (stuckQ.isError && stuckQ.data === undefined) || (followUpQ.isError && followUpQ.data === undefined) ? (
+              <BlockError
+                onRetry={() => {
+                  void stuckQ.refetch();
+                  void followUpQ.refetch();
+                }}
+              />
             ) : priorityLeads.length === 0 ? (
               <Card>
                 <Text muted>No stuck or follow-up leads waiting on you.</Text>
@@ -162,14 +191,16 @@ export function SalesTodayHome() {
               <Text variant="caption" muted style={styles.eyebrow}>
                 NEW LEADS ({newQ.data?.total ?? newLeads.length})
               </Text>
-              <PressableScale onPress={() => router.push('/proposals' as Href)}>
+              <PressableScale onPress={() => router.push('/leads' as Href)}>
                 <Text variant="caption" color={colors.primary}>
-                  Proposals
+                  All leads
                 </Text>
               </PressableScale>
             </View>
             {newQ.isPending ? (
               <Skeleton height={88} />
+            ) : newQ.isError && newQ.data === undefined ? (
+              <BlockError error={newQ.error} onRetry={() => void newQ.refetch()} />
             ) : newLeads.length === 0 ? (
               <Card>
                 <Text muted>No fresh leads right now. Tap + to add one.</Text>

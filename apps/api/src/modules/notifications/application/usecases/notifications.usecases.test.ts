@@ -14,6 +14,7 @@ import {
   MarkReadUseCase,
   NotifyUseCase,
   RemoveDeviceUseCase,
+  RemoveUserDevicesUseCase,
 } from './notifications.usecases.js';
 
 /** In-memory repository with the same contract as the Mongo one (incl. the dedupe rule). */
@@ -121,6 +122,11 @@ class FakeDevices implements DeviceRepositoryPort {
     );
     return true;
   }
+  async removeAllFor(userId: string) {
+    const n = (this.tokens.get(userId) ?? []).length;
+    this.tokens.delete(userId);
+    return n;
+  }
   async tokensFor(userId: string) {
     return this.tokens.get(userId) ?? [];
   }
@@ -210,5 +216,13 @@ describe('devices', () => {
     });
     await new RemoveDeviceUseCase(devices).execute('u1', 'd1');
     expect(devices.tokens.get('u1')).toEqual([]);
+  });
+  it("drops every device of a deactivated user, and nobody else's", async () => {
+    const devices = new FakeDevices();
+    devices.tokens.set('u1', ['d1', 'd2']);
+    devices.tokens.set('u2', ['d3']);
+    expect(await new RemoveUserDevicesUseCase(devices).execute('u1')).toBe(2);
+    expect(devices.tokens.get('u1')).toBeUndefined();
+    expect(devices.tokens.get('u2')).toEqual(['d3']);
   });
 });

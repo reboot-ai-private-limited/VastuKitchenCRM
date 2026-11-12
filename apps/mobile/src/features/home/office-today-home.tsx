@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { BlockError } from './block-error';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -92,7 +93,9 @@ export function OfficeTodayHome() {
             </View>
             {newLeadsQ.isPending ? (
               <Skeleton height={84} />
-            ) : (newLeadsQ.data?.items ?? []).length === 0 ? (
+            ) : newLeadsQ.isError && newLeadsQ.data === undefined ? (
+            <BlockError error={newLeadsQ.error} onRetry={() => void newLeadsQ.refetch()} />
+          ) : (newLeadsQ.data?.items ?? []).length === 0 ? (
               <Card>
                 <Text muted>No new walk-in leads today. Tap + to record a visitor.</Text>
               </Card>
@@ -144,7 +147,9 @@ export function OfficeTodayHome() {
             </View>
             {openComplaintsQ.isPending ? (
               <Skeleton height={84} />
-            ) : (openComplaintsQ.data?.items ?? []).length === 0 ? (
+            ) : openComplaintsQ.isError && openComplaintsQ.data === undefined ? (
+            <BlockError error={openComplaintsQ.error} onRetry={() => void openComplaintsQ.refetch()} />
+          ) : (openComplaintsQ.data?.items ?? []).length === 0 ? (
               <Card>
                 <Text muted>No unassigned complaints waiting right now.</Text>
               </Card>
@@ -173,7 +178,9 @@ export function OfficeTodayHome() {
             </View>
             {todosQ.isPending ? (
               <Skeleton height={84} />
-            ) : (todosQ.data ?? []).length === 0 ? (
+            ) : todosQ.isError && todosQ.data === undefined ? (
+            <BlockError error={todosQ.error} onRetry={() => void todosQ.refetch()} />
+          ) : (todosQ.data ?? []).length === 0 ? (
               <Card>
                 <Text muted>No open office to-dos right now.</Text>
               </Card>

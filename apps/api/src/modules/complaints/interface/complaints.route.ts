@@ -110,6 +110,13 @@ doc(
 );
 doc(
   'post',
+  '/api/complaints/{complaintId}/comments/uploads/sign',
+  'A photo-upload ticket for a message photo, for anyone who can see the complaint',
+  params,
+  { 200: okResponse('Upload ticket', uploadTicketSchema), 404: notFound, 409: wrongStatus },
+);
+doc(
+  'post',
   '/api/complaints/{complaintId}/resolve',
   'Resolve with a note and photos — the assignee or an Admin',
   { ...params, body: json(resolveComplaintBodySchema) },
@@ -148,6 +155,7 @@ doc(
 export interface ComplaintControllers {
   signRaise: RequestHandler;
   signResolve: RequestHandler;
+  signComment: RequestHandler;
   raise: RequestHandler;
   list: RequestHandler;
   counts: RequestHandler;
@@ -172,6 +180,7 @@ export function buildComplaintsRouter(c: ComplaintControllers): Router {
   router.get('/', validate({ query: listComplaintsQuerySchema }), c.list);
   router.get('/:complaintId', p, c.get);
   router.post('/:complaintId/uploads/sign', p, c.signResolve);
+  router.post('/:complaintId/comments/uploads/sign', p, c.signComment);
   router.post(
     '/:complaintId/assign',
     validate({ params: complaintIdParamsSchema, body: assignComplaintBodySchema }),

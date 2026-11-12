@@ -114,25 +114,27 @@ async function main() {
     );
     if (docId.startsWith(`${fileFolder}/`)) ok('stored inside the project FILES folder');
     else bad('not inside the files folder', docId);
-    // This decides how the app must derive `format` when it registers a file.
-    if (docId.toLowerCase().endsWith('.pdf'))
-      ok('the public_id ends in the extension (the API relies on this for documents)');
-    else bad('the public_id does NOT end in .pdf — the register check must change', docId);
+    // PDFs are stored as image assets: the id has no extension, the file URL needs one.
+    if (resourceType === 'image' && !docId.toLowerCase().endsWith('.pdf'))
+      ok('a PDF is an image asset with no extension in its id (the API handles both shapes)');
+    else if (docId.toLowerCase().endsWith('.pdf')) ok('the public_id ends in the extension');
 
-    const kind = resourceType === 'image' ? 'IMAGE' : 'FILE';
-    const urls = storage.fileUrls(docId, kind);
+    const urls = storage.fileUrls(docId, 'FILE', { resourceType, format: 'pdf' });
     const view = await head(urls.url);
-    if (view.status === 200) ok('view URL answers', view.type ?? '');
-    else bad('view URL', `HTTP ${view.status}`);
+    if (view.status === 200) ok('PDF file URL answers', view.type ?? '');
+    else
+      bad(
+        'PDF file URL',
+        `HTTP ${view.status}${view.status === 401 ? ' — Cloudinary blocks PDF delivery by default: enable Settings > Security > "PDF and ZIP files delivery"' : ''}`,
+      );
+    if (urls.thumbUrl) {
+      const thumb = await head(urls.thumbUrl);
+      if (thumb.status === 200) ok('PDF first-page preview answers', thumb.type ?? '');
+      else bad('PDF first-page preview', `HTTP ${thumb.status}`);
+    }
     const dl = await head(urls.downloadUrl);
     if (dl.status === 200) ok('download URL answers', dl.disposition ?? 'no content-disposition');
     else bad('download URL', `HTTP ${dl.status}`);
-    if (dl.disposition?.toLowerCase().includes('attachment'))
-      ok('download URL forces a download (content-disposition: attachment)');
-    else
-      console.warn(
-        `  note  the download URL does NOT force a download for this file type (content-disposition: ${dl.disposition ?? 'none'}). The app should use the plain URL with a download link.`,
-      );
   } else bad('PDF upload', JSON.stringify(doc.body).slice(0, 200));
 
   console.warn('\nClean-up');

@@ -5,6 +5,8 @@ import { openRelay } from './upload';
 export interface UploadedFile {
   publicId: string;
   bytes: number;
+  /** How storage holds it: a PDF is an `image` asset, a Word file `raw`. Sent on to the API. */
+  resourceType?: 'image' | 'raw';
 }
 
 /**
@@ -38,8 +40,18 @@ export function uploadFileToTicket(
         return reject(new Error(reason));
       }
       try {
-        const r = JSON.parse(xhr.responseText) as { public_id: string; bytes?: number };
-        resolve({ publicId: r.public_id, bytes: r.bytes && r.bytes > 0 ? r.bytes : file.size });
+        const r = JSON.parse(xhr.responseText) as {
+          public_id: string;
+          bytes?: number;
+          resource_type?: string;
+        };
+        resolve({
+          publicId: r.public_id,
+          bytes: r.bytes && r.bytes > 0 ? r.bytes : file.size,
+          ...(r.resource_type === 'image' || r.resource_type === 'raw'
+            ? { resourceType: r.resource_type }
+            : {}),
+        });
       } catch {
         reject(new Error('The file couldn’t be uploaded. Try again.'));
       }

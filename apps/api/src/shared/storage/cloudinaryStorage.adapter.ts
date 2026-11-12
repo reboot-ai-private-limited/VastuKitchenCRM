@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { ImageDto, UploadTicketDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
-import type { FileUrls, StoragePort } from './storage.port.js';
+import type { FileUrlExtra, FileUrls, StoragePort } from './storage.port.js';
 
 /** The ticket stays valid for Cloudinary's own signature window (one hour); we say 55 minutes. */
 const TICKET_MINUTES = 55;
@@ -77,11 +77,26 @@ export class CloudinaryStorage implements StoragePort {
    * `fl_attachment` makes Cloudinary answer with a download header. It is documented for images;
    * for raw files it is UNVERIFIED here — `pnpm check:storage` prints the real headers.
    */
-  fileUrls(publicId: string, kind: 'IMAGE' | 'FILE'): FileUrls {
+  fileUrls(publicId: string, kind: 'IMAGE' | 'FILE', extra: FileUrlExtra = {}): FileUrls {
     const root = `https://res.cloudinary.com/${this.config.cloudName}`;
     if (kind === 'IMAGE') {
       const images = this.imageUrls(publicId);
-      return { ...images, downloadUrl: `${root}/image/upload/fl_attachment/${publicId}` };
+      return {
+        ...images,
+        previewUrl: images.url,
+        downloadUrl: `${root}/image/upload/fl_attachment/${publicId}`,
+      };
+    }
+    // A PDF is stored as an image asset: its id has no extension, the file URL needs one, and the
+    // first page renders as a picture for the preview.
+    if (extra.resourceType === 'image') {
+      const ext = extra.format ?? 'pdf';
+      return {
+        url: `${root}/image/upload/${publicId}.${ext}`,
+        thumbUrl: `${root}/image/upload/pg_1,c_limit,w_480,f_jpg,q_auto/${publicId}`,
+        previewUrl: `${root}/image/upload/pg_1,c_limit,w_1400,f_jpg,q_auto/${publicId}`,
+        downloadUrl: `${root}/image/upload/fl_attachment/${publicId}.${ext}`,
+      };
     }
     return {
       url: `${root}/raw/upload/${publicId}`,

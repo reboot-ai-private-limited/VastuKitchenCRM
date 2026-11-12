@@ -33,6 +33,7 @@ const toFile = (d: HydratedDocument<DocFileDoc>): DocFile => ({
   originalName: d.originalName,
   publicId: d.publicId,
   kind: d.kind,
+  resourceType: d.resourceType ?? null,
   format: d.format,
   bytes: d.bytes,
   visibility: d.visibility,

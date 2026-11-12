@@ -82,6 +82,8 @@ export const docFileSchema = z.object({
   url: z.string(),
   /** A small preview, for images only. */
   thumbUrl: z.string().nullable(),
+  /** A large picture for the viewer: the photo itself, or a PDF's first page. Null for other types. */
+  previewUrl: z.string().nullable(),
   downloadUrl: z.string(),
   /** Its uploader or an Admin. */
   canDelete: z.boolean(),
@@ -97,6 +99,11 @@ export const registerFileBodySchema = z.object({
   format: z.string().trim().toLowerCase().min(1).max(10),
   originalName: z.string().trim().min(1).max(200),
   bytes: z.number().int().positive(),
+  /**
+   * The storage provider's `resource_type` for the upload. A PDF is stored as an `image` (that is what
+   * makes first-page previews possible); a Word or Excel file is `raw`. Omit it to have the API work it out.
+   */
+  resourceType: z.enum(['image', 'raw']).optional(),
   /** Defaults to the original name. */
   name: z.string().trim().min(1).max(200).optional(),
   folderId: z.string().min(1).optional(),

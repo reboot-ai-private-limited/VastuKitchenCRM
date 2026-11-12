@@ -1,5 +1,5 @@
 import type { StoragePort } from '@/shared/storage/storage.port.js';
-import type { DocFile } from '../../domain/doc.entity.js';
+import { resourceTypeOf, type DocFile } from '../../domain/doc.entity.js';
 import type { DirectoryUser, UserDirectoryPort } from '../../domain/ports.js';
 import type { Viewer } from './docsAccess.js';
 
@@ -8,6 +8,7 @@ export interface FileView {
   uploaderName: string | null;
   url: string;
   thumbUrl: string | null;
+  previewUrl: string | null;
   downloadUrl: string;
   canDelete: boolean;
   /** Hidden from the customer, who is not shown the folder structure. */
@@ -27,12 +28,21 @@ export class DocViewBuilder {
         u,
       ]),
     );
-    return files.map((file) => ({
-      file,
-      uploaderName: users.get(file.uploadedById)?.name ?? null,
-      ...this.storage.fileUrls(file.publicId, file.kind),
-      canDelete: viewer.isAdmin || file.uploadedById === viewer.actor.id,
-      folderId: viewer.isCustomer ? null : file.folderId,
-    }));
+    return files.map((file) => {
+      const urls = this.storage.fileUrls(file.publicId, file.kind, {
+        resourceType: resourceTypeOf(file),
+        format: file.format,
+      });
+      return {
+        file,
+        uploaderName: users.get(file.uploadedById)?.name ?? null,
+        url: urls.url,
+        thumbUrl: urls.thumbUrl,
+        previewUrl: urls.previewUrl ?? null,
+        downloadUrl: urls.downloadUrl,
+        canDelete: viewer.isAdmin || file.uploadedById === viewer.actor.id,
+        folderId: viewer.isCustomer ? null : file.folderId,
+      };
+    });
   }
 }

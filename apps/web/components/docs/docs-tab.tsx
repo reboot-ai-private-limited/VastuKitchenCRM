@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useFiles, useFolders } from '@/lib/api/docs';
 import { breadcrumb, folderOptions, sortFiles } from '@/lib/docs';
 import { cn } from '@/lib/utils';
-import { FileRow } from './file-list';
+import { FileCard } from './file-list';
 import { DeleteFolderDialog, EditFolderDialog, NewFolderDialog } from './folder-dialogs';
 import { UploadButton, UploadZone } from './upload-zone';
 import { useDocUploader } from './use-doc-uploader';
@@ -94,9 +94,9 @@ function CustomerDocs({ projectId }: { projectId: string }) {
             description="Drop files here or use Upload."
           />
         ) : (
-          <ul className="divide-y">
+          <ul className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
             {sortFiles(files.data).map((f) => (
-              <FileRow key={f.id} projectId={projectId} file={f} folders={[]} isCustomer />
+              <FileCard key={f.id} projectId={projectId} file={f} folders={[]} isCustomer />
             ))}
           </ul>
         )}
@@ -293,9 +293,9 @@ function TeamDocs({ projectId }: { projectId: string }) {
                 }
               />
             ) : (
-              <ul className="divide-y">
+              <ul className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
                 {sortFiles(files.data).map((f) => (
-                  <FileRow
+                  <FileCard
                     key={f.id}
                     projectId={projectId}
                     file={f}

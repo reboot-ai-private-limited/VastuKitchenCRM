@@ -76,6 +76,7 @@ export function useDocUploader(projectId: string, target: UploadTarget) {
               format: fileExtension(i.file.name),
               originalName: i.file.name,
               bytes: up.bytes,
+              ...(up.resourceType ? { resourceType: up.resourceType } : {}),
               ...(t.folderId ? { folderId: t.folderId } : {}),
               visibility: t.visibility,
             });

@@ -38,7 +38,8 @@ export function buildUploadRelayRouter(): Router {
         throw AppError.badRequest('Send the upload as multipart form data.');
       }
       const length = Number(req.headers['content-length'] ?? 0);
-      if (length > MAX_RELAY_BYTES) throw AppError.badRequest('That file is too large (60 MB max).');
+      if (length > MAX_RELAY_BYTES)
+        throw AppError.badRequest('That file is too large (60 MB max).');
 
       const upstream = await fetch(target, {
         method: 'POST',
@@ -66,7 +67,9 @@ export function buildUploadRelayRouter(): Router {
     try {
       const storage = createStorage();
       const publicId = typeof req.query.publicId === 'string' ? req.query.publicId : '';
-      const shape = new RegExp(`^${escapeRegExp(storage.rootFolder)}/projects/[a-f0-9]{24}/(files/)?[^/]+$`);
+      const shape = new RegExp(
+        `^${escapeRegExp(storage.rootFolder)}/projects/[a-f0-9]{24}/(files/)?[^/]+$`,
+      );
       if (!shape.test(publicId) || publicId.includes('..')) {
         throw AppError.badRequest('Unknown file.');
       }

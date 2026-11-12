@@ -15,6 +15,7 @@ export const toFileDto = (v: FileView): DocFileDto => ({
   uploadedBy: v.uploaderName ? { id: v.file.uploadedById, name: v.uploaderName } : null,
   url: v.url,
   thumbUrl: v.thumbUrl,
+  previewUrl: v.previewUrl,
   downloadUrl: v.downloadUrl,
   canDelete: v.canDelete,
   createdAt: v.file.createdAt.toISOString(),

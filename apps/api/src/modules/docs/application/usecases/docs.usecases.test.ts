@@ -194,6 +194,25 @@ describe('registering an uploaded file', () => {
     ).resolves.toBeDefined();
   });
 
+  it('accepts a PDF stored as an image asset (no extension in its id) and remembers how it is stored', async () => {
+    const { w, register } = setup();
+    const res = await register.execute(
+      designer,
+      'proj1',
+      pdf({ publicId: `${FILES}/abc123xyz`, resourceType: 'image' }),
+    );
+    expect(w.files.rows[0]?.resourceType).toBe('image');
+    expect(res.file.resourceType).toBe('image');
+    // Claiming a raw document whose id has no extension is still refused.
+    await expect(
+      register.execute(
+        designer,
+        'proj1',
+        pdf({ publicId: `${FILES}/other999`, resourceType: 'raw' }),
+      ),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
   it('is idempotent: registering the same upload twice returns it once and announces once', async () => {
     const { w, register } = setup();
     const a = await register.execute(designer, 'proj1', pdf());

@@ -85,8 +85,12 @@ export class RegisterFileUseCase {
         { path: ['format'], message: `.${input.format} files are not accepted` },
       ]);
     }
-    // A stored document's id ends in its extension; make sure the claimed type is the real one.
+    // A raw stored document's id ends in its extension; make sure the claimed type is the real one.
+    // PDFs and photos are stored as `image` assets whose ids have no extension, so a client that
+    // says `resourceType: 'image'` is not held to that rule (its format is still on the allow list).
+    const resourceType = input.resourceType ?? 'raw';
     if (
+      resourceType === 'raw' &&
       !isImageFormat(input.format) &&
       !input.publicId.toLowerCase().endsWith(`.${input.format}`)
     ) {
@@ -109,6 +113,7 @@ export class RegisterFileUseCase {
       originalName: input.originalName,
       publicId: input.publicId,
       kind: isImageFormat(input.format) ? 'IMAGE' : 'FILE',
+      resourceType,
       format: input.format,
       bytes: input.bytes,
       visibility: placement.visibility,
@@ -185,6 +190,7 @@ export class SaveFromPhotosUseCase {
           originalName: item.name ?? `Photo ${stamp}`,
           publicId: item.publicId,
           kind: 'IMAGE',
+          resourceType: 'image',
           format: null,
           bytes: null,
           visibility: placement.visibility,

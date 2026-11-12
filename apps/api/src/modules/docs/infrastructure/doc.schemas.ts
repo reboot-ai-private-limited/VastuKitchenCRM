@@ -34,6 +34,7 @@ export interface DocFileDoc {
   originalName: string;
   publicId: string;
   kind: 'IMAGE' | 'FILE';
+  resourceType: 'image' | 'raw' | null;
   format: string | null;
   bytes: number | null;
   visibility: (typeof POST_VISIBILITIES)[number];
@@ -50,6 +51,7 @@ const fileSchema = new Schema<DocFileDoc>(
     originalName: { type: String, required: true },
     publicId: { type: String, required: true },
     kind: { type: String, enum: ['IMAGE', 'FILE'], required: true },
+    resourceType: { type: String, enum: ['image', 'raw'], default: null },
     format: { type: String, default: null },
     bytes: { type: Number, default: null },
     visibility: { type: String, enum: POST_VISIBILITIES, required: true, default: 'TEAM' },

@@ -21,6 +21,8 @@ export interface DocFile {
   /** The stored asset. Photos saved from a post point at the SAME asset: nothing is copied. */
   publicId: string;
   kind: 'IMAGE' | 'FILE';
+  /** How the storage provider holds it. Null on older rows: worked out from the id (see `resourceTypeOf`). */
+  resourceType: 'image' | 'raw' | null;
   /** Extension, lower case. Null for a photo saved from a post (its format is not recorded). */
   format: string | null;
   bytes: number | null;
@@ -50,3 +52,15 @@ export const isAllowedFormat = (format: string): boolean =>
   (DOC_EXTENSIONS as readonly string[]).includes(format);
 
 export const MB = 1024 * 1024;
+
+/**
+ * The provider stores PDFs (and photos) as `image` assets, whose ids have no extension; other
+ * documents are `raw` and their id ends in the extension. Older rows did not record it.
+ */
+export function resourceTypeOf(
+  file: Pick<DocFile, 'resourceType' | 'kind' | 'publicId' | 'format'>,
+): 'image' | 'raw' {
+  if (file.resourceType) return file.resourceType;
+  if (file.kind === 'IMAGE') return 'image';
+  return file.format && file.publicId.toLowerCase().endsWith(`.${file.format}`) ? 'raw' : 'image';
+}

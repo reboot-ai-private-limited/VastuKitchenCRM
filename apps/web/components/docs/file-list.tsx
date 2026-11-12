@@ -3,11 +3,14 @@
 import type { DocFileDto, FolderDto } from '@vastu/contracts';
 import {
   Download,
+  ExternalLink,
+  EyeOff,
   File as FileIcon,
   FileText,
   FolderInput,
   MoreHorizontal,
   Pencil,
+  Share2,
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -37,18 +40,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { ApiError } from '@/lib/api/client';
 import { useDeleteFile, useUpdateFile } from '@/lib/api/docs';
 import { folderOptions, formatBytes } from '@/lib/docs';
 import { formatDate, relativeAge } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const fail = (e: unknown, fallback: string) =>
   toast.error(e instanceof ApiError ? e.message : fallback);
 const TOP = '__top__';
 
-/** A file row: thumbnail or icon, name, who/when, the Shared switch (team), and a menu. */
-export function FileRow({
+/** What a file with no preview looks like: its extension on a quiet tile. */
+function TypeTile({ file }: { file: DocFileDto }) {
+  const ext = (file.format ?? file.name.split('.').pop() ?? '').slice(0, 5).toUpperCase();
+  return (
+    <span className="bg-secondary text-muted-foreground flex size-full flex-col items-center justify-center gap-1.5">
+      {file.format === 'pdf' ? <FileText className="size-9" /> : <FileIcon className="size-9" />}
+      {ext && <span className="text-xs font-semibold tracking-wide">{ext}</span>}
+    </span>
+  );
+}
+
+/**
+ * A file as a gallery card: a big preview (photo, or a PDF's first page), the name and details, a
+ * Team only / Shared chip and a menu. Clicking the preview opens the viewer.
+ */
+export function FileCard({
   projectId,
   file,
   folders,
@@ -64,76 +81,47 @@ export function FileRow({
 }) {
   const update = useUpdateFile(projectId);
   const del = useDeleteFile(projectId);
-  const [dialog, setDialog] = useState<'rename' | 'move' | 'delete' | null>(null);
+  const [dialog, setDialog] = useState<'rename' | 'move' | 'delete' | 'view' | null>(null);
   const shared = file.visibility === 'CLIENT';
 
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
-      {file.thumbUrl ? (
-        <a
-          href={file.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Open ${file.name}`}
-          className="bg-muted size-11 shrink-0 overflow-hidden rounded-md border"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={file.thumbUrl} alt="" loading="lazy" className="size-full object-cover" />
-        </a>
-      ) : (
-        <span
-          className="bg-secondary text-muted-foreground grid size-11 shrink-0 place-items-center rounded-md border"
-          aria-hidden
-        >
-          {file.format === 'pdf' ? (
-            <FileText className="size-5" />
-          ) : (
-            <FileIcon className="size-5" />
-          )}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <a
-          href={file.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block truncate font-semibold hover:underline"
-        >
-          {file.name}
-        </a>
-        <p className="text-muted-foreground truncate text-xs">
-          {[
-            file.format?.toUpperCase(),
-            formatBytes(file.bytes),
-            file.uploadedBy?.name,
-            relativeAge(file.createdAt),
-            showFolder,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      </div>
-      {!isCustomer && (
-        <label className="flex shrink-0 items-center gap-2 text-xs">
-          <Switch
-            checked={shared}
-            disabled={update.isPending}
-            aria-label={`Shared with client: ${file.name}`}
-            onCheckedChange={(on) =>
-              update.mutate(
-                { id: file.id, visibility: on ? 'CLIENT' : 'TEAM' },
-                { onError: (e) => fail(e, 'Couldn’t change sharing.') },
-              )
-            }
+    <li className="bg-card shadow-card group relative overflow-hidden rounded-xl border">
+      <button
+        type="button"
+        onClick={() => setDialog('view')}
+        aria-label={`Open ${file.name}`}
+        className="focus-visible:ring-ring bg-muted block aspect-4/3 w-full overflow-hidden outline-none focus-visible:ring-2"
+      >
+        {file.thumbUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={file.thumbUrl}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover transition-transform group-hover:scale-[1.02]"
           />
-          <span className={shared ? 'text-success font-medium' : 'text-muted-foreground'}>
-            {shared ? 'Shared' : 'Team only'}
-          </span>
-        </label>
+        ) : (
+          <TypeTile file={file} />
+        )}
+      </button>
+      {!isCustomer && (
+        <span
+          className={cn(
+            'absolute top-2 left-2 rounded-full px-2 py-0.5 text-xs font-medium backdrop-blur',
+            shared ? 'bg-success-soft/90 text-success' : 'bg-background/80 text-muted-foreground',
+          )}
+        >
+          {shared ? 'Shared' : 'Team only'}
+        </span>
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label={`Actions for ${file.name}`}>
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            aria-label={`Actions for ${file.name}`}
+            className="absolute top-2 right-2 opacity-90 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100 data-[state=open]:opacity-100"
+          >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
@@ -143,6 +131,20 @@ export function FileRow({
               <Download /> Download
             </a>
           </DropdownMenuItem>
+          {!isCustomer && (
+            <DropdownMenuItem
+              disabled={update.isPending}
+              onSelect={() =>
+                update.mutate(
+                  { id: file.id, visibility: shared ? 'TEAM' : 'CLIENT' },
+                  { onError: (e) => fail(e, 'Couldn’t change sharing.') },
+                )
+              }
+            >
+              {shared ? <EyeOff /> : <Share2 />}
+              {shared ? 'Make team only' : 'Share with client'}
+            </DropdownMenuItem>
+          )}
           {file.canDelete && !isCustomer && (
             <DropdownMenuItem onSelect={() => setDialog('rename')}>
               <Pencil /> Rename…
@@ -161,7 +163,24 @@ export function FileRow({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      <div className="min-w-0 space-y-0.5 px-3 py-2.5">
+        <p className="truncate text-sm font-semibold" title={file.name}>
+          {file.name}
+        </p>
+        <p className="text-muted-foreground truncate text-xs">
+          {[
+            file.format?.toUpperCase(),
+            formatBytes(file.bytes),
+            file.uploadedBy?.name,
+            relativeAge(file.createdAt),
+            showFolder,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
 
+      {dialog === 'view' && <FileViewer file={file} onClose={() => setDialog(null)} />}
       {dialog === 'rename' && (
         <RenameFile projectId={projectId} file={file} onClose={() => setDialog(null)} />
       )}
@@ -333,6 +352,50 @@ function MoveFile({
             }
           >
             {update.isPending ? 'Moving…' : 'Move'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** The big view: the photo or a PDF's first page, with Open and Download. */
+function FileViewer({ file, onClose }: { file: DocFileDto; onClose: () => void }) {
+  const picture = file.previewUrl ?? file.thumbUrl;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="truncate pr-6">{file.name}</DialogTitle>
+          <DialogDescription>
+            {[file.format?.toUpperCase(), formatBytes(file.bytes), file.uploadedBy?.name]
+              .filter(Boolean)
+              .join(' · ')}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="bg-muted grid min-h-48 place-items-center overflow-hidden rounded-lg border">
+          {picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={picture} alt={file.name} className="max-h-[65dvh] w-auto max-w-full" />
+          ) : (
+            <div className="size-48">
+              <TypeTile file={file} />
+            </div>
+          )}
+        </div>
+        {file.format === 'pdf' && (
+          <p className="text-muted-foreground text-xs">Showing the first page.</p>
+        )}
+        <DialogFooter>
+          <Button variant="outline" asChild>
+            <a href={file.url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink /> Open
+            </a>
+          </Button>
+          <Button asChild>
+            <a href={file.downloadUrl}>
+              <Download /> Download
+            </a>
           </Button>
         </DialogFooter>
       </DialogContent>

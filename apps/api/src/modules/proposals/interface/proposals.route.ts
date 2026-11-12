@@ -12,6 +12,7 @@ import {
   sendProposalResponseSchema,
   updateProposalBodySchema,
 } from '@vastu/contracts';
+import { optionalAuthenticate } from '@/shared/http/optionalAuthenticate.middleware.js';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
 import { requireRole } from '@/shared/http/authorize.middleware.js';
 import { buildErrorBody } from '@/shared/http/response.util.js';
@@ -119,7 +120,7 @@ openApiRegistry.registerPath({
   tags: PUBLIC_TAG,
   summary: "The customer's browser reports the page rendered (counts a view)",
   description:
-    'The first view alerts the sales person. Always answers 200, whether or not it was counted.',
+    'The first view alerts the sales person. Signed-in staff are never counted (so testing the link yourself does not look like a customer view). Always answers 200, whether or not it was counted.',
   request: tokenParams,
   responses: { 200: okResponse('Acknowledged', z.object({})) },
 });
@@ -178,6 +179,6 @@ export function buildPublicProposalsRouter(c: PublicProposalsControllers): Route
   router.use(publicLimiter);
   const token = validate({ params: proposalTokenParamsSchema });
   router.get('/:token', token, c.get);
-  router.post('/:token/seen', token, c.seen);
+  router.post('/:token/seen', optionalAuthenticate, token, c.seen);
   return router;
 }

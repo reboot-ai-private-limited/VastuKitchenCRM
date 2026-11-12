@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { api } from '@/lib/api/client';
+import { ApiError, api } from '@/lib/api/client';
+import { SESSION_HINT_COOKIE } from '@/lib/api/session';
 
 /**
  * Tells the API a person (not a chat app's link preview) opened the page. Crawlers never run this:
@@ -17,9 +18,17 @@ export function SeenPing({ token }: { token: string }) {
     } catch {
       /* storage blocked: still send, the API only counts the first view specially */
     }
-    api(`/public/proposals/${token}/seen`, { method: 'POST', anonymous: true }).catch(
-      () => undefined,
-    );
+    // Signed-in staff must not count as the customer, so a session (if any) is sent along and the
+    // API decides. A dead session falls back to an anonymous ping.
+    const path = `/public/proposals/${token}/seen`;
+    const signedIn = document.cookie.includes(`${SESSION_HINT_COOKIE}=`);
+    api(path, { method: 'POST', anonymous: !signedIn })
+      .catch((e) =>
+        e instanceof ApiError && e.status === 401
+          ? api(path, { method: 'POST', anonymous: true })
+          : undefined,
+      )
+      .catch(() => undefined);
   }, [token]);
   return null;
 }

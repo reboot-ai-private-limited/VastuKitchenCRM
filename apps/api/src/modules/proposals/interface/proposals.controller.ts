@@ -120,7 +120,11 @@ export function makePublicGetController(useCase: GetPublicProposalUseCase): Requ
 /** Public. Always answers the same, whether or not the view was counted or the token exists. */
 export function makePublicSeenController(useCase: RecordProposalSeenUseCase): RequestHandler {
   return asyncHandler(async (req, res) => {
-    await useCase.execute(tokenOf(req), req.headers['user-agent']);
+    await useCase.execute(
+      tokenOf(req),
+      req.headers['user-agent'],
+      req.user ? { id: req.user.sub, role: req.user.role } : undefined,
+    );
     res.setHeader('Cache-Control', 'no-store');
     sendSuccess(req, res, {}, 'OK');
   });

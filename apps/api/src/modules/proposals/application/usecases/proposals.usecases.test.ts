@@ -204,6 +204,25 @@ describe('duplicate', () => {
   });
 });
 
+describe('who counts as a viewer', () => {
+  it('does not count signed-in staff, but counts anonymous visitors and customers', async () => {
+    const { w, create, send, seen } = setup();
+    const p = await create.execute(sales1, body());
+    await send.execute(sales1, p.id);
+    const browser = 'Mozilla/5.0 (Linux; Android 14) Chrome/120';
+
+    await seen.execute(p.token, browser, { id: 'admin1', role: 'ADMIN' });
+    await seen.execute(p.token, browser, { id: 'sales1', role: 'SALES' });
+    expect(w.proposals.rows[0]?.seenCount).toBe(0);
+    expect(w.events.seen).toHaveLength(0);
+
+    await seen.execute(p.token, browser, { id: 'cust1', role: 'CUSTOMER' });
+    await seen.execute(p.token, browser);
+    expect(w.proposals.rows[0]?.seenCount).toBe(2);
+    expect(w.events.seen).toHaveLength(1);
+  });
+});
+
 describe('public page and seen tracking', () => {
   it('never shows a draft, and loading the page records nothing', async () => {
     const { w, create, send, getPublic } = setup();

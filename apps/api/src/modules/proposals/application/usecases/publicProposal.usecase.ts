@@ -1,3 +1,4 @@
+import type { RoleName } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import { isExpired, type Proposal } from '../../domain/proposal.entity.js';
 import type { LeadsGatewayPort } from '../../domain/leadsGateway.port.js';
@@ -56,8 +57,14 @@ export class RecordProposalSeenUseCase {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async execute(token: string, userAgent: string | undefined): Promise<void> {
+  async execute(
+    token: string,
+    userAgent: string | undefined,
+    viewer?: { id: string; role: RoleName },
+  ): Promise<void> {
     if (userAgent && BOT_AGENT.test(userAgent)) return;
+    // Staff opening the link (to check it, or just clicking around) is not the customer looking.
+    if (viewer && viewer.role !== 'CUSTOMER') return;
 
     const result = await this.proposals.recordSeen(token, this.now());
     if (!result?.first) return;

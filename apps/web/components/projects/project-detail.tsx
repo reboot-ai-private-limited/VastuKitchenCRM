@@ -202,6 +202,7 @@ export function ProjectDetail({ id }: { id: string }) {
             isCustomer={can.isCustomer}
             finalDeliveryRequested={finalDelivery}
             onFinalDeliveryDone={() => setFinalDelivery(false)}
+            onOpenComplaint={(id) => setParams({ tab: 'complaints', complaint: id })}
           />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto p-4">

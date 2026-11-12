@@ -64,12 +64,12 @@ export function ComplaintThread({ complaint: c }: { complaint: ComplaintDto }) {
           )}
         </ul>
       )}
-      {c.status !== 'CLOSED' && <Reply complaint={c} />}
+      {c.status !== 'CLOSED' && <ReplyBox complaint={c} />}
     </div>
   );
 }
 
-function EventLine({
+export function EventLine({
   event,
   images,
 }: {
@@ -159,7 +159,7 @@ function CommentRow({
 }
 
 /** Hidden behind a button until you want to write, like a reply on a post. */
-function Reply({ complaint }: { complaint: ComplaintDto }) {
+export function ReplyBox({ complaint }: { complaint: ComplaintDto }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const up = useImageUploader(complaint.projectId, MAX_IMAGES_PER_COMMENT);

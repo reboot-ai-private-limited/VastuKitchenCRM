@@ -17,6 +17,51 @@ import { ReopenedChip } from './complaints-view';
 type Dialog = 'assign' | 'resolve' | 'reopen' | 'close' | null;
 
 /**
+ * The buttons this person may use on a complaint right now, with their dialogs. They come from `can`,
+ * never from the role: the API already decided what is possible in the current status.
+ */
+export function ComplaintActions({ complaint: c }: { complaint: ComplaintDto }) {
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const can = c.can;
+  if (!(can.assign || can.resolve || can.reopen || can.close)) return null;
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        {can.assign && (
+          <Button variant="outline" size="sm" onClick={() => setDialog('assign')}>
+            {c.assignedTo ? 'Reassign' : 'Assign'}
+          </Button>
+        )}
+        {can.resolve && (
+          <Button size="sm" onClick={() => setDialog('resolve')}>
+            Resolve
+          </Button>
+        )}
+        {can.reopen && (
+          <Button variant="outline" size="sm" onClick={() => setDialog('reopen')}>
+            Not fixed? Reopen
+          </Button>
+        )}
+        {can.close && (
+          <Button
+            variant={can.reopen ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setDialog('close')}
+          >
+            Close
+          </Button>
+        )}
+      </div>
+
+      {dialog === 'assign' && <AssignDialog complaint={c} onClose={() => setDialog(null)} />}
+      {dialog === 'resolve' && <ResolveDialog complaint={c} onClose={() => setDialog(null)} />}
+      {dialog === 'reopen' && <ReopenDialog complaint={c} onClose={() => setDialog(null)} />}
+      {dialog === 'close' && <CloseDialog complaint={c} onClose={() => setDialog(null)} />}
+    </>
+  );
+}
+
+/**
  * The inside of a complaint: what was reported, who has it, the actions the caller may take right
  * now, and the conversation. Shown in the chat card and inline in the project's Complaints tab.
  * Pass `onCollapse` to get a collapse button.
@@ -28,9 +73,6 @@ export function ComplaintBody({
   complaint: ComplaintDto;
   onCollapse?: () => void;
 }) {
-  const [dialog, setDialog] = useState<Dialog>(null);
-  const can = c.can;
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -64,42 +106,9 @@ export function ComplaintBody({
         </p>
       </div>
 
-      {/* Buttons come from `can`, never from the role: the API already decided what this person may do now. */}
-      {(can.assign || can.resolve || can.reopen || can.close) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {can.assign && (
-            <Button variant="outline" size="sm" onClick={() => setDialog('assign')}>
-              {c.assignedTo ? 'Reassign' : 'Assign'}
-            </Button>
-          )}
-          {can.resolve && (
-            <Button size="sm" onClick={() => setDialog('resolve')}>
-              Resolve
-            </Button>
-          )}
-          {can.reopen && (
-            <Button variant="outline" size="sm" onClick={() => setDialog('reopen')}>
-              Not fixed? Reopen
-            </Button>
-          )}
-          {can.close && (
-            <Button
-              variant={can.reopen ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setDialog('close')}
-            >
-              Close
-            </Button>
-          )}
-        </div>
-      )}
+      <ComplaintActions complaint={c} />
 
       <ComplaintThread complaint={c} />
-
-      {dialog === 'assign' && <AssignDialog complaint={c} onClose={() => setDialog(null)} />}
-      {dialog === 'resolve' && <ResolveDialog complaint={c} onClose={() => setDialog(null)} />}
-      {dialog === 'reopen' && <ReopenDialog complaint={c} onClose={() => setDialog(null)} />}
-      {dialog === 'close' && <CloseDialog complaint={c} onClose={() => setDialog(null)} />}
     </div>
   );
 }

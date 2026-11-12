@@ -14,6 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useImageUploader } from '@/hooks/use-image-uploader';
 import { ApiError } from '@/lib/api/client';
 import { ComplaintCard } from '@/components/complaints/complaint-card';
+import {
+  ComplaintUpdateRow,
+  type ComplaintUpdate,
+} from '@/components/complaints/complaint-update-row';
 import { useComplaints } from '@/lib/api/complaints';
 import { DEFAULT_COMPLAINT_FILTERS } from '@/lib/complaints';
 import { useCreatePost, usePosts, useTimeline } from '@/lib/api/projects';
@@ -38,6 +42,7 @@ export function Feed({
   view,
   finalDeliveryRequested,
   onFinalDeliveryDone,
+  onOpenComplaint,
 }: {
   projectId: string;
   seesTeam: boolean;
@@ -48,6 +53,8 @@ export function Feed({
   /** Set by the Close dialog: open the composer ready for a final-delivery post. */
   finalDeliveryRequested: boolean;
   onFinalDeliveryDone: () => void;
+  /** Opens a complaint in the Complaints tab (for a card that is not loaded in the chat). */
+  onOpenComplaint?: (id: string) => void;
 }) {
   const visibility: PostVisibility = seesTeam ? view : 'CLIENT';
   const everything = seesTeam && visibility === 'TEAM';
@@ -114,6 +121,16 @@ export function Feed({
     if (el && landed.current && el.scrollHeight <= el.clientHeight) loadOlder();
   });
 
+  // Jump from an update to its complaint card and flash it; if the card is not loaded (it is far back
+  // in history), open the complaint in the Complaints tab instead.
+  const jumpTo = (complaintId: string) => {
+    const el = document.getElementById(`complaint-${complaintId}`);
+    if (!el) return onOpenComplaint?.(complaintId);
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add('bg-primary-soft');
+    setTimeout(() => el.classList.remove('bg-primary-soft'), 1600);
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div
@@ -155,7 +172,20 @@ export function Feed({
                       isCustomer={isCustomer}
                     />
                   ) : it.kind === 'COMPLAINT' ? (
-                    <ComplaintCard key={`c${it.complaint.id}`} complaint={it.complaint} />
+                    <ComplaintCard
+                      key={`c${it.complaint.id}`}
+                      complaint={it.complaint}
+                      updateCount={it.updateCount}
+                    />
+                  ) : it.kind === 'COMPLAINT_UPDATE' ? (
+                    <ComplaintUpdateRow
+                      key={`u${it.complaint.id}-${it.update.type === 'comment' ? it.update.comment.id : `${it.update.event.type}-${it.update.at}`}`}
+                      complaint={it.complaint}
+                      update={it.update}
+                      latest={it.latest}
+                      showResolutionPhotos={it.lastResolved}
+                      onJump={() => jumpTo(it.complaint.id)}
+                    />
                   ) : (
                     <ActivityRow key={`a${it.activity.id}`} iso={it.at}>
                       <ActivityLine activity={it.activity} />
@@ -192,12 +222,23 @@ export function Feed({
   );
 }
 
-type StreamItem = TimelineItemDto | { kind: 'COMPLAINT'; at: string; complaint: ComplaintDto };
+type StreamItem =
+  | TimelineItemDto
+  | { kind: 'COMPLAINT'; at: string; complaint: ComplaintDto; updateCount: number }
+  | {
+      kind: 'COMPLAINT_UPDATE';
+      at: string;
+      complaint: ComplaintDto;
+      update: ComplaintUpdate;
+      latest: boolean;
+      lastResolved: boolean;
+    };
 
 /**
  * Posts and activity (newest first, as the API pages them) plus the project's complaints, as one
- * oldest-first list. While older pages are still to load, complaints older than what is on screen
- * wait for them, so a card never appears out of place.
+ * oldest-first list. A complaint is a card where it was raised, and every later reply or status
+ * change is its own row at the time it happened, so news about an old complaint shows up at the
+ * bottom. While older pages are still to load, anything older than what is on screen waits for them.
  */
 function buildStream(
   newestFirst: TimelineItemDto[],
@@ -205,13 +246,49 @@ function buildStream(
   moreToLoad: boolean,
 ): StreamItem[] {
   const oldestShown = newestFirst.length > 0 ? newestFirst[newestFirst.length - 1]!.at : null;
-  const base = newestFirst.filter(
+  const visible = (at: string) => !moreToLoad || oldestShown === null || at >= oldestShown;
+  // The complaint's own lines are in the cards and update rows, so the plain activity lines would repeat them.
+  const base: StreamItem[] = newestFirst.filter(
     (it) => !(it.kind === 'ACTIVITY' && it.activity.type.startsWith('COMPLAINT_')),
   );
-  const cards = complaints
-    .filter((c) => !moreToLoad || oldestShown === null || c.createdAt >= oldestShown)
-    .map((complaint): StreamItem => ({ kind: 'COMPLAINT', at: complaint.createdAt, complaint }));
-  return [...base, ...cards].sort((a, b) => a.at.localeCompare(b.at));
+
+  const extra: StreamItem[] = [];
+  for (const complaint of complaints) {
+    const updates: ComplaintUpdate[] = [
+      ...complaint.history
+        .filter((e) => e.type !== 'RAISED')
+        .map((event): ComplaintUpdate => ({ type: 'event', at: event.at, event })),
+      ...complaint.comments.map((comment): ComplaintUpdate => ({
+        type: 'comment',
+        at: comment.createdAt,
+        comment,
+      })),
+    ].sort((a, b) => a.at.localeCompare(b.at));
+    const lastResolvedAt = [...updates]
+      .reverse()
+      .find((u) => u.type === 'event' && u.event.type === 'RESOLVED')?.at;
+    const newest = updates[updates.length - 1];
+
+    if (visible(complaint.createdAt))
+      extra.push({
+        kind: 'COMPLAINT',
+        at: complaint.createdAt,
+        complaint,
+        updateCount: updates.length,
+      });
+    for (const update of updates) {
+      if (!visible(update.at)) continue;
+      extra.push({
+        kind: 'COMPLAINT_UPDATE',
+        at: update.at,
+        complaint,
+        update,
+        latest: update === newest,
+        lastResolved: update.at === lastResolvedAt,
+      });
+    }
+  }
+  return [...base, ...extra].sort((a, b) => a.at.localeCompare(b.at));
 }
 
 /** Everything | Client view: staff only. Sits in the project's top bar. */

@@ -1,6 +1,11 @@
 'use client';
 
-import { DESIGN_STAGES, type DesignStage, type ProjectDto } from '@vastu/contracts';
+import {
+  DESIGN_STAGES,
+  type DesignStage,
+  type PostVisibility,
+  type ProjectDto,
+} from '@vastu/contracts';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -55,7 +60,7 @@ import { canRaiseComplaint } from '@/lib/complaints';
 import { ComplaintsTab } from './complaints-tab';
 import { WorkspaceNav, type WorkspaceSection } from './workspace-nav';
 import { DesignStageChip } from './design-stage-chip';
-import { Feed } from './feed';
+import { Feed, FeedViewToggle } from './feed';
 import { CloseDialog, EditProjectDialog, InviteDialog, MembersDialog } from './project-dialogs';
 
 type Dialog = 'edit' | 'members' | 'close' | 'invite' | 'complaint' | null;
@@ -81,6 +86,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [finalDelivery, setFinalDelivery] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [feedView, setFeedView] = useState<PostVisibility>('TEAM');
 
   if (q.isError && q.error instanceof ApiError && q.error.isNotFound) return <NotFoundView />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
@@ -110,67 +116,13 @@ export function ProjectDetail({ id }: { id: string }) {
   return (
     <div className="flex h-full flex-col md:flex-row">
       <aside className="flex shrink-0 flex-col border-b md:w-60 md:border-r md:border-b-0">
-        <div className="space-y-2 p-3 md:p-4">
+        <div className="p-3 pb-1 md:p-4 md:pb-2">
           <Link
             href="/projects"
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
           >
             <ArrowLeft className="size-3.5" aria-hidden /> Projects
           </Link>
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h1 className="text-base leading-tight font-semibold">{p.name}</h1>
-              <p className="text-muted-foreground truncate text-xs">{p.customer.name}</p>
-            </div>
-            <div className="flex shrink-0 items-center">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Project info"
-                onClick={() => setInfoOpen(true)}
-              >
-                <Info />
-              </Button>
-              {hasMenu && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm" aria-label="Project actions">
-                      <MoreHorizontal />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {can.editProject && (
-                      <DropdownMenuItem onSelect={() => setDialog('edit')}>
-                        <Pencil /> Edit project
-                      </DropdownMenuItem>
-                    )}
-                    {can.manageMembers && (
-                      <DropdownMenuItem onSelect={() => setDialog('members')}>
-                        <Users /> Team
-                      </DropdownMenuItem>
-                    )}
-                    {can.invite && !can.isCustomer && (
-                      <DropdownMenuItem onSelect={() => setDialog('invite')}>
-                        <UserPlus /> Invite customer
-                      </DropdownMenuItem>
-                    )}
-                    {can.isAdmin && !closed && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => setDialog('close')}>
-                          <CheckCircle2 /> Close project
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <StatusBadge kind="project" value={p.stage} />
-            <DesignStageChip value={p.designStage} />
-          </div>
         </div>
         {!can.summaryOnly && (
           <div className="px-3 pb-2 md:pb-4">
@@ -180,6 +132,61 @@ export function ProjectDetail({ id }: { id: string }) {
       </aside>
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-3 py-2 sm:px-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h1 className="max-w-full truncate text-base font-semibold">{p.name}</h1>
+            <span className="text-muted-foreground truncate text-sm">{p.customer.name}</span>
+            <StatusBadge kind="project" value={p.stage} />
+            <DesignStageChip value={p.designStage} />
+          </div>
+          <div className="flex items-center gap-2">
+            {tab === 'feed' && can.seesTeam && !can.summaryOnly && (
+              <FeedViewToggle value={feedView} onChange={setFeedView} />
+            )}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Project info"
+              onClick={() => setInfoOpen(true)}
+            >
+              <Info />
+            </Button>
+            {hasMenu && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" aria-label="Project actions">
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {can.editProject && (
+                    <DropdownMenuItem onSelect={() => setDialog('edit')}>
+                      <Pencil /> Edit project
+                    </DropdownMenuItem>
+                  )}
+                  {can.manageMembers && (
+                    <DropdownMenuItem onSelect={() => setDialog('members')}>
+                      <Users /> Team
+                    </DropdownMenuItem>
+                  )}
+                  {can.invite && !can.isCustomer && (
+                    <DropdownMenuItem onSelect={() => setDialog('invite')}>
+                      <UserPlus /> Invite customer
+                    </DropdownMenuItem>
+                  )}
+                  {can.isAdmin && !closed && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => setDialog('close')}>
+                        <CheckCircle2 /> Close project
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </header>
         {can.summaryOnly ? (
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <Summary project={p} />
@@ -188,6 +195,7 @@ export function ProjectDetail({ id }: { id: string }) {
           <Feed
             projectId={p.id}
             seesTeam={can.seesTeam}
+            view={feedView}
             closed={closed}
             isCustomer={can.isCustomer}
             finalDeliveryRequested={finalDelivery}

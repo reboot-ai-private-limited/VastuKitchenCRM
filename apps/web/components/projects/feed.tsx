@@ -32,19 +32,21 @@ export function Feed({
   seesTeam,
   closed,
   isCustomer,
+  view,
   finalDeliveryRequested,
   onFinalDeliveryDone,
 }: {
   projectId: string;
   seesTeam: boolean;
+  /** Which feed staff are looking at; the switch itself lives in the project's top bar. */
+  view: PostVisibility;
   closed: boolean;
   isCustomer: boolean;
   /** Set by the Close dialog: open the composer ready for a final-delivery post. */
   finalDeliveryRequested: boolean;
   onFinalDeliveryDone: () => void;
 }) {
-  const [tab, setTab] = useState<PostVisibility>('TEAM');
-  const visibility: PostVisibility = seesTeam ? tab : 'CLIENT';
+  const visibility: PostVisibility = seesTeam ? view : 'CLIENT';
   const everything = seesTeam && visibility === 'TEAM';
   const posts = usePosts(projectId, 'CLIENT', !everything);
   const timeline = useTimeline(projectId, everything);
@@ -106,39 +108,6 @@ export function Feed({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {seesTeam && (
-        <div className="flex shrink-0 items-center border-b px-3 py-2 sm:px-4">
-          <div
-            role="tablist"
-            aria-label="Feed"
-            title="Team notes and activity are only visible to staff"
-            className="bg-secondary inline-flex rounded-lg p-0.5 text-sm"
-          >
-            {(['TEAM', 'CLIENT'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="tab"
-                aria-selected={tab === v}
-                onClick={() => setTab(v)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors',
-                  tab === v ? 'bg-card shadow-card' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {v === 'TEAM' ? <Layers className="size-3.5" /> : <Eye className="size-3.5" />}
-                {v === 'TEAM' ? 'Everything' : 'Client view'}
-              </button>
-            ))}
-          </div>
-          <p className="text-muted-foreground ml-3 hidden truncate text-xs lg:block">
-            {visibility === 'CLIENT'
-              ? 'Exactly what the customer sees.'
-              : 'Team notes and activity are only visible to staff.'}
-          </p>
-        </div>
-      )}
-
       <div
         ref={scroller}
         onScroll={(e) => e.currentTarget.scrollTop < 120 && loadOlder()}
@@ -209,6 +178,41 @@ export function Feed({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Everything | Client view: staff only. Sits in the project's top bar. */
+export function FeedViewToggle({
+  value,
+  onChange,
+}: {
+  value: PostVisibility;
+  onChange: (v: PostVisibility) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Feed"
+      title="Team notes and activity are only visible to staff"
+      className="bg-secondary inline-flex rounded-lg p-0.5 text-sm"
+    >
+      {(['TEAM', 'CLIENT'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="tab"
+          aria-selected={value === v}
+          onClick={() => onChange(v)}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-colors',
+            value === v ? 'bg-card shadow-card' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {v === 'TEAM' ? <Layers className="size-3.5" /> : <Eye className="size-3.5" />}
+          {v === 'TEAM' ? 'Everything' : 'Client view'}
+        </button>
+      ))}
     </div>
   );
 }

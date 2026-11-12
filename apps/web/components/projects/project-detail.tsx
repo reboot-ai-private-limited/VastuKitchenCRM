@@ -4,8 +4,8 @@ import { DESIGN_STAGES, type DesignStage, type ProjectDto } from '@vastu/contrac
 import {
   ArrowLeft,
   CheckCircle2,
-  LifeBuoy,
   MapPin,
+  MoreHorizontal,
   Pencil,
   RotateCcw,
   UserPlus,
@@ -29,7 +29,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ApiError } from '@/lib/api/client';
 import { useChangeDesignStage, useChangeStage, useJourney, useProject } from '@/lib/api/projects';
 import { useAuth } from '@/lib/auth';
@@ -41,12 +47,14 @@ import { DocsTab } from '@/components/docs/docs-tab';
 import { TodosTab } from '@/components/todos/todos-tab';
 import { canRaiseComplaint } from '@/lib/complaints';
 import { ActivityTab } from './activity-tab';
+import { ComplaintsTab } from './complaints-tab';
+import { WorkspaceNav, type WorkspaceSection } from './workspace-nav';
 import { DesignStageChip } from './design-stage-chip';
 import { Feed } from './feed';
 import { CloseDialog, EditProjectDialog, InviteDialog, MembersDialog } from './project-dialogs';
 
 type Dialog = 'edit' | 'members' | 'close' | 'invite' | 'complaint' | null;
-const TABS = ['feed', 'todos', 'docs', 'activity'] as const;
+const SECTIONS: readonly WorkspaceSection[] = ['feed', 'todos', 'complaints', 'docs', 'activity'];
 
 export function ProjectDetail({ id }: { id: string }) {
   const { user } = useAuth();
@@ -80,9 +88,11 @@ export function ProjectDetail({ id }: { id: string }) {
 
   const p = q.data;
   const can = projectPermissions(user?.role, user?.id, p);
-  const allowed = TABS.filter((t) => (t === 'todos' || t === 'activity' ? can.seesTeam : true));
-  const tab = (allowed as readonly string[]).includes(wanted ?? '') ? (wanted as string) : 'feed';
+  const allowed = SECTIONS.filter((t) => (t === 'todos' || t === 'activity' ? can.seesTeam : true));
+  // Chat is what opens by default.
+  const tab: WorkspaceSection = allowed.find((t) => t === wanted) ?? 'feed';
   const setTab = (t: string) => setParams({ tab: t === 'feed' ? null : t, todo: null });
+  const raisable = canRaiseComplaint(user?.role) && !can.summaryOnly;
   const closed = p.stage === 'CLOSED';
 
   return (
@@ -112,31 +122,40 @@ export function ProjectDetail({ id }: { id: string }) {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {can.editProject && (
-              <Button variant="outline" onClick={() => setDialog('edit')}>
-                <Pencil /> Edit
-              </Button>
-            )}
-            {can.manageMembers && (
-              <Button variant="outline" onClick={() => setDialog('members')}>
-                <Users /> Team
-              </Button>
-            )}
-            {canRaiseComplaint(user?.role) && !can.summaryOnly && (
-              <Button variant="outline" onClick={() => setDialog('complaint')}>
-                <LifeBuoy /> Raise complaint
-              </Button>
-            )}
-            {can.invite && !can.isCustomer && (
-              <Button variant="outline" onClick={() => setDialog('invite')}>
-                <UserPlus /> Invite customer
-              </Button>
-            )}
+          <div className="flex items-center gap-2">
             {can.isAdmin && !closed && (
               <Button onClick={() => setDialog('close')}>
                 <CheckCircle2 /> Close project
               </Button>
+            )}
+            {(can.editProject || can.manageMembers || (can.invite && !can.isCustomer)) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" aria-label="Project actions">
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {can.editProject && (
+                    <DropdownMenuItem onSelect={() => setDialog('edit')}>
+                      <Pencil /> Edit project
+                    </DropdownMenuItem>
+                  )}
+                  {can.manageMembers && (
+                    <DropdownMenuItem onSelect={() => setDialog('members')}>
+                      <Users /> Team
+                    </DropdownMenuItem>
+                  )}
+                  {can.invite && !can.isCustomer && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => setDialog('invite')}>
+                        <UserPlus /> Invite customer
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
@@ -149,29 +168,30 @@ export function ProjectDetail({ id }: { id: string }) {
         </p>
       )}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div
+        className={
+          can.summaryOnly
+            ? 'grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]'
+            : 'grid items-start gap-4 md:grid-cols-[11rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)_280px]'
+        }
+      >
         {can.summaryOnly ? (
           <Summary project={p} />
         ) : (
-          <Tabs value={tab} onValueChange={setTab} className="min-w-0">
-            <TabsList>
-              <TabsTrigger value="feed">Feed</TabsTrigger>
-              {can.seesTeam && <TabsTrigger value="todos">To-dos</TabsTrigger>}
-              <TabsTrigger value="docs">Docs</TabsTrigger>
-              {can.seesTeam && <TabsTrigger value="activity">Activity</TabsTrigger>}
-            </TabsList>
-            <TabsContent value="feed" className="mt-4">
-              <Feed
-                projectId={p.id}
-                seesTeam={can.seesTeam}
-                closed={closed}
-                isCustomer={can.isCustomer}
-                finalDeliveryRequested={finalDelivery}
-                onFinalDeliveryDone={() => setFinalDelivery(false)}
-              />
-            </TabsContent>
-            {can.seesTeam && (
-              <TabsContent value="todos" className="mt-4">
+          <>
+            <WorkspaceNav sections={allowed} value={tab} onChange={setTab} />
+            <div className="min-w-0">
+              {tab === 'feed' && (
+                <Feed
+                  projectId={p.id}
+                  seesTeam={can.seesTeam}
+                  closed={closed}
+                  isCustomer={can.isCustomer}
+                  finalDeliveryRequested={finalDelivery}
+                  onFinalDeliveryDone={() => setFinalDelivery(false)}
+                />
+              )}
+              {tab === 'todos' && can.seesTeam && (
                 <TodosTab
                   projectId={p.id}
                   closed={closed}
@@ -179,26 +199,33 @@ export function ProjectDetail({ id }: { id: string }) {
                   todoId={todoParam}
                   onTodoChange={(id) => setParams({ tab: 'todos', todo: id })}
                 />
-              </TabsContent>
-            )}
-            <TabsContent value="docs" className="mt-4">
-              <DocsTab
-                projectId={p.id}
-                closed={closed}
-                isAdmin={can.isAdmin}
-                isCustomer={can.isCustomer}
-              />
-            </TabsContent>
-            {can.seesTeam && (
-              <TabsContent value="activity" className="mt-4">
+              )}
+              {tab === 'complaints' && (
+                <ComplaintsTab
+                  projectId={p.id}
+                  canRaise={raisable && !closed}
+                  onRaise={() => setDialog('complaint')}
+                />
+              )}
+              {tab === 'docs' && (
+                <DocsTab
+                  projectId={p.id}
+                  closed={closed}
+                  isAdmin={can.isAdmin}
+                  isCustomer={can.isCustomer}
+                />
+              )}
+              {tab === 'activity' && can.seesTeam && (
                 <div className="bg-card shadow-card overflow-hidden rounded-xl border">
-                  <ActivityTab projectId={p.id} active={tab === 'activity'} />
+                  <ActivityTab projectId={p.id} active />
                 </div>
-              </TabsContent>
-            )}
-          </Tabs>
+              )}
+            </div>
+          </>
         )}
-        <Rail project={p} can={can} />
+        <div className="md:col-span-2 xl:col-span-1">
+          <Rail project={p} can={can} />
+        </div>
       </div>
 
       {dialog === 'edit' && <EditProjectDialog project={p} onClose={() => setDialog(null)} />}

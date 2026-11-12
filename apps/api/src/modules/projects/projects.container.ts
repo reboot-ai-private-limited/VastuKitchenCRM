@@ -96,6 +96,14 @@ export function buildProjectsContainer(deps: ProjectsDeps): ProjectsContainer {
   return {
     contract: {
       createFromWonLead: (event) => fromWonLead.execute(event),
+      getCustomerProjects: async (ids) =>
+        (await projects.findByCustomerIds(ids)).map((p) => ({
+          id: p.id,
+          name: p.name,
+          customerId: p.customerId,
+          stage: p.stage,
+          createdAt: p.createdAt,
+        })),
       countByStage: () => insights.countByStage(),
       feedActivitySummary: (from, to) => insights.feedActivityByUser(from, to),
       recentCustomerActivity: (limit) => insights.recentCustomerActivity(limit),

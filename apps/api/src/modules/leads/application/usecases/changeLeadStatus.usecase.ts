@@ -11,8 +11,10 @@ import type { LeadView, LeadViewBuilder } from '../services/leadViews.js';
 
 /**
  * Any status can move to any other. Every change is logged and resets `statusChangedAt`.
- * Won: finds-or-creates the CUSTOMER account, stores it on the lead, and announces `lead.won` —
- * once per lead, so moving a Won lead away and back never creates a second project.
+ * Won: finds-or-creates the CUSTOMER account, stores it on the lead, and announces `lead.won`. The
+ * first win makes the project. Later wins make another only when the lead was deliberately started
+ * again for a new project (`newProjectRequested`), so moving a Won lead away and back never makes a
+ * second project by accident.
  */
 export class ChangeLeadStatusUseCase {
   constructor(
@@ -44,11 +46,17 @@ export class ChangeLeadStatusUseCase {
     };
 
     let announce = false;
+    let again = false;
     if (input.status === 'WON' && lead.customerId === null) {
       const customer = await this.directory.ensureCustomer({ name: lead.name, phone: lead.phone });
       patch.customerId = customer.id;
       announce = true;
+    } else if (input.status === 'WON' && lead.newProjectRequested) {
+      announce = true;
+      again = true;
     }
+    // Won consumes the request: the next project needs a new "start again".
+    if (input.status === 'WON') patch.newProjectRequested = false;
 
     const updated = await this.leads.update(id, patch);
     if (!updated) throw AppError.notFound('Lead not found.');
@@ -73,6 +81,7 @@ export class ChangeLeadStatusUseCase {
         name: updated.name,
         phone: updated.phone,
         byUserId: actor.id,
+        ...(again ? { again: true } : {}),
       });
     }
 

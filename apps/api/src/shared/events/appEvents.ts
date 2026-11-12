@@ -16,6 +16,8 @@ export interface LeadWonEvent {
   phone: string;
   /** Who marked it won. */
   byUserId: string;
+  /** True when an existing customer's lead was started again: this win makes ANOTHER project. */
+  again?: boolean;
 }
 
 export interface ProposalSeenEvent {

@@ -11,6 +11,8 @@ export interface ProjectRepositoryPort {
   ): Promise<{ project: Project; created: boolean }>;
   findById(id: string): Promise<Project | null>;
   findByIds(ids: string[]): Promise<Project[]>;
+  /** Every project of these customers, newest first (the Customers list and page). */
+  findByCustomerIds(customerIds: string[]): Promise<Project[]>;
   update(id: string, patch: ProjectPatch): Promise<Project | null>;
   list(filter: ProjectListFilter): Promise<{ items: Project[]; total: number }>;
 }

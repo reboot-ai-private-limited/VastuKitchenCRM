@@ -80,8 +80,9 @@ export class CreateProjectUseCase {
 }
 
 /**
- * Reacts to `lead.won` (wired at the composition root). IDEMPOTENT: one project per won lead, so
- * a replayed event creates nothing. A repeat customer's later project is made manually instead.
+ * Reacts to `lead.won` (wired at the composition root). The first win is IDEMPOTENT: one project per
+ * won lead, so a replayed event creates nothing. When an existing customer's lead was started again
+ * (`again`), its win makes one more project for the same customer and lead.
  */
 export class CreateProjectFromWonLeadUseCase {
   constructor(
@@ -97,6 +98,7 @@ export class CreateProjectFromWonLeadUseCase {
     customerId: string;
     name: string;
     byUserId: string;
+    again?: boolean;
   }): Promise<void> {
     // The Admin can switch automatic creation off (Settings). Then someone makes the project by hand.
     if (!(await this.settings.autoCreateOnWon())) {
@@ -104,6 +106,30 @@ export class CreateProjectFromWonLeadUseCase {
         { leadId: event.leadId, name: event.name },
         event.byUserId,
       );
+      return;
+    }
+    if (event.again) {
+      const earlier = await this.projects.findByCustomerIds([event.customerId]);
+      const project = await this.projects.create({
+        name: `${event.name}'s project (${earlier.length + 1})`,
+        customerId: event.customerId,
+        leadId: event.leadId,
+        wonLeadId: null,
+        siteAddress: null,
+        value: await this.proposals.latestSentTotal(event.leadId),
+        stage: 'DESIGN',
+        designStage: 'NOT_STARTED',
+        designerId: null,
+        memberIds: [],
+        createdById: event.byUserId,
+        closedAt: null,
+      });
+      await this.leads.recordEvent(event.leadId, {
+        type: 'PROJECT_CREATED',
+        projectName: project.name,
+        byUserId: event.byUserId,
+      });
+      await this.alerts.projectCreated(project);
       return;
     }
     const { project, created } = await this.projects.createFromWonLead({

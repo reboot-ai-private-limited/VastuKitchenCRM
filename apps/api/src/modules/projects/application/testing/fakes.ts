@@ -60,6 +60,9 @@ export class FakeProjects implements ProjectRepositoryPort {
   async findByIds(ids: string[]) {
     return this.rows.filter((p) => ids.includes(p.id));
   }
+  async findByCustomerIds(ids: string[]) {
+    return this.rows.filter((p) => ids.includes(p.customerId)).reverse();
+  }
   async update(id: string, patch: ProjectPatch) {
     const p = this.rows.find((x) => x.id === id);
     if (!p) return null;

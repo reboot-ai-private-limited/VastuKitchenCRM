@@ -14,6 +14,7 @@ export function registerSubscribers({ events, notifications, projects }: AppCont
       customerId: e.customerId,
       name: e.name,
       byUserId: e.byUserId,
+      ...(e.again ? { again: true } : {}),
     });
   });
 

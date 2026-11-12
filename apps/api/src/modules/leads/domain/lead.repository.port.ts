@@ -18,6 +18,8 @@ export interface LeadRepositoryPort {
   /** Throws `AppError.conflict` if a changed phone is already used. */
   update(id: string, patch: LeadPatch): Promise<Lead | null>;
   findByIds(ids: string[]): Promise<Lead[]>;
+  /** The lead behind a customer account (one per customer: the phone is unique). */
+  findByCustomerId(customerId: string): Promise<Lead | null>;
   /**
    * Open leads (not Won/Lost) whose status last changed in `(after, before)` and that are not in
    * `excludeStatuses`. Oldest first, at most `limit`. Bounded on both sides so reminder runs stay small.

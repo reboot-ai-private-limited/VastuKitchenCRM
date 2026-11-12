@@ -55,6 +55,13 @@ export class MongoProjectRepository implements ProjectRepositoryPort {
     return doc ? toEntity(doc) : null;
   }
 
+  async findByCustomerIds(customerIds: string[]): Promise<Project[]> {
+    const valid = customerIds.filter((id) => isValidObjectId(id));
+    return (await ProjectModel.find({ customerId: { $in: valid } }).sort({ createdAt: -1 })).map(
+      toEntity,
+    );
+  }
+
   async findByIds(ids: string[]): Promise<Project[]> {
     const valid = ids.filter((id) => isValidObjectId(id));
     return (await ProjectModel.find({ _id: { $in: valid } })).map(toEntity);

@@ -34,6 +34,9 @@ export class FakeLeads implements LeadRepositoryPort {
   async findByIds(ids: string[]) {
     return this.rows.filter((l) => ids.includes(l.id));
   }
+  async findByCustomerId(customerId: string) {
+    return this.rows.find((l) => l.customerId === customerId) ?? null;
+  }
   async findStuck(q: StuckQuery) {
     return this.rows
       .filter(
@@ -46,7 +49,12 @@ export class FakeLeads implements LeadRepositoryPort {
   }
   async create(lead: NewLead) {
     if (this.rows.some((l) => l.phone === lead.phone)) throw AppError.conflict('dup');
-    const created: Lead = { ...lead, id: `l${++this.seq}`, createdAt: new Date() };
+    const created: Lead = {
+      ...lead,
+      newProjectRequested: lead.newProjectRequested ?? false,
+      id: `l${++this.seq}`,
+      createdAt: new Date(),
+    };
     this.rows.push(created);
     return created;
   }
@@ -60,7 +68,9 @@ export class FakeLeads implements LeadRepositoryPort {
   async list(filter: LeadListFilter) {
     this.lastFilter = filter;
     const items = this.rows.filter(
-      (l) => filter.assignedToId === undefined || l.assignedToId === filter.assignedToId,
+      (l) =>
+        (filter.assignedToId === undefined || l.assignedToId === filter.assignedToId) &&
+        (!filter.customersOnly || l.customerId !== null),
     );
     return { items, total: items.length };
   }

@@ -20,6 +20,14 @@ export interface CustomerFeedItem {
   hasPhotos: boolean;
 }
 
+export interface CustomerProjectSummary {
+  id: string;
+  name: string;
+  customerId: string;
+  stage: ProjectStage;
+  createdAt: Date;
+}
+
 export interface ProjectsPublicContract {
   /** Read-only, for the dashboard: how many projects are in each stage. */
   countByStage(): Promise<Record<ProjectStage, number>>;
@@ -36,7 +44,11 @@ export interface ProjectsPublicContract {
     customerId: string;
     name: string;
     byUserId: string;
+    /** An existing customer's lead started again: make one MORE project (not idempotent per lead). */
+    again?: boolean;
   }): Promise<void>;
+  /** Every project of these customers, newest first: for the Customers list and page. */
+  getCustomerProjects(customerIds: string[]): Promise<CustomerProjectSummary[]>;
 
   /** Admin or member (never the customer): the project's name and members, or NOT FOUND. */
   getMembership(

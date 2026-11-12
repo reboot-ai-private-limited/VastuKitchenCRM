@@ -12,6 +12,12 @@ import {
   RecordCallUseCase,
 } from './application/usecases/calls.usecase.js';
 import { CreateLeadUseCase } from './application/usecases/createLead.usecase.js';
+import {
+  AddCustomerLeadUseCase,
+  FindCustomerLeadUseCase,
+  ListCustomerLeadsUseCase,
+  StartNewProjectUseCase,
+} from './application/usecases/customerLeads.usecase.js';
 import { GetLeadUseCase } from './application/usecases/getLead.usecase.js';
 import { ImportLeadsUseCase } from './application/usecases/importLeads.usecase.js';
 import {
@@ -106,6 +112,10 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
   const getLeadForProposal = new GetLeadForProposalUseCase(access);
   const recordProposalSent = new RecordProposalSentUseCase(access, leads, activities);
   const recordProposalSeen = new RecordProposalSeenUseCase(activities);
+  const listCustomerLeads = new ListCustomerLeadsUseCase(leads);
+  const findCustomerLead = new FindCustomerLeadUseCase(leads);
+  const addCustomerLead = new AddCustomerLeadUseCase(leads, activities);
+  const startNewProject = new StartNewProjectUseCase(leads, activities);
 
   return {
     contract: {
@@ -124,6 +134,10 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
       recordProposalSeen: (leadId, info) => recordProposalSeen.execute(leadId, info),
       recordProjectEvent: (leadId, event) => recordProjectEvent.execute(leadId, event),
       getLeadJourney: (actor, leadId) => getLeadJourney.execute(actor, leadId),
+      listCustomerLeads: (actor, query) => listCustomerLeads.execute(actor, query),
+      findCustomerLead: (actor, customerId) => findCustomerLead.execute(actor, customerId),
+      addCustomerLead: (actor, input) => addCustomerLead.execute(actor, input),
+      startNewProject: (actor, customerId) => startNewProject.execute(actor, customerId),
     },
     buildRouter: () =>
       buildLeadsRouter({

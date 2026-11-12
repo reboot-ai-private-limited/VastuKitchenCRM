@@ -14,6 +14,7 @@ export interface LeadDoc {
   assignedToId: Types.ObjectId | null;
   lostReason: string | null;
   customerId: Types.ObjectId | null;
+  newProjectRequested: boolean;
   createdById: Types.ObjectId | null;
   createdAt: Date;
 }
@@ -32,6 +33,7 @@ const schema = new Schema<LeadDoc>(
     assignedToId: { type: Schema.Types.ObjectId, default: null },
     lostReason: { type: String, default: null },
     customerId: { type: Schema.Types.ObjectId, default: null },
+    newProjectRequested: { type: Boolean, default: false },
     createdById: { type: Schema.Types.ObjectId, default: null },
   },
   { timestamps: true },
@@ -39,6 +41,7 @@ const schema = new Schema<LeadDoc>(
 schema.index({ assignedToId: 1, status: 1 });
 schema.index({ status: 1, statusChangedAt: 1 });
 schema.index({ createdAt: -1 });
+schema.index({ customerId: 1 });
 
 export const LeadModel: Model<LeadDoc> =
   (mongoose.models['Lead'] as Model<LeadDoc>) ?? mongoose.model<LeadDoc>('Lead', schema);

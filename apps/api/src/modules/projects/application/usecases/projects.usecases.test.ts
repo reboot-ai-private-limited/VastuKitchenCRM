@@ -94,6 +94,23 @@ describe('creating a project when a lead is won', () => {
   });
 });
 
+describe('an existing customer started again', () => {
+  it('makes one more project for the same customer and lead, numbered, and tells the lead', async () => {
+    const { w, fromWon } = setup();
+    await fromWon.execute(won);
+    await fromWon.execute({ ...won, again: true });
+    expect(w.projects.rows).toHaveLength(2);
+    expect(w.projects.rows[1]).toMatchObject({
+      name: "Mrs Rao's project (2)",
+      customerId: 'cust1',
+      leadId: 'lead1',
+      wonLeadId: null,
+    });
+    expect(w.leads.events.map((e) => e.type)).toEqual(['PROJECT_CREATED', 'PROJECT_CREATED']);
+    expect(w.sender.ofType('PROJECT_CREATED')).toHaveLength(2);
+  });
+});
+
 describe('the "create automatically" setting', () => {
   it('creates nothing when switched off, and alerts every Admin instead — once per lead', async () => {
     const { w, fromWon } = setup();

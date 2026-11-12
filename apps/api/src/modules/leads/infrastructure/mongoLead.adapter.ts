@@ -23,6 +23,7 @@ function toEntity(doc: HydratedDocument<LeadDoc>): Lead {
     assignedToId: idOrNull(doc.assignedToId),
     lostReason: doc.lostReason,
     customerId: idOrNull(doc.customerId),
+    newProjectRequested: doc.newProjectRequested ?? false,
     createdById: idOrNull(doc.createdById),
     createdAt: doc.createdAt,
   };
@@ -49,6 +50,12 @@ export class MongoLeadRepository implements LeadRepositoryPort {
   async findByIds(ids: string[]): Promise<Lead[]> {
     const valid = ids.filter((id) => isValidObjectId(id));
     return (await LeadModel.find({ _id: { $in: valid } })).map(toEntity);
+  }
+
+  async findByCustomerId(customerId: string): Promise<Lead | null> {
+    if (!isValidObjectId(customerId)) return null;
+    const doc = await LeadModel.findOne({ customerId });
+    return doc ? toEntity(doc) : null;
   }
 
   async findStuck(q: StuckQuery): Promise<Lead[]> {
@@ -85,6 +92,7 @@ export class MongoLeadRepository implements LeadRepositoryPort {
     const query: Record<string, unknown> = {};
     if (filter.status) query['status'] = filter.status;
     if (filter.source) query['source'] = filter.source;
+    if (filter.customersOnly) query['customerId'] = { $ne: null };
 
     if (filter.assignedToId !== undefined) {
       // An id that is not even a valid ObjectId can match nothing.
@@ -111,7 +119,7 @@ export class MongoLeadRepository implements LeadRepositoryPort {
 
     const [docs, total] = await Promise.all([
       LeadModel.find(query)
-        .sort({ createdAt: -1 })
+        .sort(filter.customersOnly ? { statusChangedAt: -1 } : { createdAt: -1 })
         .skip((filter.page - 1) * filter.pageSize)
         .limit(filter.pageSize),
       LeadModel.countDocuments(query),

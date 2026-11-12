@@ -1,4 +1,7 @@
 import type { LeadStatus, RoleName } from '@vastu/contracts';
+import type { CustomerLead } from './application/usecases/customerLeads.usecase.js';
+
+export type { CustomerLead } from './application/usecases/customerLeads.usecase.js';
 
 export interface LeadState {
   id: string;
@@ -94,4 +97,19 @@ export interface LeadsPublicContract {
   ): Promise<void>;
   /** The lead's story, oldest first, if `actor` may access the lead; otherwise NOT FOUND. */
   getLeadJourney(actor: LeadActor, leadId: string): Promise<LeadJourneyEntry[]>;
+
+  /** The Customers list: leads that have an account, within what `actor` may see. */
+  listCustomerLeads(
+    actor: LeadActor,
+    query: { search?: string; page: number; pageSize: number },
+  ): Promise<{ items: CustomerLead[]; total: number }>;
+  /** The lead behind a customer account, or NOT FOUND when `actor` may not see it. */
+  findCustomerLead(actor: LeadActor, customerId: string): Promise<CustomerLead>;
+  /** A customer added by hand or imported: creates or links their lead (see AddCustomerLeadUseCase). */
+  addCustomerLead(
+    actor: LeadActor,
+    input: { name: string; phone: string; city: string | null; customerId: string },
+  ): Promise<{ lead: CustomerLead; created: boolean }>;
+  /** Puts an existing customer's lead back into the pipeline for a new project. */
+  startNewProject(actor: LeadActor, customerId: string): Promise<CustomerLead>;
 }

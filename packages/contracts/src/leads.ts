@@ -11,6 +11,7 @@ export const LEAD_SOURCES = [
   'JUSTDIAL',
   'WALK_IN',
   'REFERRAL',
+  'EXISTING_CUSTOMER',
   'OTHER',
 ] as const;
 export const leadSourceSchema = z.enum(LEAD_SOURCES);

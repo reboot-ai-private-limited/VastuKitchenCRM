@@ -2,7 +2,7 @@
 
 import type { ImageDto, ProjectDto, TodoCommentDto, TodoDto } from '@vastu/contracts';
 import { MAX_TODO_IMAGES } from '@vastu/contracts';
-import { Check, Trash2, X } from 'lucide-react';
+import { Check, ChevronUp, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ErrorState } from '@/components/common/error-state';
@@ -20,13 +20,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useImageUploader } from '@/hooks/use-image-uploader';
@@ -56,15 +49,18 @@ const asInput = (i: ImageDto) => ({
   ...(i.height ? { height: i.height } : {}),
 });
 
-/** The to-do's side panel: edit, discuss, complete. Open by passing a `todoId`; closing clears it. */
-export function TodoDrawer({
+/**
+ * A to-do opened in place: edit, discuss, complete. Rendered by the list where the row was, so there is
+ * no side panel and no page change. `onClose` collapses it (and is also called after a delete).
+ */
+export function TodoDetail({
   todoId,
   projectId,
   members,
   onClose,
   initial,
 }: {
-  todoId: string | null;
+  todoId: string;
   projectId: string;
   members: Member[];
   onClose: () => void;
@@ -72,34 +68,17 @@ export function TodoDrawer({
 }) {
   const q = useTodo(todoId);
   const todo = q.data ?? (initial && initial.id === todoId ? initial : undefined);
+  if (q.isError && !todo) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
+  if (!todo)
+    return (
+      <div className="space-y-3 p-4" aria-hidden>
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  // Keyed by id so another to-do never inherits this one's half-typed form.
   return (
-    <Sheet open={todoId !== null} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle className="pr-6">{todo?.title ?? 'To-do'}</SheetTitle>
-          <SheetDescription className="sr-only">
-            Details and discussion for this to-do
-          </SheetDescription>
-        </SheetHeader>
-        {q.isError && !todo ? (
-          <ErrorState error={q.error} onRetry={() => q.refetch()} />
-        ) : !todo ? (
-          <div className="space-y-3 px-4" aria-hidden>
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        ) : (
-          // Keyed by id so another to-do never inherits this one's half-typed form.
-          <Body
-            key={todo.id}
-            todo={todo}
-            projectId={projectId}
-            members={members}
-            onClose={onClose}
-          />
-        )}
-      </SheetContent>
-    </Sheet>
+    <Body key={todo.id} todo={todo} projectId={projectId} members={members} onClose={onClose} />
   );
 }
 
@@ -165,7 +144,7 @@ function Body({
   }
 
   return (
-    <div className="space-y-6 px-4 pb-6">
+    <div className="space-y-6 p-4">
       <div className="flex items-start gap-3">
         <button
           type="button"
@@ -205,6 +184,15 @@ function Body({
             </p>
           )}
         </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Collapse"
+          className="text-muted-foreground"
+          onClick={onClose}
+        >
+          <ChevronUp />
+        </Button>
         {todo.canDelete && (
           <Button
             variant="ghost"

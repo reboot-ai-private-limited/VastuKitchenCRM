@@ -195,15 +195,19 @@ export function ComplaintsView() {
                   c.id === openId ? (
                     <li key={c.id} className="sm:col-span-2 xl:col-span-3">
                       <div className="bg-card shadow-card rounded-xl border">
-                        <ComplaintPanel
-                          id={c.id}
-                          onCollapse={() => setOpenId(null)}
-                          {...(canOpenProject ? { projectHref: complaintInProject(c) } : {})}
-                        />
+                        <ComplaintPanel id={c.id} onCollapse={() => setOpenId(null)} />
                       </div>
                     </li>
                   ) : (
-                    <ComplaintTile key={c.id} complaint={c} onOpen={() => setOpenId(c.id)} />
+                    <ComplaintTile
+                      key={c.id}
+                      complaint={c}
+                      // Into the project, at this complaint, with a way back here. A technician who
+                      // may not open the project reads it in place instead.
+                      onOpen={() =>
+                        canOpenProject ? router.push(complaintInProject(c)) : setOpenId(c.id)
+                      }
+                    />
                   ),
                 )}
               </ul>

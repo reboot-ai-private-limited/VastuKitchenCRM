@@ -29,6 +29,12 @@ export interface ProposalDoc {
   firstSeenAt: Date | null;
   lastSeenAt: Date | null;
   seenCount: number;
+  whatsappSends?: Array<{
+    to: string;
+    at: Date;
+    byId: Types.ObjectId | null;
+    messageId: string | null;
+  }>;
   createdById: Types.ObjectId;
   createdAt: Date;
 }
@@ -77,6 +83,20 @@ const schema = new Schema<ProposalDoc>(
     firstSeenAt: { type: Date, default: null },
     lastSeenAt: { type: Date, default: null },
     seenCount: { type: Number, default: 0 },
+    whatsappSends: {
+      type: [
+        new Schema(
+          {
+            to: { type: String, required: true },
+            at: { type: Date, required: true },
+            byId: { type: Schema.Types.ObjectId, default: null },
+            messageId: { type: String, default: null },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     createdById: { type: Schema.Types.ObjectId, required: true, index: true },
   },
   { timestamps: true },

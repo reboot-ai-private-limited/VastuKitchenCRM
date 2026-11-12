@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/lib/api/client';
 import { useLead } from '@/lib/api/leads';
+import { formatPhone } from '@/lib/leads';
 import { useDuplicateProposal, useProposal } from '@/lib/api/proposals';
 import { formatDate, formatTime, relativeAge } from '@/lib/format';
 import { ProposalBuilder } from './proposal-builder';
@@ -172,6 +173,21 @@ function SentView({ proposal: p, onShare }: { proposal: ProposalDto; onShare: ()
           <p className="text-muted-foreground text-xs">
             Opening this page yourself never counts as a view.
           </p>
+          {p.whatsappSends.length > 0 && (
+            <div className="space-y-1 border-t pt-2">
+              <h3 className="flex items-center gap-2 text-xs font-semibold">
+                <MessageCircle className="size-3.5" aria-hidden /> Sent on WhatsApp
+              </h3>
+              <ul className="text-muted-foreground space-y-0.5 text-xs">
+                {[...p.whatsappSends].reverse().map((w) => (
+                  <li key={`${w.to}-${w.at}`}>
+                    +91 {formatPhone(w.to)} · {relativeAge(w.at)}
+                    {w.by ? ` · ${w.by.name}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </aside>
       </div>
     </PageBody>

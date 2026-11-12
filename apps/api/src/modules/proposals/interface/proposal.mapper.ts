@@ -8,6 +8,7 @@ export function toProposalDto({
   proposal: p,
   createdByName,
   publicUrl,
+  userNames,
 }: ProposalView): ProposalDto {
   return {
     id: p.id,
@@ -30,6 +31,11 @@ export function toProposalDto({
     firstSeenAt: iso(p.firstSeenAt),
     lastSeenAt: iso(p.lastSeenAt),
     seenCount: p.seenCount,
+    whatsappSends: p.whatsappSends.map((w) => ({
+      to: w.to,
+      at: w.at.toISOString(),
+      by: w.byId ? { id: w.byId, name: userNames.get(w.byId) ?? 'Someone' } : null,
+    })),
     createdBy: createdByName ? { id: p.createdById, name: createdByName } : null,
     createdAt: p.createdAt.toISOString(),
   };

@@ -4,9 +4,10 @@ import { CreateProposalUseCase } from './createProposal.usecase.js';
 import { DuplicateProposalUseCase } from './duplicateProposal.usecase.js';
 import { GetPublicProposalUseCase, RecordProposalSeenUseCase } from './publicProposal.usecase.js';
 import { GetProposalUseCase, ListProposalsUseCase } from './queries.usecase.js';
+import { SendProposalWhatsappUseCase } from './sendProposalWhatsapp.usecase.js';
 import { SendProposalUseCase } from './sendProposal.usecase.js';
 import { DeleteProposalUseCase, UpdateProposalUseCase } from './updateProposal.usecase.js';
-import { admin, item, sales1, sales2, world } from '../testing/fakes.js';
+import { FakeMessenger, admin, item, sales1, sales2, world } from '../testing/fakes.js';
 
 const NOW = new Date('2026-11-10T10:00:00Z');
 
@@ -327,5 +328,96 @@ describe('ListProposalsUseCase', () => {
       list.execute(sales2, { page: 1, pageSize: 20, leadId: 'lead1' }),
     ).rejects.toMatchObject({ statusCode: 404 });
     expect((await list.execute(admin, { page: 1, pageSize: 20 })).total).toBe(2);
+  });
+});
+
+describe('sending on WhatsApp', () => {
+  function withMessenger() {
+    const base = setup();
+    const messenger = new FakeMessenger();
+    const sendWhatsapp = new SendProposalWhatsappUseCase(
+      base.send,
+      base.w.proposals,
+      messenger,
+      base.w.settings,
+      base.w.views,
+      base.w.now,
+    );
+    return { ...base, messenger, sendWhatsapp };
+  }
+
+  it("freezes a draft, sends the template to the lead's number, and records the send", async () => {
+    const { w, create, messenger, sendWhatsapp } = withMessenger();
+    const p = await create.execute(sales1, body());
+    const r = await sendWhatsapp.execute(sales1, p.id, {});
+    expect(r.delivery).toBe('sent');
+    expect(r.sentTo).toBe(w.proposals.rows[0]!.customer.phone);
+    expect(w.proposals.rows[0]?.status).toBe('SENT');
+    expect(messenger.sent).toHaveLength(1);
+    expect(messenger.sent[0]).toMatchObject({
+      to: r.sentTo,
+      firstName: 'Mrs',
+      number: p.number,
+      token: p.token,
+    });
+    expect(w.proposals.rows[0]?.whatsappSends).toMatchObject([
+      { to: r.sentTo, byId: 'sales1', messageId: 'msg1' },
+    ]);
+  });
+
+  it("sends to another number when asked, and leaves the lead and the proposal's own number alone", async () => {
+    const { w, create, messenger, sendWhatsapp } = withMessenger();
+    const p = await create.execute(sales1, body());
+    const own = w.proposals.rows[0]!.customer.phone;
+    const r = await sendWhatsapp.execute(sales1, p.id, { phone: '9811100077' });
+    expect(r.sentTo).toBe('9811100077');
+    expect(messenger.sent[0]?.to).toBe('9811100077');
+    expect(w.proposals.rows[0]?.customer.phone).toBe(own);
+    expect(w.gateway.leads[0]?.phone).toBe('9876500001');
+  });
+
+  it('passes a request id on as the idempotency key, so a double click sends once', async () => {
+    const { create, messenger, sendWhatsapp } = withMessenger();
+    const p = await create.execute(sales1, body());
+    await sendWhatsapp.execute(sales1, p.id, { requestId: 'click-12345' });
+    expect(messenger.sent[0]?.idempotencyKey).toBe(`proposal-${p.id}-click-12345`);
+  });
+
+  it('can be sent again later (a resend), adding to the record', async () => {
+    const { w, create, sendWhatsapp } = withMessenger();
+    const p = await create.execute(sales1, body());
+    await sendWhatsapp.execute(sales1, p.id, {});
+    await sendWhatsapp.execute(sales1, p.id, { phone: '9811100077' });
+    expect(w.proposals.rows[0]?.whatsappSends.map((s) => s.to)).toHaveLength(2);
+  });
+
+  it('when WhatsApp is not set up, still freezes and says to use the manual link', async () => {
+    const { w, create, messenger, sendWhatsapp } = withMessenger();
+    messenger.configured = false;
+    const p = await create.execute(sales1, body());
+    const r = await sendWhatsapp.execute(sales1, p.id, {});
+    expect(r.delivery).toBe('not_configured');
+    expect(r.whatsappUrl).toContain('wa.me');
+    expect(w.proposals.rows[0]?.status).toBe('SENT');
+    expect(messenger.sent).toHaveLength(0);
+  });
+
+  it('when WhatsApp fails, the proposal stays frozen and nothing is recorded as sent', async () => {
+    const { w, create, messenger, sendWhatsapp } = withMessenger();
+    messenger.fail = true;
+    const p = await create.execute(sales1, body());
+    await expect(sendWhatsapp.execute(sales1, p.id, {})).rejects.toMatchObject({
+      statusCode: 503,
+    });
+    expect(w.proposals.rows[0]?.status).toBe('SENT');
+    expect(w.proposals.rows[0]?.whatsappSends).toHaveLength(0);
+  });
+
+  it("a Sales person cannot send another person's lead's proposal", async () => {
+    const { create, sendWhatsapp } = withMessenger();
+    const p = await create.execute(sales1, body());
+    await expect(sendWhatsapp.execute(sales2, p.id, {})).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 });

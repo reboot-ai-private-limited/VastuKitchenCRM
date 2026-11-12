@@ -3,6 +3,7 @@ import type {
   PaginatedDto,
   ProposalDto,
   SendProposalResponseDto,
+  SendProposalWhatsappResponseDto,
   ListProposalsQueryDto,
 } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
@@ -20,6 +21,7 @@ import type {
   RecordProposalSeenUseCase,
 } from '../application/usecases/publicProposal.usecase.js';
 import type { SendProposalUseCase } from '../application/usecases/sendProposal.usecase.js';
+import type { SendProposalWhatsappUseCase } from '../application/usecases/sendProposalWhatsapp.usecase.js';
 import type {
   DeleteProposalUseCase,
   UpdateProposalUseCase,
@@ -104,6 +106,25 @@ export function makeSendController(useCase: SendProposalUseCase): RequestHandler
       whatsappUrl: result.whatsappUrl,
     };
     sendSuccess(req, res, data, 'Proposal ready to send.');
+  });
+}
+
+export function makeSendWhatsappController(useCase: SendProposalWhatsappUseCase): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    const result = await useCase.execute(actorOf(req), idOf(req), req.body);
+    const data: SendProposalWhatsappResponseDto = {
+      proposal: toProposalDto(result.view),
+      publicUrl: result.publicUrl,
+      whatsappUrl: result.whatsappUrl,
+      sentTo: result.sentTo,
+      delivery: result.delivery,
+    };
+    sendSuccess(
+      req,
+      res,
+      data,
+      result.delivery === 'sent' ? 'Sent on WhatsApp.' : 'Ready to share (WhatsApp is not set up).',
+    );
   });
 }
 

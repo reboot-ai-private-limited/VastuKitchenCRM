@@ -8,6 +8,8 @@ export interface ProposalView {
   proposal: Proposal;
   createdByName: string | null;
   publicUrl: string | null;
+  /** Names of the people on it (creator, WhatsApp senders), by user id. */
+  userNames: ReadonlyMap<string, string>;
 }
 
 /** Builds the public link and the prefilled WhatsApp message. No I/O, so trivially testable. */
@@ -50,13 +52,21 @@ export class ProposalViewBuilder {
   ) {}
 
   async build(proposals: Proposal[]): Promise<ProposalView[]> {
-    const ids = [...new Set(proposals.map((p) => p.createdById))];
+    const ids = [
+      ...new Set(
+        proposals.flatMap((p) => [
+          p.createdById,
+          ...p.whatsappSends.flatMap((w) => (w.byId ? [w.byId] : [])),
+        ]),
+      ),
+    ];
     const names = new Map((await this.directory.find(ids)).map((u) => [u.id, u.name]));
     return proposals.map((proposal) => ({
       proposal,
       createdByName: names.get(proposal.createdById) ?? null,
       // The link exists only once the proposal has been sent.
       publicUrl: proposal.status === 'SENT' ? this.links.publicUrl(proposal.token) : null,
+      userNames: names,
     }));
   }
 }

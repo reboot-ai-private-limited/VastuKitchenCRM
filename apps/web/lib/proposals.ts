@@ -171,5 +171,13 @@ function zodErrors(issues: Array<{ path: Array<string | number>; message: string
   return out;
 }
 
+/**
+ * The approved `proposal_share` template, as the customer reads it (the proposal link arrives as the
+ * button under it). Keep in step with the template in WA AGENT: changing the wording there means a
+ * new approval.
+ */
+export const proposalMessagePreview = (firstName: string, number: string): string =>
+  `Hello ${firstName}, your proposal ${number} from [your company] is ready to view. Tap the button below to open it.`;
+
 export const SEND_MESSAGE_FROZEN =
   'This freezes the proposal. To change prices you will duplicate it.';

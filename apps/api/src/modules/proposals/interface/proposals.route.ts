@@ -10,6 +10,8 @@ import {
   proposalTokenParamsSchema,
   publicProposalSchema,
   sendProposalResponseSchema,
+  sendProposalWhatsappBodySchema,
+  sendProposalWhatsappResponseSchema,
   updateProposalBodySchema,
 } from '@vastu/contracts';
 import { optionalAuthenticate } from '@/shared/http/optionalAuthenticate.middleware.js';
@@ -101,6 +103,26 @@ openApiRegistry.registerPath({
   responses: { 200: okResponse('Links to share', sendProposalResponseSchema), 404: notFound },
 });
 
+openApiRegistry.registerPath({
+  method: 'post',
+  path: '/api/proposals/{id}/send-whatsapp',
+  tags: TAG,
+  security,
+  summary:
+    'Send the proposal to the customer as a WhatsApp message (and freeze it if it is a draft)',
+  description:
+    "Sends the approved `proposal_share` template with the customer's link. `phone` defaults to the lead's number; a different number only changes where this message goes. If WhatsApp sending is not set up, the proposal is still frozen and `delivery` is `not_configured`: use `whatsappUrl` instead.",
+  request: {
+    params: proposalIdParamsSchema,
+    body: { content: { 'application/json': { schema: sendProposalWhatsappBodySchema } } },
+  },
+  responses: {
+    200: okResponse('Sent, or ready to share', sendProposalWhatsappResponseSchema),
+    404: notFound,
+    503: errorResponse('WhatsApp could not send it (the proposal stays frozen)'),
+  },
+});
+
 const tokenParams = { params: proposalTokenParamsSchema };
 openApiRegistry.registerPath({
   method: 'get',
@@ -133,6 +155,7 @@ export interface ProposalsControllers {
   remove: RequestHandler;
   duplicate: RequestHandler;
   send: RequestHandler;
+  sendWhatsapp: RequestHandler;
 }
 
 export function buildProposalsRouter(c: ProposalsControllers): Router {
@@ -150,6 +173,11 @@ export function buildProposalsRouter(c: ProposalsControllers): Router {
   router.delete('/:id', id, c.remove);
   router.post('/:id/duplicate', id, c.duplicate);
   router.post('/:id/send', id, c.send);
+  router.post(
+    '/:id/send-whatsapp',
+    validate({ params: proposalIdParamsSchema, body: sendProposalWhatsappBodySchema }),
+    c.sendWhatsapp,
+  );
   return router;
 }
 

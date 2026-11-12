@@ -21,6 +21,12 @@ import {
 } from './application/usecases/queries.usecase.js';
 import { ProposalReminderQueriesUseCase } from './application/usecases/reminderQueries.usecase.js';
 import { SendProposalUseCase } from './application/usecases/sendProposal.usecase.js';
+import { SendProposalWhatsappUseCase } from './application/usecases/sendProposalWhatsapp.usecase.js';
+import {
+  UnconfiguredProposalMessenger,
+  WaAgentProposalMessenger,
+} from './infrastructure/waAgentProposalMessenger.adapter.js';
+import { WaAgentClient } from '@/shared/whatsapp/waAgentClient.js';
 import {
   DeleteProposalUseCase,
   UpdateProposalUseCase,
@@ -52,6 +58,7 @@ import {
   makePublicGetController,
   makePublicSeenController,
   makeSendController,
+  makeSendWhatsappController,
   makeUpdateController,
 } from './interface/proposals.controller.js';
 import { makeTemplateControllers } from './interface/templates.controller.js';
@@ -99,13 +106,43 @@ export function buildProposalsContainer({
   const views = new ProposalViewBuilder(directory, links);
   const templates = new TemplateResolver(templateStore);
 
-  const create = new CreateProposalUseCase(proposals, gateway, numbers, tokens, proposalSettings, templates);
+  const create = new CreateProposalUseCase(
+    proposals,
+    gateway,
+    numbers,
+    tokens,
+    proposalSettings,
+    templates,
+  );
   const update = new UpdateProposalUseCase(access, proposals, templates);
   const remove = new DeleteProposalUseCase(access, proposals);
   const get = new GetProposalUseCase(access, views);
   const list = new ListProposalsUseCase(proposals, gateway, views);
   const duplicate = new DuplicateProposalUseCase(access, proposals, gateway, numbers, tokens);
   const send = new SendProposalUseCase(access, proposals, gateway, links, views, proposalSettings);
+  const proposalTemplate = env.WA_AGENT_PROPOSAL_TEMPLATE_ID
+    ? { id: env.WA_AGENT_PROPOSAL_TEMPLATE_ID }
+    : env.WA_AGENT_PROPOSAL_TEMPLATE
+      ? { name: env.WA_AGENT_PROPOSAL_TEMPLATE, language: env.WA_AGENT_PROPOSAL_LANGUAGE }
+      : null;
+  const messenger =
+    env.WA_AGENT_API_KEY && env.WA_AGENT_PHONE_NUMBER_ID && proposalTemplate
+      ? new WaAgentProposalMessenger(
+          new WaAgentClient({
+            apiKey: env.WA_AGENT_API_KEY,
+            phoneNumberId: env.WA_AGENT_PHONE_NUMBER_ID,
+            baseUrl: env.WA_AGENT_BASE_URL,
+          }),
+          proposalTemplate,
+        )
+      : new UnconfiguredProposalMessenger();
+  const sendWhatsapp = new SendProposalWhatsappUseCase(
+    send,
+    proposals,
+    messenger,
+    proposalSettings,
+    views,
+  );
   const reminderQueries = new ProposalReminderQueriesUseCase(proposals);
   const getPublic = new GetPublicProposalUseCase(proposals, directory, proposalSettings);
   const recordSeen = new RecordProposalSeenUseCase(proposals, gateway, proposalEvents);
@@ -139,6 +176,7 @@ export function buildProposalsContainer({
         remove: makeDeleteController(remove),
         duplicate: makeDuplicateController(duplicate, views),
         send: makeSendController(send),
+        sendWhatsapp: makeSendWhatsappController(sendWhatsapp),
       }),
     buildTemplatesRouter: () => buildTemplatesRouter(templateControllers),
     buildPublicRouter: () =>

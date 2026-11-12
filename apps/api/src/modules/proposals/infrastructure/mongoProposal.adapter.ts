@@ -1,9 +1,10 @@
-import { isValidObjectId, type HydratedDocument } from 'mongoose';
+import { Types, isValidObjectId, type HydratedDocument } from 'mongoose';
 import {
   templateOrDefault,
   type NewProposal,
   type Proposal,
   type ProposalPatch,
+  type WhatsappSend,
 } from '../domain/proposal.entity.js';
 import type {
   ProposalListFilter,
@@ -42,6 +43,12 @@ function toEntity(doc: HydratedDocument<ProposalDoc>): Proposal {
     token: doc.token,
     sentAt: doc.sentAt,
     sentById: doc.sentById ? doc.sentById.toString() : null,
+    whatsappSends: (doc.whatsappSends ?? []).map((w) => ({
+      to: w.to,
+      at: w.at,
+      byId: w.byId ? w.byId.toString() : null,
+      messageId: w.messageId,
+    })),
     firstSeenAt: doc.firstSeenAt,
     lastSeenAt: doc.lastSeenAt,
     seenCount: doc.seenCount,
@@ -88,6 +95,25 @@ export class MongoProposalRepository implements ProposalRepositoryPort {
     const doc = await ProposalModel.findOneAndUpdate(
       { _id: id, status: 'DRAFT' },
       { $set: { status: 'SENT', sentAt, sentById } },
+      { new: true },
+    );
+    return doc ? toEntity(doc) : null;
+  }
+
+  async recordWhatsappSend(id: string, send: WhatsappSend): Promise<Proposal | null> {
+    if (!isValidObjectId(id)) return null;
+    const doc = await ProposalModel.findByIdAndUpdate(
+      id,
+      {
+        $push: {
+          whatsappSends: {
+            to: send.to,
+            at: send.at,
+            byId: send.byId ? new Types.ObjectId(send.byId) : null,
+            messageId: send.messageId,
+          },
+        },
+      },
       { new: true },
     );
     return doc ? toEntity(doc) : null;

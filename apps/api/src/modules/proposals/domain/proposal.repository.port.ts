@@ -1,4 +1,4 @@
-import type { NewProposal, Proposal, ProposalPatch } from './proposal.entity.js';
+import type { NewProposal, Proposal, ProposalPatch, WhatsappSend } from './proposal.entity.js';
 import type { ProposalStatus } from '@vastu/contracts';
 
 export interface ReminderWindow {
@@ -25,6 +25,8 @@ export interface ProposalRepositoryPort {
   deleteDraft(id: string): Promise<boolean>;
   /** DRAFT → SENT, atomically. Null when missing or already sent. */
   markSent(id: string, sentAt: Date, sentById: string): Promise<Proposal | null>;
+  /** Appends a WhatsApp send record to a SENT proposal. Null when it does not exist. */
+  recordWhatsappSend(id: string, send: WhatsappSend): Promise<Proposal | null>;
   /**
    * Counts a view of a SENT proposal. `first` is true only for the very first view, even when
    * several browsers open it at once. Null when the token is unknown or the proposal is a draft.

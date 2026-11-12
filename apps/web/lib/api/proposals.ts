@@ -7,6 +7,8 @@ import type {
   ProposalDto,
   ProposalStatus,
   SendProposalResponseDto,
+  SendProposalWhatsappBodyDto,
+  SendProposalWhatsappResponseDto,
   UpdateProposalBodyDto,
 } from '@vastu/contracts';
 import { api } from './client';
@@ -70,6 +72,22 @@ export function useSendProposal(id: string) {
   return useMutation({
     mutationFn: () => api<SendProposalResponseDto>(`/proposals/${id}/send`, { method: 'POST' }),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Sends the template message (and freezes a draft). Invalidates on failure too: the server freezes the
+ * draft before it tries WhatsApp, so a failed send still changed the proposal.
+ */
+export function useSendProposalWhatsapp(id: string) {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: SendProposalWhatsappBodyDto) =>
+      api<SendProposalWhatsappResponseDto>(`/proposals/${id}/send-whatsapp`, {
+        method: 'POST',
+        body,
+      }),
+    onSettled: invalidate,
   });
 }
 

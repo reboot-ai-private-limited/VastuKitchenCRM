@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { phoneSchema } from './identity.js';
 import { paginatedSchema } from './pagination.js';
 import { proposalTemplateSchema } from './proposalTemplates.js';
 
@@ -111,6 +112,14 @@ export const proposalSchema = z.object({
   firstSeenAt: z.string().nullable(),
   lastSeenAt: z.string().nullable(),
   seenCount: z.number().int(),
+  /** Each time it was sent as a WhatsApp message from here (newest last). */
+  whatsappSends: z.array(
+    z.object({
+      to: z.string(),
+      at: z.string(),
+      by: z.object({ id: z.string(), name: z.string() }).nullable(),
+    }),
+  ),
   createdBy: z.object({ id: z.string(), name: z.string() }).nullable(),
   createdAt: z.string(),
 });
@@ -126,6 +135,22 @@ export const sendProposalResponseSchema = z.object({
   whatsappUrl: z.string(),
 });
 export type SendProposalResponseDto = z.infer<typeof sendProposalResponseSchema>;
+
+/** Send as a WhatsApp template message. `phone` defaults to the lead's number and never changes it. */
+export const sendProposalWhatsappBodySchema = z.object({
+  phone: phoneSchema.optional(),
+  /** One per confirm click: a double click or a retry sends once. */
+  requestId: z.string().min(8).max(64).optional(),
+});
+export type SendProposalWhatsappBodyDto = z.infer<typeof sendProposalWhatsappBodySchema>;
+
+export const sendProposalWhatsappResponseSchema = sendProposalResponseSchema.extend({
+  /** The 10-digit number the message went to. */
+  sentTo: z.string(),
+  /** `sent`: WhatsApp accepted it. `not_configured`: sending from here is not set up, so use `whatsappUrl`. */
+  delivery: z.enum(['sent', 'not_configured']),
+});
+export type SendProposalWhatsappResponseDto = z.infer<typeof sendProposalWhatsappResponseSchema>;
 
 /** What the customer's page shows. Deliberately small: nothing internal. */
 export const publicProposalSchema = z.object({

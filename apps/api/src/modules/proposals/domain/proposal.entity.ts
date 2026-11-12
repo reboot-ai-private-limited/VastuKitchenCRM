@@ -24,6 +24,15 @@ export interface CustomerSnapshot {
   siteAddress: string | null;
 }
 
+export interface WhatsappSend {
+  /** The 10-digit number it went to. May differ from the lead's: editing it never changes the lead. */
+  to: string;
+  at: Date;
+  byId: string | null;
+  /** WA AGENT's id for the message, to look up delivery later. */
+  messageId: string | null;
+}
+
 export interface Proposal {
   id: string;
   /** `VK-2026-0001`. */
@@ -49,11 +58,15 @@ export interface Proposal {
   firstSeenAt: Date | null;
   lastSeenAt: Date | null;
   seenCount: number;
+  /** Every WhatsApp template message sent from here: where it went, when and who sent it. */
+  whatsappSends: WhatsappSend[];
   createdById: string;
   createdAt: Date;
 }
 
-export type NewProposal = Omit<Proposal, 'id' | 'createdAt'>;
+export type NewProposal = Omit<Proposal, 'id' | 'createdAt' | 'whatsappSends'> & {
+  whatsappSends?: WhatsappSend[];
+};
 
 export type ProposalPatch = Partial<
   Pick<

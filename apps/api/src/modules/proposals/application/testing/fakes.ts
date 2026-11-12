@@ -8,7 +8,13 @@ import type {
   ProposalTemplateStorePort,
 } from '../../domain/proposalTemplate.store.port.js';
 import { TemplateResolver } from '../services/templateResolver.js';
-import type { NewProposal, Proposal, ProposalPatch } from '../../domain/proposal.entity.js';
+import type {
+  NewProposal,
+  Proposal,
+  ProposalPatch,
+  WhatsappSend,
+} from '../../domain/proposal.entity.js';
+import type { ProposalMessengerPort } from '../../domain/proposalMessenger.port.js';
 import type { ProposalEventsPort } from '../../domain/proposalEvents.port.js';
 import type {
   ProposalListFilter,
@@ -27,7 +33,12 @@ export class FakeProposals implements ProposalRepositoryPort {
   lastFilter: ProposalListFilter | undefined;
   private seq = 0;
   async create(p: NewProposal) {
-    const created: Proposal = { ...p, id: `p${++this.seq}`, createdAt: new Date() };
+    const created: Proposal = {
+      ...p,
+      whatsappSends: p.whatsappSends ?? [],
+      id: `p${++this.seq}`,
+      createdAt: new Date(),
+    };
     this.rows.push(created);
     return created;
   }
@@ -53,6 +64,12 @@ export class FakeProposals implements ProposalRepositoryPort {
     const p = this.rows.find((x) => x.id === id && x.status === 'DRAFT');
     if (!p) return null;
     Object.assign(p, { status: 'SENT', sentAt, sentById });
+    return p;
+  }
+  async recordWhatsappSend(id: string, send: WhatsappSend) {
+    const p = this.rows.find((x) => x.id === id);
+    if (!p) return null;
+    p.whatsappSends.push(send);
     return p;
   }
   async recordSeen(token: string, at: Date) {
@@ -249,3 +266,22 @@ export const item = (over = {}) => ({
   unitPrice: 450_000,
   ...over,
 });
+
+/** Records what would be sent as a WhatsApp message; can be switched off or made to fail. */
+export class FakeMessenger implements ProposalMessengerPort {
+  configured = true;
+  fail = false;
+  sent: Array<{
+    to: string;
+    firstName: string;
+    number: string;
+    companyName: string;
+    token: string;
+    idempotencyKey?: string;
+  }> = [];
+  async sendLink(input: (typeof this.sent)[number]) {
+    if (this.fail) throw AppError.unavailable('WhatsApp could not send the message.');
+    this.sent.push(input);
+    return { messageId: `msg${this.sent.length}` };
+  }
+}

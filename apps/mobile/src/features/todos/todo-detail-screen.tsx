@@ -20,7 +20,8 @@ import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { formatDate, timeAgo } from '@/lib/format';
-import { useAddTodoComment, useTodoComments, useTodoDetail, useToggleTodo } from './use-todos';
+import { PendingSyncBadge } from '@/offline';
+import { useAddTodoComment, useTodoComments, usePendingTodoDone, useTodoDetail, useToggleTodo } from './use-todos';
 
 export function TodoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,7 +34,8 @@ export function TodoDetailScreen() {
   const [draft, setDraft] = useState('');
 
   const todo = q.data;
-  const isDone = !!todo?.completed;
+  const pendingDone = usePendingTodoDone(id);
+  const isDone = pendingDone ?? !!todo?.completed;
 
   const submitComment = () => {
     const trimmed = draft.trim();
@@ -67,12 +69,13 @@ export function TodoDetailScreen() {
             <Text variant="title">{todo.title}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
               {isDone ? (
-                <Badge label={`Completed by ${todo.completed!.by.name}`} t="success" />
+                <Badge label={todo.completed ? `Completed by ${todo.completed.by.name}` : 'Completed'} t="success" />
               ) : todo.isOverdue ? (
                 <Badge label="Overdue" t="danger" />
               ) : (
                 <Badge label="Open" t="info" />
               )}
+              {pendingDone !== null ? <PendingSyncBadge filter={(i) => i.entityKey === `todo:${id}`} /> : null}
               {todo.dueOn ? <Badge label={`Due ${formatDate(todo.dueOn)}`} t="neutral" /> : null}
             </View>
           </View>

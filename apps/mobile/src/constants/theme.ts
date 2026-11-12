@@ -32,7 +32,7 @@ export type Tone = keyof typeof tone;
 export const radius = { sm: 6, md: 8, lg: 10, xl: 14, '2xl': 18, '3xl': 22, full: 9999 } as const;
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 } as const;
 export const hit = 48;
-export const control = { sm: 36, md: 44, lg: 52 } as const;
+export const control = { sm: 48, md: 48, lg: 52 } as const;
 
 export const shadow = {
   card: {

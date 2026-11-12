@@ -25,3 +25,6 @@ export const getMe = (signal?: AbortSignal) =>
 
 export const changePassword = (body: ChangePasswordBodyDto) =>
   request<void>('POST', '/identity/auth/change-password', body);
+
+export const redeemInvite = (token: string) =>
+  request<LoginResponseDto>('POST', '/identity/auth/invite/redeem', { token }, { anonymous: true });

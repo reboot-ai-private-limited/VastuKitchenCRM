@@ -1,55 +1,13 @@
 import * as Haptics from 'expo-haptics';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { LocationDto } from '@vastu/contracts';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
-  checkInAttendance,
-  checkOutAttendance,
   getAttendanceBoard,
   getMyAttendanceMonth,
   getUserAttendanceMonth,
 } from '@/lib/api/endpoints/attendance';
-import { businessMonth } from '@/lib/format';
-
-type GeoGlobal = {
-  navigator?: {
-    geolocation?: {
-      getCurrentPosition: (
-        success: (pos: { coords: { latitude: number; longitude: number; accuracy?: number | null } }) => void,
-        error: () => void,
-        opts?: { enableHighAccuracy?: boolean; timeout?: number; maximumAge?: number },
-      ) => void;
-    };
-  };
-};
-
-async function tryGetLocation(): Promise<LocationDto | undefined> {
-  const geo = (globalThis as unknown as GeoGlobal).navigator?.geolocation;
-  if (!geo?.getCurrentPosition) return undefined;
-  return new Promise<LocationDto | undefined>((resolve) => {
-    const timer = setTimeout(() => resolve(undefined), 4_000);
-    try {
-      geo.getCurrentPosition(
-        (pos) => {
-          clearTimeout(timer);
-          const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-          resolve({
-            lat,
-            lng,
-            ...(typeof accuracy === 'number' && accuracy >= 0 ? { accuracy } : {}),
-          });
-        },
-        () => {
-          clearTimeout(timer);
-          resolve(undefined);
-        },
-        { enableHighAccuracy: true, timeout: 3_500, maximumAge: 30_000 },
-      );
-    } catch {
-      clearTimeout(timer);
-      resolve(undefined);
-    }
-  });
-}
+import { businessDate, businessMonth } from '@/lib/format';
+import { enqueueOutbox, usePendingOutbox, type AttendancePayload } from '@/offline';
+import { getLocationFix, LocationUnavailableError } from './use-location-fix';
 
 export const useMyAttendanceMonth = (month = businessMonth(), enabled = true) =>
   useQuery({
@@ -71,18 +29,36 @@ export const useAttendanceBoard = (date: string) =>
     queryFn: ({ signal }) => getAttendanceBoard(date, signal),
   });
 
+export type PunchInput = { kind: 'in' | 'out'; manual?: boolean };
+
+/**
+ * Check in / out: one GPS fix on tap, then the action goes through the offline outbox (sent now
+ * if online, otherwise when the connection returns). With no fix and `manual` unset it throws
+ * LocationUnavailableError so the card can offer "without location".
+ */
 export function usePunchAttendance() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (kind: 'in' | 'out') => {
-      const location = await tryGetLocation();
-      const body = location ? { location } : {};
-      return kind === 'in' ? checkInAttendance(body) : checkOutAttendance(body);
+    mutationFn: async ({ kind, manual }: PunchInput) => {
+      const fix = await getLocationFix();
+      if (!fix.ok && !manual) throw new LocationUnavailableError(fix.reason, fix.canAskAgain);
+      const payload: AttendancePayload = fix.ok ? { location: fix.location } : {};
+      return enqueueOutbox({
+        type: kind === 'in' ? 'attendance.checkin' : 'attendance.checkout',
+        entityKey: `attendance:${businessDate()}`,
+        payload,
+      });
     },
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      void qc.invalidateQueries({ queryKey: ['attendance'] });
-      void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
+}
+
+/** Unsent check-in / check-out, for the "Pending sync" view of the card. */
+export function usePendingPunches() {
+  const pending = usePendingOutbox((i) => i.type.startsWith('attendance.'));
+  return {
+    pendingIn: pending.find((i) => i.type === 'attendance.checkin') ?? null,
+    pendingOut: pending.find((i) => i.type === 'attendance.checkout') ?? null,
+  };
 }

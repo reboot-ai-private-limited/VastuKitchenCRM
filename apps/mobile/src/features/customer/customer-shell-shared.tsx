@@ -14,16 +14,30 @@ import { colors, radius, space } from '@/constants/theme';
 import { useUnreadCount } from '@/features/alerts/use-notifications';
 import { DESIGN_LABEL, STAGE_LABEL, STAGE_TONE } from '@/features/projects/project-meta';
 import { listProjects } from '@/lib/api/endpoints/projects';
-import { useSession } from '@/lib/auth/session';
+import { session, useSession } from '@/lib/auth/session';
 
+// The chosen project is remembered per signed-in user, so a different customer on the same phone never inherits it.
 let currentProjectId: string | null = null;
+let currentOwnerId: string | null = null;
 const listeners = new Set<() => void>();
 
+const selectedProjectId = () =>
+  currentOwnerId && currentOwnerId === session.getState().user?.id ? currentProjectId : null;
+
 function setSelectedProjectId(id: string) {
-  if (currentProjectId !== id) {
+  const owner = session.getState().user?.id ?? null;
+  if (currentProjectId !== id || currentOwnerId !== owner) {
     currentProjectId = id;
+    currentOwnerId = owner;
     listeners.forEach((l) => l());
   }
+}
+
+/** Forget the selected project. Call from sign-out (the selection is also ignored once the user changes). */
+export function resetCustomerShell() {
+  currentProjectId = null;
+  currentOwnerId = null;
+  listeners.forEach((l) => l());
 }
 
 function subscribe(l: () => void) {
@@ -34,8 +48,8 @@ function subscribe(l: () => void) {
 export function useActiveCustomerProject(overrideProjectId?: string) {
   const storedId = useSyncExternalStore(
     subscribe,
-    () => currentProjectId,
-    () => currentProjectId,
+    selectedProjectId,
+    selectedProjectId,
   );
 
   const q = useQuery({
@@ -95,7 +109,7 @@ export function CustomerHeader({
             <PressableScale
               onPress={() => setPickerOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel="Switch project"
+              accessibilityLabel={`Switch project, current ${project.name}`}
               style={styles.switcherBtn}
             >
               <Text variant="title" numberOfLines={1} style={{ flexShrink: 1 }}>
@@ -122,7 +136,13 @@ export function CustomerHeader({
           onPress={() => router.push('/notifications' as Href)}
         />
         {user ? (
-          <Avatar name={user.name} size={36} accent onPress={() => router.push('/profile' as Href)} />
+          <Avatar
+            name={user.name}
+            size={36}
+            accent
+            onPress={() => router.push('/profile' as Href)}
+            accessibilityLabel={`${user.name}, open profile`}
+          />
         ) : null}
       </View>
 
@@ -142,6 +162,8 @@ export function CustomerHeader({
                   onSelectProject(p.id);
                   setPickerOpen(false);
                 }}
+                accessibilityLabel={`${p.name}, ${STAGE_LABEL[p.stage]}`}
+                accessibilityState={{ selected: active }}
                 style={[
                   styles.projectItem,
                   active && {
@@ -180,6 +202,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[2],
     alignSelf: 'flex-start',
+    minHeight: 48,
   },
   switcherChevron: {
     width: 26,
@@ -193,6 +216,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
+    minHeight: 48,
     padding: space[3],
     borderRadius: radius.lg,
     borderWidth: 1,

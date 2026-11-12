@@ -1,10 +1,14 @@
 import type {
+  CallDto,
   ChangeLeadStatusBodyDto,
   CreateLeadBodyDto,
   LeadActivityDto,
   LeadDto,
   LeadStatus,
   PaginatedDto,
+  RecordCallBodyDto,
+  RecordVisitBodyDto,
+  VisitDto,
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
@@ -52,3 +56,15 @@ export const createLead = (body: CreateLeadBodyDto) =>
 
 export const changeLeadStatus = (id: string, body: ChangeLeadStatusBodyDto) =>
   request<LeadDto>('POST', `/leads/${encodeURIComponent(id)}/status`, body);
+
+export const recordCall = (id: string, body: RecordCallBodyDto) =>
+  request<CallDto>('POST', `/leads/${encodeURIComponent(id)}/calls`, body);
+
+export const listCalls = (id: string, signal?: AbortSignal) =>
+  request<CallDto[]>('GET', `/leads/${encodeURIComponent(id)}/calls`, undefined, { signal });
+
+export const recordVisit = (id: string, body: RecordVisitBodyDto) =>
+  request<VisitDto>('POST', `/leads/${encodeURIComponent(id)}/visits`, body);
+
+export const listVisits = (id: string, signal?: AbortSignal) =>
+  request<VisitDto[]>('GET', `/leads/${encodeURIComponent(id)}/visits`, undefined, { signal });

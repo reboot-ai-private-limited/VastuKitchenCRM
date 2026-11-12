@@ -1,5 +1,6 @@
 import { AppState, Platform } from 'react-native';
-import { focusManager, QueryClient } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
+import { focusManager, onlineManager, QueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/api/client';
 
 if (Platform.OS !== 'web') {
@@ -9,12 +10,19 @@ if (Platform.OS !== 'web') {
     });
     return () => sub.remove();
   });
+
+  onlineManager.setEventListener((setOnline) =>
+    NetInfo.addEventListener((s) => {
+      setOnline(s.isConnected !== false && s.isInternetReachable !== false);
+    }),
+  );
 }
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
+      refetchOnReconnect: true,
       // Reads only: 2 retries, never on 4xx. Writes are never auto-retried.
       retry: (count, err) => !(err instanceof ApiError && err.status < 500) && count < 2,
     },

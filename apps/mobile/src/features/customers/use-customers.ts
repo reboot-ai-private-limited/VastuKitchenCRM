@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AddCustomerBodyDto } from '@vastu/contracts';
 import {
   addCustomer,
@@ -14,6 +14,7 @@ export const useCustomersList = (search: string) =>
     queryKey: ['customers', 'list', { search }],
     queryFn: ({ pageParam, signal }) => listCustomers(pageParam, search || undefined, signal),
     initialPageParam: 1,
+    placeholderData: keepPreviousData,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {
       const seen = new Set<string>();

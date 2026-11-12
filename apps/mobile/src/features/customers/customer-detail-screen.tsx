@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Linking, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,9 +15,11 @@ import { Text } from '@/components/ui/text';
 import { colors, space } from '@/constants/theme';
 import { STATUS_LABEL, STATUS_TONE } from '@/features/leads/lead-meta';
 import { STAGE_LABEL, STAGE_TONE } from '@/features/projects/project-meta';
-import { ApiError } from '@/lib/api/client';
+import { RoleGate } from '@/components/ui/role-gate';
+import { ApiError, NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { formatDate, formatPhone, timeAgo } from '@/lib/format';
+import { normalizePhone, openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
 import {
   useCustomerDetail,
   useCustomerTimeline,
@@ -38,6 +40,14 @@ const ACTIVITY_LABEL: Record<LeadActivityDto['type'], string> = {
 };
 
 export function CustomerDetailScreen() {
+  return (
+    <RoleGate roles={['ADMIN', 'SALES', 'OFFICE']}>
+      <CustomerDetail />
+    </RoleGate>
+  );
+}
+
+function CustomerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -83,7 +93,7 @@ export function CustomerDetailScreen() {
       </View>
     );
   } else {
-    const digits = c.phone.replace(/\D/g, '').slice(-10);
+    const digits = normalizePhone(c.phone);
     body = (
       <>
         <Reveal>
@@ -100,7 +110,7 @@ export function CustomerDetailScreen() {
               <Button
                 title="Call"
                 size="lg"
-                onPress={() => void Linking.openURL(`tel:${digits}`)}
+                onPress={() => void openLink(telUrl(c.phone))}
                 fullWidth
               />
             </View>
@@ -109,7 +119,7 @@ export function CustomerDetailScreen() {
                 title="WhatsApp"
                 size="lg"
                 variant="outline"
-                onPress={() => void Linking.openURL(`https://wa.me/91${digits}`)}
+                onPress={() => void openLink(whatsappUrlFor(c.phone))}
                 fullWidth
               />
             </View>
@@ -142,6 +152,7 @@ export function CustomerDetailScreen() {
             ) : null}
             <PressableScale
               onPress={() => router.push({ pathname: '/leads/[id]', params: { id: c.leadId } } as Href)}
+              accessibilityLabel="Open linked lead record"
               style={styles.inlineLink}
             >
               <Text variant="caption" color={colors.primary}>
@@ -157,7 +168,7 @@ export function CustomerDetailScreen() {
             <Card style={{ gap: space[2] }}>
               <Text variant="label">Customer app access</Text>
               <Text variant="caption" muted>
-                Generate a one-time invite link or let the customer sign in with OTP on +91 {digits}.
+                Generate a one-time invite link or let the customer sign in with OTP on {digits ? `+91 ${digits}` : formatPhone(c.phone)}.
               </Text>
               <Button
                 title="Share invite link"
@@ -220,7 +231,16 @@ export function CustomerDetailScreen() {
           {timeline.isPending ? (
             <Skeleton height={80} />
           ) : timeline.isError ? (
-            <Text muted>Timeline unavailable for your role.</Text>
+            <View style={{ gap: space[2], alignItems: 'flex-start' }}>
+              <Text muted>
+                {timeline.error instanceof ApiError && timeline.error.status === 403
+                  ? 'Timeline unavailable for your role.'
+                  : timeline.error instanceof NetworkError
+                    ? 'Connection lost. Check your internet and try again.'
+                    : `Could not load the timeline: ${timeline.error.message}`}
+              </Text>
+              <Button title="Retry" variant="outline" size="sm" onPress={() => void timeline.refetch()} />
+            </View>
           ) : (timeline.data ?? []).length === 0 ? (
             <Text muted>No timeline events yet.</Text>
           ) : (
@@ -308,6 +328,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[1],
-    paddingTop: space[1],
+    minHeight: 48,
   },
 });

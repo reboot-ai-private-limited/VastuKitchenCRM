@@ -13,11 +13,25 @@ let state: State = { status: 'booting', user: null };
 let accessToken: string | null = null;
 let expiresAt = 0;
 let refreshToken: string | null = null;
+let expiredFlag = false;
 const listeners = new Set<() => void>();
 
 function emit(next: State) {
   state = next;
   listeners.forEach((l) => l());
+}
+
+/** Never cache pay data on the device. */
+function slim(user: UserDto): UserDto {
+  const { fixedSalary: _omit, ...rest } = user as UserDto & { fixedSalary?: number };
+  return rest as UserDto;
+}
+
+/** One-shot: true once after a forced logout (refresh token rejected). */
+export function consumeSessionExpired(): boolean {
+  const v = expiredFlag;
+  expiredFlag = false;
+  return v;
 }
 
 export const session = {
@@ -28,19 +42,24 @@ export const session = {
 
   /** Restore from SecureStore. Signed in immediately with the cached user (offline-first). */
   async restore() {
-    const [rt, rawUser] = await Promise.all([
-      SecureStore.getItemAsync(RT_KEY),
-      SecureStore.getItemAsync(USER_KEY),
-    ]);
-    if (!rt) return emit({ status: 'signedOut', user: null });
-    refreshToken = rt;
-    let user: UserDto | null = null;
     try {
-      user = rawUser ? (JSON.parse(rawUser) as UserDto) : null;
+      const [rt, rawUser] = await Promise.all([
+        SecureStore.getItemAsync(RT_KEY),
+        SecureStore.getItemAsync(USER_KEY),
+      ]);
+      if (!rt) return emit({ status: 'signedOut', user: null });
+      refreshToken = rt;
+      let user: UserDto | null = null;
+      try {
+        user = rawUser ? slim(JSON.parse(rawUser) as UserDto) : null;
+      } catch {
+        user = null;
+      }
+      emit(user ? { status: 'signedIn', user } : { status: 'signedOut', user: null });
     } catch {
-      user = null;
+      refreshToken = null;
+      emit({ status: 'signedOut', user: null });
     }
-    emit(user ? { status: 'signedIn', user } : { status: 'signedOut', user: null });
   },
 
   async set(res: LoginResponseDto) {
@@ -51,8 +70,9 @@ export const session = {
     }
     accessToken = res.accessToken;
     expiresAt = Date.now() + res.expiresIn * 1000;
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(res.user));
-    emit({ status: 'signedIn', user: res.user });
+    const user = slim(res.user);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+    emit({ status: 'signedIn', user });
   },
 
   async setTokens(t: { accessToken: string; refreshToken?: string; expiresIn: number }) {
@@ -66,16 +86,25 @@ export const session = {
 
   async updateUser(user: UserDto) {
     if (state.status !== 'signedIn') return;
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
-    emit({ status: 'signedIn', user });
+    const slimmed = slim(user);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(slimmed));
+    emit({ status: 'signedIn', user: slimmed });
+  },
+
+  /** Forced logout (refresh rejected): clear and remember to tell the user once. */
+  async expire() {
+    expiredFlag = true;
+    await session.clear();
   },
 
   async clear() {
     accessToken = null;
     refreshToken = null;
     expiresAt = 0;
-    await Promise.all([SecureStore.deleteItemAsync(RT_KEY), SecureStore.deleteItemAsync(USER_KEY)]);
     emit({ status: 'signedOut', user: null });
+    await Promise.all([SecureStore.deleteItemAsync(RT_KEY), SecureStore.deleteItemAsync(USER_KEY)]).catch(
+      () => undefined,
+    );
   },
 };
 

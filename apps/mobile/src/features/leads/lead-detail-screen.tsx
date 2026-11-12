@@ -15,6 +15,8 @@ import { colors, font, radius, space, tone } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { formatPhone } from '@/lib/format';
+import { useCallLogger } from './call-logger';
+import { VisitLog } from './visit-log';
 import { STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
 import { useChangeLeadStatus, useLeadDetail } from './use-leads';
 
@@ -24,6 +26,7 @@ export function LeadDetailScreen() {
   const { user } = useSession();
   const q = useLeadDetail(id);
   const change = useChangeLeadStatus(id);
+  const callLogger = useCallLogger(id, q.data?.phone ?? '');
   const lead = q.data;
 
   const [lostSheetOpen, setLostSheetOpen] = useState(false);
@@ -102,7 +105,7 @@ export function LeadDetailScreen() {
           <Reveal index={1}>
             <View style={{ flexDirection: 'row', gap: space[3] }}>
               <View style={{ flex: 1 }}>
-                <Button title="Call" size="lg" onPress={() => open(`tel:${lead.phone}`)} fullWidth />
+                <Button title="Call" size="lg" onPress={callLogger.startCall} fullWidth />
               </View>
               <View style={{ flex: 1 }}>
                 <Button
@@ -131,6 +134,12 @@ export function LeadDetailScreen() {
               ))}
           </Card>
         </Reveal>
+
+        {!isOffice && (user?.role === 'ADMIN' || user?.role === 'SALES') ? (
+          <Reveal index={3}>
+            <VisitLog leadId={id} canAdd />
+          </Reveal>
+        ) : null}
 
         {canChangeStatus ? (
           <Reveal index={3}>
@@ -187,6 +196,8 @@ export function LeadDetailScreen() {
       >
         {content}
       </ScrollView>
+
+      {callLogger.sheet}
 
       <BottomSheet
         visible={lostSheetOpen}

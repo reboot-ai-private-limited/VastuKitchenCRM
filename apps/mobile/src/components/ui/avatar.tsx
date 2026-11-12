@@ -40,6 +40,7 @@ export function Avatar({ name, size = 36, accent = false, onPress, accessibility
   return (
     <PressableScale
       onPress={onPress}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? `${name}, open profile`}
       hitSlop={Math.max(0, Math.ceil((hit - size) / 2))}
       style={styles.hit}

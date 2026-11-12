@@ -1,7 +1,8 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loginBodySchema, otpRequestBodySchema, otpVerifyBodySchema } from '@vastu/contracts';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,8 @@ import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { loginPassword, requestOtp, verifyOtp } from '@/lib/api/endpoints/auth';
-import { session } from '@/lib/auth/session';
+import { parseInviteToken } from '@/lib/auth/invite';
+import { consumeSessionExpired, session } from '@/lib/auth/session';
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -22,8 +24,30 @@ export function LoginScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [notice, setNotice] = useState<string | null>(() =>
+    consumeSessionExpired() ? 'Session expired, sign in again.' : null,
+  );
+  const [cooldown, setCooldown] = useState(0);
+  const [showInvite, setShowInvite] = useState(false);
+  const [invite, setInvite] = useState('');
 
-  const fail = (e: unknown) =>
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const openInvite = () => {
+    const token = parseInviteToken(invite);
+    if (!token) return setError('Paste the full invite link you received.');
+    setError(null);
+    router.push({ pathname: '/invite/[token]', params: { token } } as never);
+  };
+
+  const fail = (e: unknown) => {
+    if (e instanceof ApiError && e.status === 429) setCooldown((c) => Math.max(c, 30));
+    setNotice(null);
     setError(
       e instanceof NetworkError
         ? 'Connection lost. Check your internet and try again.'
@@ -31,15 +55,18 @@ export function LoginScreen() {
           ? e.message
           : 'Something went wrong',
     );
+  };
 
   const sendCode = async () => {
     const parsed = otpRequestBodySchema.safeParse({ phone });
     if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? 'Enter a valid phone number');
+    if (cooldown > 0) return;
     setBusy(true);
     setError(null);
     try {
       await requestOtp(parsed.data);
       setStep('code');
+      setCooldown(30);
     } catch (e) {
       fail(e);
     } finally {
@@ -154,7 +181,7 @@ export function LoginScreen() {
                 style={styles.input}
               />
             </View>
-            <Button title="Send code" onPress={sendCode} loading={busy} fullWidth size="lg" />
+            <Button title="Send code" onPress={sendCode} loading={busy} disabled={cooldown > 0} fullWidth size="lg" />
           </Animated.View>
         ) : (
           <Animated.View key="code" entering={FadeIn.duration(200)} style={{ gap: space[4] }}>
@@ -173,6 +200,13 @@ export function LoginScreen() {
             </View>
             <Button title="Verify and sign in" onPress={verify} loading={busy} fullWidth size="lg" />
             <Button
+              title={cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+              variant="outline"
+              onPress={sendCode}
+              disabled={cooldown > 0 || busy}
+              fullWidth
+            />
+            <Button
               title="Change number"
               variant="ghost"
               onPress={() => {
@@ -184,11 +218,39 @@ export function LoginScreen() {
             />
           </Animated.View>
         )}
+        {notice && !error ? (
+          <Text variant="caption" color={colors.mutedForeground}>
+            {notice}
+          </Text>
+        ) : null}
         {error ? (
           <Text variant="caption" color={colors.destructive}>
             {error}
           </Text>
         ) : null}
+      </View>
+
+      <View style={{ gap: space[3] }}>
+        {showInvite ? (
+          <>
+            <View style={styles.inputRow}>
+              <TextInput
+                value={invite}
+                onChangeText={setInvite}
+                placeholder="Paste your invite link"
+                placeholderTextColor={colors.placeholder}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={openInvite}
+                style={styles.input}
+              />
+            </View>
+            <Button title="Open invite" onPress={openInvite} fullWidth />
+          </>
+        ) : (
+          <Button title="I have an invite link" variant="ghost" onPress={() => setShowInvite(true)} fullWidth />
+        )}
       </View>
     </KeyboardAvoidingView>
   );

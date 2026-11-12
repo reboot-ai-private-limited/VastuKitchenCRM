@@ -12,7 +12,8 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, radius, space } from '@/constants/theme';
+import { Chip } from '@/components/ui/chip';
+import { colors, space } from '@/constants/theme';
 import { NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { timeAgo } from '@/lib/format';
@@ -25,6 +26,7 @@ export function ComplaintRow({ c }: { c: ComplaintDto }) {
     <Reveal>
       <PressableScale
         onPress={() => router.push({ pathname: '/complaints/[id]', params: { id: c.id } } as Href)}
+        accessibilityLabel={`${c.projectName}, ${STATUS_LABEL[c.status]}. ${c.description}`}
       >
         <Card style={{ gap: space[2] }}>
           <View style={styles.row}>
@@ -74,15 +76,7 @@ export function ComplaintsScreen() {
         {[undefined, ...STATUS_ORDER].map((s) => {
           const active = s === status;
           return (
-            <PressableScale
-              key={s ?? 'all'}
-              onPress={() => setStatus(s)}
-              style={[styles.chip, active && styles.chipActive]}
-            >
-              <Text variant="caption" color={active ? colors.primaryForeground : colors.mutedForeground}>
-                {s ? STATUS_LABEL[s] : 'All'}
-              </Text>
-            </PressableScale>
+            <Chip key={s ?? 'all'} label={s ? STATUS_LABEL[s] : 'All'} active={active} onPress={() => setStatus(s)} />
           );
         })}
       </ScrollView>
@@ -147,13 +141,4 @@ export function ComplaintsScreen() {
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  chip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: radius.full,
-    backgroundColor: colors.muted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { backgroundColor: colors.primary },
 });

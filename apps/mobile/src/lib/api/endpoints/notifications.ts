@@ -1,4 +1,10 @@
-import type { NotificationDto, PaginatedDto, UnreadCountDto } from '@vastu/contracts';
+import type {
+  DeviceDto,
+  NotificationDto,
+  PaginatedDto,
+  RegisterDeviceDto,
+  UnreadCountDto,
+} from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
 export const listNotifications = (page: number, signal?: AbortSignal) =>
@@ -11,3 +17,7 @@ export const getUnreadCount = (signal?: AbortSignal) =>
 
 export const markRead = (id: string) => request<unknown>('POST', `/notifications/${id}/read`);
 export const markAllRead = () => request<unknown>('POST', '/notifications/read-all');
+
+export const registerDevice = (body: RegisterDeviceDto) =>
+  request<DeviceDto>('POST', '/notifications/devices', body);
+export const removeDevice = (id: string) => request<unknown>('DELETE', `/notifications/devices/${id}`);

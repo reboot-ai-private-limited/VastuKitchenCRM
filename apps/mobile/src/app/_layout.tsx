@@ -16,11 +16,13 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { getMe } from '@/lib/api/endpoints/auth';
 import { session, useSession } from '@/lib/auth/session';
 import { queryClient } from '@/lib/query/client';
+import { useOutboxRunner } from '@/offline';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { status } = useSession();
+  useOutboxRunner();
   const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -62,6 +64,7 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
               <Stack.Protected guard={status === 'signedOut'}>
                 <Stack.Screen name="(auth)" />
+                <Stack.Screen name="invite/[token]" />
               </Stack.Protected>
               <Stack.Protected guard={status === 'signedIn'}>
                 <Stack.Screen name="(app)" />

@@ -1,6 +1,21 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ChangeLeadStatusBodyDto, CreateLeadBodyDto, LeadDto } from '@vastu/contracts';
-import { changeLeadStatus, createLead, getLead, listLeads } from '@/lib/api/endpoints/leads';
+import type {
+  ChangeLeadStatusBodyDto,
+  CreateLeadBodyDto,
+  LeadDto,
+  RecordCallBodyDto,
+  RecordVisitBodyDto,
+} from '@vastu/contracts';
+import {
+  changeLeadStatus,
+  createLead,
+  getLead,
+  listCalls,
+  listLeads,
+  listVisits,
+  recordCall,
+  recordVisit,
+} from '@/lib/api/endpoints/leads';
 
 export const useLeadsList = (search: string, status?: LeadDto['status']) =>
   useInfiniteQuery({
@@ -41,5 +56,34 @@ export function useChangeLeadStatus(id: string) {
       void qc.invalidateQueries({ queryKey: ['leads', 'today'] });
       void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
+  });
+}
+
+export const useLeadCalls = (id: string, enabled = true) =>
+  useQuery({ queryKey: ['leads', 'calls', id], queryFn: ({ signal }) => listCalls(id, signal), enabled });
+
+export const useLeadVisits = (id: string, enabled = true) =>
+  useQuery({ queryKey: ['leads', 'visits', id], queryFn: ({ signal }) => listVisits(id, signal), enabled });
+
+export function useRecordCall(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    // TODO(outbox): enqueue instead of calling the API directly (the API dedupes a retried call by startedAt).
+    mutationFn: (body: RecordCallBodyDto) => recordCall(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['leads', 'calls', id] });
+      void qc.invalidateQueries({ queryKey: ['leads', 'detail', id] });
+      void qc.invalidateQueries({ queryKey: ['leads', 'today'] });
+    },
+  });
+}
+
+export function useRecordVisit(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    // TODO(outbox): enqueue with the captured `at`. NOT idempotent: send once, never auto-retry.
+    mutationFn: (body: RecordVisitBodyDto) => recordVisit(id, body),
+    retry: false,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['leads', 'visits', id] }),
   });
 }

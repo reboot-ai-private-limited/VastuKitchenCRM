@@ -1,5 +1,5 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -10,16 +10,19 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { raiseComplaintBodySchema } from '@vastu/contracts';
+import { MAX_COMPLAINT_IMAGES, raiseComplaintBodySchema } from '@vastu/contracts';
 import { Button } from '@/components/ui/button';
+import { PhotoAttachBar } from '@/components/ui/photo-attach-bar';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space } from '@/constants/theme';
+import { colors, font, hit, radius, space } from '@/constants/theme';
 import { ApiError, NetworkError } from '@/lib/api/client';
+import { signRaiseUpload } from '@/lib/api/endpoints/complaints';
 import { listProjects } from '@/lib/api/endpoints/projects';
+import { useSignedAttachments } from './use-signed-attachments';
 import { useRaiseComplaint } from './use-complaints';
 
 export function RaiseComplaintScreen() {
@@ -41,10 +44,18 @@ export function RaiseComplaintScreen() {
   const effectiveProjectId =
     selectedProjectId || (projectsQ.data?.length === 1 ? projectsQ.data[0].id : '');
 
+  const sign = useCallback(() => signRaiseUpload(effectiveProjectId), [effectiveProjectId]);
+  const photos = useSignedAttachments(sign, MAX_COMPLAINT_IMAGES);
+
   const submit = () => {
+    if (photos.busy || !photos.uploadsDone) {
+      setError('Wait for the photos to finish uploading, or remove any that failed.');
+      return;
+    }
     const parsed = raiseComplaintBodySchema.safeParse({
       projectId: effectiveProjectId,
       description,
+      images: photos.images.length ? photos.images : undefined,
     });
     if (!parsed.success) {
       setError(
@@ -113,6 +124,8 @@ export function RaiseComplaintScreen() {
                     return (
                       <PressableScale
                         key={p.id}
+                        accessibilityLabel={`${p.name}, ${p.customer.name}`}
+                        accessibilityState={{ selected }}
                         onPress={() => setSelectedProjectId(p.id)}
                         style={[
                           styles.projectOption,
@@ -149,7 +162,22 @@ export function RaiseComplaintScreen() {
                   placeholder="Describe the fitting, hinge, finish or service issue..."
                   placeholderTextColor={colors.placeholder}
                   multiline
+                  accessibilityLabel="Describe the issue"
                   style={styles.textarea}
+                />
+              </View>
+              <View style={{ gap: space[1] }}>
+                <Text variant="caption" muted>
+                  Photos (optional)
+                </Text>
+                <PhotoAttachBar
+                  items={photos.items}
+                  problem={photos.problem}
+                  disabled={!effectiveProjectId}
+                  onCamera={() => void photos.takePhoto()}
+                  onGallery={() => void photos.pickFromGallery()}
+                  onRemove={photos.remove}
+                  onRetry={photos.retry}
                 />
               </View>
             </Card>
@@ -164,6 +192,7 @@ export function RaiseComplaintScreen() {
               title="Submit complaint"
               size="lg"
               loading={raise.isPending}
+              disabled={photos.busy}
               onPress={submit}
               fullWidth
             />
@@ -179,6 +208,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
+    minHeight: hit,
     padding: space[3],
     borderRadius: radius.lg,
     borderWidth: 1,

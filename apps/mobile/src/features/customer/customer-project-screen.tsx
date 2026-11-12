@@ -1,7 +1,6 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { type ComponentRef, useRef, useState } from 'react';
+import { type ComponentRef, useCallback, useRef, useState } from 'react';
 import {
-  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -9,7 +8,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -20,14 +18,18 @@ import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PhotoAttachBar } from '@/components/ui/photo-attach-bar';
+import { PhotoGrid } from '@/components/ui/photo-grid';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space, tone } from '@/constants/theme';
+import { colors, font, hit, radius, space, tone } from '@/constants/theme';
+import { useSignedAttachments } from '@/features/complaints/use-signed-attachments';
 import { NetworkError } from '@/lib/api/client';
-import { approvePost, createPost, listPosts } from '@/lib/api/endpoints/projects';
+import { approvePost, createComment, createPost, listPosts } from '@/lib/api/endpoints/projects';
+import { signProjectUpload } from '@/lib/api/upload';
 import { formatDate, timeAgo } from '@/lib/format';
 import { CustomerHeader, useActiveCustomerProject } from './customer-shell-shared';
 
@@ -74,10 +76,12 @@ function ClientPostCard({
   post,
   highlighted,
   onApprovePress,
+  projectId,
 }: {
   post: PostDto;
   highlighted: boolean;
   onApprovePress: (post: PostDto) => void;
+  projectId: string;
 }) {
   return (
     <Card
@@ -102,19 +106,7 @@ function ClientPostCard({
 
       {post.text ? <Text>{post.text}</Text> : null}
 
-      {post.images.length > 0 ? (
-        <View style={styles.photoGrid}>
-          {post.images.map((img) => (
-            <PressableScale
-              key={img.publicId}
-              onPress={() => void Linking.openURL(img.url)}
-              style={styles.photoCell}
-            >
-              <Image source={{ uri: img.thumbUrl }} style={styles.photo} contentFit="cover" />
-            </PressableScale>
-          ))}
-        </View>
-      ) : null}
+      <PhotoGrid images={post.images} label={`Photo from ${post.author.name}`} />
 
       {post.approval ? (
         <Text variant="caption" color={tone.accent.fg}>
@@ -145,7 +137,77 @@ function ClientPostCard({
           ))}
         </View>
       ) : null}
+      <ReplyBox projectId={projectId} postId={post.id} authorName={post.author.name} />
     </Card>
+  );
+}
+
+/** A customer's reply on one update: text and/or photos. */
+function ReplyBox({ projectId, postId, authorName }: { projectId: string; postId: string; authorName: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const sign = useCallback(() => signProjectUpload(projectId), [projectId]);
+  const photos = useSignedAttachments(sign, 5);
+  const reply = useMutation({
+    mutationFn: () =>
+      createComment(projectId, postId, {
+        ...(text.trim() ? { text: text.trim() } : {}),
+        ...(photos.images.length ? { images: photos.images } : {}),
+      }),
+    onSuccess: () => {
+      setText('');
+      photos.clear();
+      setOpen(false);
+      void qc.invalidateQueries({ queryKey: ['customer', 'posts', projectId] });
+    },
+  });
+  const canSend = !photos.busy && photos.uploadsDone && (text.trim().length > 0 || photos.images.length > 0);
+
+  if (!open) {
+    return (
+      <PressableScale
+        onPress={() => setOpen(true)}
+        accessibilityLabel={`Reply to ${authorName}`}
+        style={{ alignSelf: 'flex-start', minHeight: hit, justifyContent: 'center' }}
+      >
+        <Text variant="caption" color={colors.primary}>
+          Reply
+        </Text>
+      </PressableScale>
+    );
+  }
+  return (
+    <View style={{ gap: space[2] }}>
+      <TextInput
+        value={text}
+        onChangeText={setText}
+        placeholder="Write a reply..."
+        placeholderTextColor={colors.placeholder}
+        accessibilityLabel={`Reply to ${authorName}`}
+        multiline
+        style={styles.composerInput}
+      />
+      <PhotoAttachBar
+        items={photos.items}
+        problem={photos.problem}
+        onCamera={() => void photos.takePhoto()}
+        onGallery={() => void photos.pickFromGallery()}
+        onRemove={photos.remove}
+        onRetry={photos.retry}
+      />
+      {reply.isError ? (
+        <Text variant="caption" color={colors.destructive} accessibilityRole="alert">
+          {reply.error instanceof NetworkError
+            ? 'Connection lost. Check your internet and try again.'
+            : reply.error.message}
+        </Text>
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: space[2] }}>
+        <Button title="Send reply" size="sm" loading={reply.isPending} disabled={!canSend} onPress={() => reply.mutate()} />
+        <Button title="Cancel" size="sm" variant="ghost" onPress={() => setOpen(false)} />
+      </View>
+    </View>
   );
 }
 
@@ -180,16 +242,21 @@ export function CustomerProjectScreen() {
     },
   });
 
+  const projectIdForUpload = project?.id ?? '';
+  const sign = useCallback(() => signProjectUpload(projectIdForUpload), [projectIdForUpload]);
+  const photos = useSignedAttachments(sign, 5);
+
   const sendPost = useMutation({
     mutationFn: (text: string) =>
       createPost(project!.id, {
-        text,
+        ...(text ? { text } : {}),
         visibility: 'CLIENT',
         kind: 'UPDATE',
-        images: [],
+        images: photos.images,
       }),
     onSuccess: () => {
       setMessage('');
+      photos.clear();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       void qc.invalidateQueries({ queryKey: ['customer', 'posts', project?.id] });
     },
@@ -217,7 +284,8 @@ export function CustomerProjectScreen() {
 
   const handleSend = () => {
     const trimmed = message.trim();
-    if (!trimmed || !project || sendPost.isPending) return;
+    if ((!trimmed && photos.images.length === 0) || !project || sendPost.isPending) return;
+    if (photos.busy || !photos.uploadsDone) return;
     sendPost.mutate(trimmed);
   };
 
@@ -361,6 +429,7 @@ export function CustomerProjectScreen() {
                   <Reveal key={post.id} index={idx}>
                     <ClientPostCard
                       post={post}
+                      projectId={project.id}
                       highlighted={params.post === post.id}
                       onApprovePress={(p) => setConfirmPost(p)}
                     />
@@ -392,9 +461,26 @@ export function CustomerProjectScreen() {
             </Text>
           </View>
         ) : (
+          <View style={styles.composerWrap}>
+            {sendPost.isError ? (
+              <Text variant="caption" color={colors.destructive} accessibilityRole="alert">
+                {sendPost.error instanceof NetworkError
+                  ? 'Connection lost. Your message was not sent. Try again.'
+                  : sendPost.error.message}
+              </Text>
+            ) : null}
+            <PhotoAttachBar
+              items={photos.items}
+              problem={photos.problem}
+              onCamera={() => void photos.takePhoto()}
+              onGallery={() => void photos.pickFromGallery()}
+              onRemove={photos.remove}
+              onRetry={photos.retry}
+            />
           <View style={styles.composer}>
             <TextInput
               ref={inputRef}
+              accessibilityLabel="Message your Vastu Kitchen team"
               value={message}
               onChangeText={setMessage}
               placeholder="Message your Vastu Kitchen team..."
@@ -406,9 +492,10 @@ export function CustomerProjectScreen() {
               title="Send"
               size="sm"
               loading={sendPost.isPending}
-              disabled={!message.trim()}
+              disabled={photos.busy || (!message.trim() && photos.images.length === 0)}
               onPress={handleSend}
             />
+          </View>
           </View>
         )
       ) : null}
@@ -468,31 +555,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[2],
   },
-  photoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space[2],
-  },
-  photoCell: {
-    width: '48%',
-    aspectRatio: 1.25,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.muted,
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
   commentsBox: {
     gap: space[2],
     paddingTop: space[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  composerWrap: {
     gap: space[2],
     paddingHorizontal: space[4],
     paddingVertical: space[2],
@@ -500,9 +569,14 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.card,
   },
+  composer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+  },
   composerInput: {
     flex: 1,
-    minHeight: 42,
+    minHeight: hit,
     maxHeight: 96,
     paddingHorizontal: space[3],
     paddingVertical: space[2],

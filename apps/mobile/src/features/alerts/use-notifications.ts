@@ -13,7 +13,7 @@ export const useNotifications = () =>
     },
   });
 
-/** Polled every 30 s while the app is in the foreground (there is no push yet). */
+/** Polled every 30 s while the app is in the foreground (push also refreshes it when the app is open). */
 export const useUnreadCount = () =>
   useQuery({
     queryKey: ['notifications', 'unread'],

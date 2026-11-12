@@ -19,6 +19,7 @@ export * from './proposals.js';
 export * from './proposalTemplates.js';
 export * from './proposalTemplates.seed.js';
 export * from './notifications.js';
+export * from './devices.js';
 export * from './uploads.js';
 export * from './settings.js';
 export * from './projects.js';

@@ -1,7 +1,9 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ComplaintStatus, RaiseComplaintBodyDto } from '@vastu/contracts';
+import type { ComplaintStatus, ImageInputDto, RaiseComplaintBodyDto } from '@vastu/contracts';
 import {
   addComment,
+  assignComplaint,
+  deleteComplaintComment,
   closeComplaint,
   getComplaint,
   listComplaints,
@@ -43,12 +45,20 @@ export type ComplaintAction = 'comment' | 'resolve' | 'reopen' | 'close';
 export function useComplaintAction(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, text }: { action: ComplaintAction; text: string }) => {
+    mutationFn: ({
+      action,
+      text,
+      images,
+    }: {
+      action: ComplaintAction;
+      text: string;
+      images?: ImageInputDto[];
+    }) => {
       switch (action) {
         case 'comment':
-          return addComment(id, text);
+          return addComment(id, text, images);
         case 'resolve':
-          return resolveComplaint(id, text);
+          return resolveComplaint(id, text, images);
         case 'reopen':
           return reopenComplaint(id, text);
         case 'close':
@@ -57,5 +67,24 @@ export function useComplaintAction(id: string) {
     },
     // 409 means someone else just changed it: refetch either way.
     onSettled: () => void qc.invalidateQueries({ queryKey: ['complaints'] }),
+  });
+}
+
+export function useAssignComplaint(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assigneeId: string) => assignComplaint(id, assigneeId),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['complaints'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useDeleteComplaintComment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => deleteComplaintComment(id, commentId),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ['complaints', 'detail', id] }),
   });
 }

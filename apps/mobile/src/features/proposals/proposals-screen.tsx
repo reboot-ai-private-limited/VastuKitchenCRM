@@ -13,7 +13,9 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, radius, space, type Tone } from '@/constants/theme';
+import { Chip } from '@/components/ui/chip';
+import { RoleGate } from '@/components/ui/role-gate';
+import { colors, space, type Tone } from '@/constants/theme';
 import { NetworkError } from '@/lib/api/client';
 import { formatINR, timeAgo } from '@/lib/format';
 import { useProposalsList } from './use-proposals';
@@ -35,6 +37,7 @@ function ProposalRow({ proposal, index }: { proposal: ProposalDto; index: number
           router.push({ pathname: '/proposals/[id]', params: { id: proposal.id } } as Href)
         }
         scaleTo={0.98}
+        accessibilityLabel={`${proposal.customer.name}, ${proposal.number}, ${formatINR(proposal.total)}, ${badge.label}`}
       >
         <Card style={{ gap: space[2] }}>
           <View style={styles.row}>
@@ -62,6 +65,14 @@ function ProposalRow({ proposal, index }: { proposal: ProposalDto; index: number
 }
 
 export function ProposalsScreen() {
+  return (
+    <RoleGate roles={['ADMIN', 'SALES']}>
+      <ProposalsList />
+    </RoleGate>
+  );
+}
+
+function ProposalsList() {
   const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<ProposalStatus | undefined>();
   const q = useProposalsList(status);
@@ -73,15 +84,7 @@ export function ProposalsScreen() {
           const active = s === status;
           const label = s === 'SENT' ? 'Sent' : s === 'DRAFT' ? 'Drafts' : 'All';
           return (
-            <PressableScale
-              key={s ?? 'all'}
-              onPress={() => setStatus(s)}
-              style={[styles.chip, active && styles.chipActive]}
-            >
-              <Text variant="caption" color={active ? colors.primaryForeground : colors.mutedForeground}>
-                {label}
-              </Text>
-            </PressableScale>
+            <Chip key={s ?? 'all'} label={label} active={active} onPress={() => setStatus(s)} />
           );
         })}
       </ScrollView>
@@ -155,13 +158,4 @@ export function ProposalsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  chip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: radius.full,
-    backgroundColor: colors.muted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { backgroundColor: colors.primary },
 });

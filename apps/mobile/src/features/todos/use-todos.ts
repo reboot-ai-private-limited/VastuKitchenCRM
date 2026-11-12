@@ -2,12 +2,11 @@ import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addTodoComment,
-  completeTodo,
   getTodo,
   listMyTodos,
   listTodoComments,
-  reopenTodo,
 } from '@/lib/api/endpoints/todos';
+import { enqueueOutbox, usePendingOutbox, type TodoPayload } from '@/offline';
 
 export const useMyTodos = (status: 'open' | 'done' | 'all' = 'open') =>
   useQuery({
@@ -29,18 +28,29 @@ export const useTodoComments = (id: string) =>
     enabled: !!id,
   });
 
+/**
+ * Tick / untick goes through the offline outbox: it is applied locally at once (see
+ * usePendingTodoDone) and sent when online. The server call is an idempotent set-state.
+ */
 export function useToggleTodo() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) =>
-      done ? completeTodo(id) : reopenTodo(id),
-    onSuccess: (updated) => {
+      enqueueOutbox<TodoPayload>({
+        type: done ? 'todo.complete' : 'todo.reopen',
+        entityKey: `todo:${id}`,
+        payload: { todoId: id },
+      }),
+    onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      qc.setQueryData(['todos', 'detail', updated.id], updated);
-      void qc.invalidateQueries({ queryKey: ['todos'] });
-      void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
+}
+
+/** The not-yet-synced tick state of a to-do: true = done, false = reopened, null = nothing waiting. */
+export function usePendingTodoDone(id: string): boolean | null {
+  const pending = usePendingOutbox((i) => i.entityKey === `todo:${id}`);
+  const last = pending[pending.length - 1];
+  return last ? last.type === 'todo.complete' : null;
 }
 
 export function useAddTodoComment(todoId: string) {

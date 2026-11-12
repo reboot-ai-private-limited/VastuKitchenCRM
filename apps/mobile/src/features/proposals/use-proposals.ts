@@ -1,6 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProposalStatus } from '@vastu/contracts';
-import { getProposal, listProposals, sendProposal } from '@/lib/api/endpoints/proposals';
+import type { ProposalDto, ProposalStatus, SendProposalWhatsappBodyDto } from '@vastu/contracts';
+import {
+  duplicateProposal,
+  getProposal,
+  listProposals,
+  sendProposal,
+  sendProposalWhatsapp,
+} from '@/lib/api/endpoints/proposals';
 
 export const useProposalsList = (status?: ProposalStatus) =>
   useInfiniteQuery({
@@ -21,14 +27,39 @@ export const useProposalDetail = (id: string) =>
     enabled: !!id,
   });
 
-export function useSendProposal(id: string) {
+function useAfterSend(id: string) {
   const qc = useQueryClient();
+  return (proposal: ProposalDto) => {
+    qc.setQueryData(['proposals', 'detail', id], proposal);
+    void qc.invalidateQueries({ queryKey: ['proposals', 'list'] });
+    void qc.invalidateQueries({ queryKey: ['dashboard'] });
+  };
+}
+
+/** Marks a draft as sent (freezing it) and returns the share link. */
+export function useSendProposal(id: string) {
+  const after = useAfterSend(id);
   return useMutation({
     mutationFn: () => sendProposal(id),
-    onSuccess: (res) => {
-      qc.setQueryData(['proposals', 'detail', id], res.proposal);
+    onSuccess: (res) => after(res.proposal),
+  });
+}
+
+export function useSendProposalWhatsapp(id: string) {
+  const after = useAfterSend(id);
+  return useMutation({
+    mutationFn: (body: SendProposalWhatsappBodyDto) => sendProposalWhatsapp(id, body),
+    onSuccess: (res) => after(res.proposal),
+  });
+}
+
+export function useDuplicateProposal(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => duplicateProposal(id),
+    onSuccess: (copy) => {
+      qc.setQueryData(['proposals', 'detail', copy.id], copy);
       void qc.invalidateQueries({ queryKey: ['proposals', 'list'] });
-      void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

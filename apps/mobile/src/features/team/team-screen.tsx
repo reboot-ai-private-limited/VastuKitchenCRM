@@ -1,9 +1,8 @@
 import type React from 'react';
 import { useState } from 'react';
-import { FlatList, Linking, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
 import { STAFF_ROLES, type StaffRole, type UserDto } from '@vastu/contracts';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -11,19 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconButton } from '@/components/ui/icon-button';
-import { PressableScale } from '@/components/ui/pressable-scale';
+import { Chip } from '@/components/ui/chip';
+import { RoleGate } from '@/components/ui/role-gate';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { ROLE_LABEL } from '@/constants/roles';
-import { colors, font, radius, space } from '@/constants/theme';
+import { colors, font, hit, radius, space } from '@/constants/theme';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NetworkError } from '@/lib/api/client';
-import { listUsers } from '@/lib/api/endpoints/users';
 import { formatPhone } from '@/lib/format';
+import { openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
+import { useTeam } from './use-team';
 
 /** Read-only staff directory for Admin & HR. Never displays `fixedSalary` (00-principles-and-scope.md §5). */
 function StaffCard({ member }: { member: UserDto }) {
-  const digits = member.phone.replace(/\D/g, '').slice(-10);
   return (
     <Reveal>
       <Card style={styles.card}>
@@ -43,12 +44,12 @@ function StaffCard({ member }: { member: UserDto }) {
         <IconButton
           icon="phone"
           label={`Call ${member.name}`}
-          onPress={() => void Linking.openURL(`tel:${digits}`)}
+          onPress={() => void openLink(telUrl(member.phone))}
         />
         <IconButton
           icon="message-circle"
           label={`WhatsApp ${member.name}`}
-          onPress={() => void Linking.openURL(`https://wa.me/91${digits}`)}
+          onPress={() => void openLink(whatsappUrlFor(member.phone))}
         />
       </Card>
     </Reveal>
@@ -56,16 +57,20 @@ function StaffCard({ member }: { member: UserDto }) {
 }
 
 export function TeamScreen() {
+  return (
+    <RoleGate roles={['ADMIN', 'HR']}>
+      <TeamList />
+    </RoleGate>
+  );
+}
+
+function TeamList() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [role, setRole] = useState<StaffRole | undefined>();
 
-  const q = useQuery({
-    queryKey: ['users', 'team', { search: search.trim(), role }],
-    queryFn: ({ signal }) =>
-      listUsers({ page: 1, pageSize: 100, search: search.trim() || undefined, role, active: true }, signal),
-    select: (d) => d.items.filter((u) => u.role !== 'CUSTOMER'),
-  });
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const q = useTeam(debouncedSearch, role);
 
   const header = (
     <View style={{ gap: space[3], paddingBottom: space[2] }}>
@@ -78,6 +83,7 @@ export function TeamScreen() {
           placeholder="Search name or phone"
           placeholderTextColor={colors.placeholder}
           returnKeyType="search"
+          accessibilityLabel="Search team"
           style={styles.searchInput}
         />
       </View>
@@ -85,15 +91,7 @@ export function TeamScreen() {
         {[undefined, ...STAFF_ROLES].map((r) => {
           const active = r === role;
           return (
-            <PressableScale
-              key={r ?? 'all'}
-              onPress={() => setRole(r)}
-              style={[styles.chip, active && styles.chipActive]}
-            >
-              <Text variant="caption" color={active ? colors.primaryForeground : colors.mutedForeground}>
-                {r ? ROLE_LABEL[r] : 'All staff'}
-              </Text>
-            </PressableScale>
+            <Chip key={r ?? 'all'} label={r ? ROLE_LABEL[r] : 'All staff'} active={active} onPress={() => setRole(r)} />
           );
         })}
       </ScrollView>
@@ -141,10 +139,13 @@ export function TeamScreen() {
       renderItem={({ item }) => <StaffCard member={item} />}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
+      ListFooterComponent={q.isFetchingNextPage ? <Skeleton height={80} /> : undefined}
+      onEndReached={() => q.hasNextPage && !q.isFetchingNextPage && void q.fetchNextPage()}
+      onEndReachedThreshold={0.5}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl
-          refreshing={q.isRefetching}
+          refreshing={q.isRefetching && !q.isFetchingNextPage}
           onRefresh={() => void q.refetch()}
           tintColor={colors.primary}
         />
@@ -164,20 +165,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
-    height: 44,
+    height: hit,
     paddingHorizontal: space[3],
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.input,
   },
   searchInput: { flex: 1, fontFamily: font.regular, fontSize: 16, color: colors.foreground },
-  chip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: radius.full,
-    backgroundColor: colors.muted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { backgroundColor: colors.primary },
 });

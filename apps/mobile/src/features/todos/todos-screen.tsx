@@ -16,7 +16,7 @@ import { Text } from '@/components/ui/text';
 import { colors, hit, radius, space, type Tone } from '@/constants/theme';
 import { NetworkError } from '@/lib/api/client';
 import { formatDay } from '@/lib/format';
-import { useMyTodos, useToggleTodo } from './use-todos';
+import { useMyTodos, usePendingTodoDone, useToggleTodo } from './use-todos';
 
 const BUCKET_META: Record<TodoBucket, { label: string; tone: Tone }> = {
   OVERDUE: { label: 'Overdue', tone: 'danger' },
@@ -28,7 +28,8 @@ const BUCKET_META: Record<TodoBucket, { label: string; tone: Tone }> = {
 export function CompactTodoRow({ todo }: { todo: MyTodoDto }) {
   const router = useRouter();
   const toggle = useToggleTodo();
-  const isDone = todo.completed !== null;
+  const pendingDone = usePendingTodoDone(todo.id);
+  const isDone = pendingDone ?? todo.completed !== null;
 
   let dueBadge: { label: string; tone: Tone } | null = null;
   if (!isDone && todo.dueOn) {
@@ -45,7 +46,6 @@ export function CompactTodoRow({ todo }: { todo: MyTodoDto }) {
     <Card style={styles.todoCard}>
       <PressableScale
         onPress={() => toggle.mutate({ id: todo.id, done: !isDone })}
-        disabled={toggle.isPending}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isDone }}
         accessibilityLabel={isDone ? `Reopen ${todo.title}` : `Complete ${todo.title}`}

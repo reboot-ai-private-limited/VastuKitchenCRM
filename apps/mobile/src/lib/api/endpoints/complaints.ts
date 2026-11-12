@@ -3,6 +3,8 @@ import type {
   ComplaintStatus,
   PaginatedDto,
   RaiseComplaintBodyDto,
+  UploadTicketDto,
+  ImageInputDto,
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
@@ -48,14 +50,37 @@ export const getComplaint = (id: string, signal?: AbortSignal) =>
 export const raiseComplaint = (body: RaiseComplaintBodyDto) =>
   request<ComplaintDto>('POST', '/complaints', body);
 
-export const addComment = (id: string, text: string) =>
-  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/comments`, { text });
+export const addComment = (id: string, text: string, images?: ImageInputDto[]) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/comments`, {
+    ...(text ? { text } : {}),
+    ...(images?.length ? { images } : {}),
+  });
 
-export const resolveComplaint = (id: string, note: string) =>
-  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/resolve`, { note });
+export const resolveComplaint = (id: string, note: string, images?: ImageInputDto[]) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/resolve`, {
+    note,
+    ...(images?.length ? { images } : {}),
+  });
 
 export const reopenComplaint = (id: string, reason: string) =>
   request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/reopen`, { reason });
 
 export const closeComplaint = (id: string, note?: string) =>
   request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/close`, note ? { note } : {});
+
+/** Upload ticket for photos on a new complaint (raise). */
+export const signRaiseUpload = (projectId: string) =>
+  request<UploadTicketDto>('POST', '/complaints/uploads/sign', { projectId });
+
+/** Upload ticket for resolution photos (only whoever may resolve it). */
+export const signResolveUpload = (id: string) =>
+  request<UploadTicketDto>('POST', `/complaints/${encodeURIComponent(id)}/uploads/sign`, {});
+
+export const assignComplaint = (id: string, assigneeId: string) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/assign`, { assigneeId });
+
+export const deleteComplaintComment = (id: string, commentId: string) =>
+  request<unknown>(
+    'DELETE',
+    `/complaints/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`,
+  );

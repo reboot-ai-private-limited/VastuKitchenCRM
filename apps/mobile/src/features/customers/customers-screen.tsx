@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useState } from 'react';
-import { FlatList, Linking, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,14 +16,16 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space } from '@/constants/theme';
+import { RoleGate } from '@/components/ui/role-gate';
+import { colors, font, hit, radius, space } from '@/constants/theme';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { formatPhone, timeAgo } from '@/lib/format';
+import { openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
 import { useAddCustomer, useCustomersList } from './use-customers';
 
 function CustomerCard({ customer, index }: { customer: CustomerDto; index: number }) {
   const router = useRouter();
-  const digits = customer.phone.replace(/\D/g, '').slice(-10);
 
   return (
     <Reveal index={index}>
@@ -32,6 +34,7 @@ function CustomerCard({ customer, index }: { customer: CustomerDto; index: numbe
           router.push({ pathname: '/customers/[id]', params: { id: customer.id } } as Href)
         }
         scaleTo={0.98}
+        accessibilityLabel={`${customer.name}, ${formatPhone(customer.phone)}`}
       >
         <Card style={{ gap: space[2] }}>
           <View style={styles.topRow}>
@@ -48,12 +51,12 @@ function CustomerCard({ customer, index }: { customer: CustomerDto; index: numbe
             <IconButton
               icon="phone"
               label={`Call ${customer.name}`}
-              onPress={() => void Linking.openURL(`tel:${digits}`)}
+              onPress={() => void openLink(telUrl(customer.phone))}
             />
             <IconButton
               icon="message-circle"
               label={`WhatsApp ${customer.name}`}
-              onPress={() => void Linking.openURL(`https://wa.me/91${digits}`)}
+              onPress={() => void openLink(whatsappUrlFor(customer.phone))}
             />
           </View>
           <View style={styles.metaRow}>
@@ -73,6 +76,14 @@ function CustomerCard({ customer, index }: { customer: CustomerDto; index: numbe
 }
 
 export function CustomersScreen() {
+  return (
+    <RoleGate roles={['ADMIN', 'SALES', 'OFFICE']}>
+      <CustomersList />
+    </RoleGate>
+  );
+}
+
+function CustomersList() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -82,7 +93,8 @@ export function CustomersScreen() {
   const [city, setCity] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const q = useCustomersList(search.trim());
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const q = useCustomersList(debouncedSearch);
   const addMutation = useAddCustomer();
 
   const closeAdd = () => {
@@ -135,6 +147,7 @@ export function CustomersScreen() {
           placeholder="Search customer or phone"
           placeholderTextColor={colors.placeholder}
           returnKeyType="search"
+          accessibilityLabel="Search customers"
           style={styles.searchInput}
         />
       </View>
@@ -219,6 +232,7 @@ export function CustomersScreen() {
             <TextInput
               value={name}
               onChangeText={setName}
+              accessibilityLabel="Full name"
               placeholder="e.g. Rajesh Sharma"
               placeholderTextColor={colors.placeholder}
               style={styles.fieldInput}
@@ -231,6 +245,7 @@ export function CustomersScreen() {
             <TextInput
               value={phone}
               onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
+              accessibilityLabel="Mobile number"
               placeholder="10-digit mobile number"
               placeholderTextColor={colors.placeholder}
               keyboardType="number-pad"
@@ -244,6 +259,7 @@ export function CustomersScreen() {
             <TextInput
               value={city}
               onChangeText={setCity}
+              accessibilityLabel="City"
               placeholder="e.g. Jaipur"
               placeholderTextColor={colors.placeholder}
               style={styles.fieldInput}
@@ -282,7 +298,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
-    height: 44,
+    height: hit,
     paddingHorizontal: space[3],
     borderRadius: radius.lg,
     borderWidth: 1,

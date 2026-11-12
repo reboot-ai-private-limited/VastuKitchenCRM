@@ -43,3 +43,7 @@ export const sendProposalWhatsapp = (id: string, body: SendProposalWhatsappBodyD
     `/proposals/${encodeURIComponent(id)}/send-whatsapp`,
     body,
   );
+
+/** Copies a (possibly frozen) proposal into a new DRAFT with its own number and link. */
+export const duplicateProposal = (id: string) =>
+  request<ProposalDto>('POST', `/proposals/${encodeURIComponent(id)}/duplicate`, {});

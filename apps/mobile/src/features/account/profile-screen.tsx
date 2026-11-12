@@ -1,6 +1,6 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { changePasswordBodySchema } from '@vastu/contracts';
@@ -14,8 +14,10 @@ import { Text } from '@/components/ui/text';
 import { isStaffRole, ROLE_LABEL } from '@/constants/roles';
 import { colors, font, radius, space } from '@/constants/theme';
 import { ApiError, NetworkError } from '@/lib/api/client';
-import { changePassword, logout } from '@/lib/api/endpoints/auth';
+import { changePassword } from '@/lib/api/endpoints/auth';
 import { session, useSession } from '@/lib/auth/session';
+import { confirmSignOut } from '@/lib/auth/sign-out';
+import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '@/lib/auth/support';
 import { formatPhone } from '@/lib/format';
 import { queryClient } from '@/lib/query/client';
 
@@ -27,13 +29,6 @@ export function ProfileScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [pwBusy, setPwBusy] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
-
-  const handleSignOut = async () => {
-    const rt = session.refreshToken();
-    if (rt) await logout(rt).catch(() => undefined);
-    queryClient.clear();
-    await session.clear();
-  };
 
   const handlePasswordChange = async () => {
     const parsed = changePasswordBodySchema.safeParse({ currentPassword, newPassword });
@@ -62,15 +57,20 @@ export function ProfileScreen() {
 
   const handleDeleteAccountRequest = () => {
     Alert.alert(
-      'Delete your account?',
-      'Account deletion removes your sign-in access and anonymises personal details while preserving active project records. Contact your Vastu Kitchen coordinator or confirm below to sign out and request removal.',
+      'Request account deletion',
+      'Your account is not deleted from this app. Send a request to your Vastu Kitchen coordinator, who will review it. Records tied to active projects may be kept but anonymised.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Request & sign out',
-          style: 'destructive',
+          text: SUPPORT_WHATSAPP ? 'WhatsApp coordinator' : 'Email request',
           onPress: () => {
-            void handleSignOut();
+            const msg = 'Please delete my Vastu Kitchen account. Phone: ' + (user?.phone ?? '');
+            const url = SUPPORT_WHATSAPP
+              ? 'https://wa.me/' + SUPPORT_WHATSAPP + '?text=' + encodeURIComponent(msg)
+              : 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent('Account deletion request') + '&body=' + encodeURIComponent(msg);
+            Linking.openURL(url).catch(() =>
+              Alert.alert('Could not open', 'Please contact your coordinator directly.'),
+            );
           },
         },
       ],
@@ -171,25 +171,13 @@ export function ProfileScreen() {
             </Reveal>
           ) : null}
 
-          <Reveal>
-            <Card style={{ paddingVertical: space[1] }}>
-              <ListRow
-                icon="globe"
-                iconTone="neutral"
-                title="Language"
-                subtitle="English (India) · Hindi & Bengali coming soon"
-                showChevron={false}
-              />
-            </Card>
-          </Reveal>
-
           <Reveal style={{ gap: space[3] }}>
-            <Button title="Sign out" variant="outline" onPress={() => void handleSignOut()} fullWidth />
+            <Button title="Sign out" variant="outline" onPress={() => confirmSignOut()} fullWidth />
             <Card style={{ paddingVertical: space[1] }}>
               <ListRow
                 icon="trash-2"
-                title="Delete my account"
-                subtitle="Request account removal under store & privacy policy"
+                title="Request account deletion"
+                subtitle="Ask your coordinator to remove your account"
                 destructive
                 onPress={handleDeleteAccountRequest}
               />

@@ -18,6 +18,7 @@ export type Attachment = {
 };
 
 /**
+ * Photos are JPEG-compressed by the picker (quality 0.6, no EXIF/GPS) before upload.
  * Pick photos (camera or gallery) and upload each one as soon as it is chosen, so Send is instant.
  * `uploadsDone` is false while any photo is still on its way or failed.
  */
@@ -77,7 +78,8 @@ export function usePhotoAttachments(projectId: string, max: number) {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: Math.max(1, max - items.length),
-      quality: 0.8,
+      quality: 0.6,
+      exif: false,
     });
     if (!res.canceled) add(res.assets);
   }, [add, items.length, max]);
@@ -85,7 +87,7 @@ export function usePhotoAttachments(projectId: string, max: number) {
   const takePhoto = useCallback(async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return setProblem('Allow camera access in Settings to take photos.');
-    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6, exif: false });
     if (!res.canceled) add(res.assets);
   }, [add]);
 

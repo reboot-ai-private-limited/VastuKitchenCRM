@@ -62,6 +62,8 @@ const schema = z.object({
   WA_AGENT_PROPOSAL_TEMPLATE: blankAsUnset(z.string().min(1).optional()),
   WA_AGENT_PROPOSAL_LANGUAGE: z.string().min(1).default('en'),
   WA_AGENT_BASE_URL: z.string().url().default('https://api.waagent.in/v1'),
+  /** Expo Push Service access token. Optional: pushes work without it unless enhanced security is on in Expo. */
+  EXPO_ACCESS_TOKEN: blankAsUnset(z.string().min(1).optional()),
   /** Demo only: every code is 123456. Refused in production. */
   OTP_DEV_MODE: z
     .enum(['true', 'false'])

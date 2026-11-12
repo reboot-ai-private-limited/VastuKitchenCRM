@@ -11,14 +11,19 @@ type Props = {
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 };
 
-export function Button({ title, onPress, variant = 'default', size = 'md', loading, disabled, fullWidth }: Props) {
+export function Button({ title, onPress, variant = 'default', size = 'md', loading, disabled, fullWidth, accessibilityLabel, accessibilityHint }: Props) {
   const isSolid = variant === 'default' || variant === 'destructive';
   return (
     <PressableScale
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!disabled, busy: !!loading }}
       style={[
         styles.base,

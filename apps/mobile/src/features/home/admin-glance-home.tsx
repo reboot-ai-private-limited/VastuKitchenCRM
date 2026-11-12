@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Chip } from '@/components/ui/chip';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -125,7 +126,13 @@ export function AdminGlanceHome() {
           </Text>
         </View>
         {user ? (
-          <Avatar name={user.name} size={36} accent onPress={() => router.push('/profile' as Href)} />
+          <Avatar
+            name={user.name}
+            size={36}
+            accent
+            onPress={() => router.push('/profile' as Href)}
+            accessibilityLabel={`${user.name}, open profile`}
+          />
         ) : null}
       </View>
 
@@ -133,15 +140,7 @@ export function AdminGlanceHome() {
         {RANGE_OPTIONS.map((opt) => {
           const active = opt.key === preset;
           return (
-            <PressableScale
-              key={opt.key}
-              onPress={() => setPreset(opt.key)}
-              style={[styles.rangeChip, active && styles.rangeChipActive]}
-            >
-              <Text variant="caption" color={active ? colors.primaryForeground : colors.mutedForeground}>
-                {opt.label}
-              </Text>
-            </PressableScale>
+            <Chip key={opt.key} label={opt.label} active={active} onPress={() => setPreset(opt.key)} />
           );
         })}
       </View>
@@ -208,6 +207,8 @@ export function AdminGlanceHome() {
                           <PressableScale
                             key={b.key}
                             onPress={() => setSelectedBucket(b.key)}
+                            hitSlop={7}
+                            accessibilityState={{ selected }}
                             style={[
                               styles.bucketPill,
                               {
@@ -467,17 +468,6 @@ const styles = StyleSheet.create({
   rangeRow: {
     flexDirection: 'row',
     gap: space[2],
-  },
-  rangeChip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: radius.full,
-    backgroundColor: colors.muted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rangeChipActive: {
-    backgroundColor: colors.primary,
   },
   eyebrow: {
     letterSpacing: 0.6,

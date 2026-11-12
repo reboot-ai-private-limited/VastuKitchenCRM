@@ -9,10 +9,9 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { moreItemsForUser, ROLE_LABEL } from '@/constants/roles';
 import { colors, space } from '@/constants/theme';
-import { logout } from '@/lib/api/endpoints/auth';
-import { session, useSession } from '@/lib/auth/session';
+import { confirmSignOut } from '@/lib/auth/sign-out';
+import { useSession } from '@/lib/auth/session';
 import { formatPhone } from '@/lib/format';
-import { queryClient } from '@/lib/query/client';
 import { moreSheet, useMoreSheetOpen } from './more-store';
 
 export function MoreMenuContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -23,14 +22,6 @@ export function MoreMenuContent({ onNavigate }: { onNavigate?: () => void }) {
   const go = (href: Href) => {
     onNavigate?.();
     router.push(href);
-  };
-
-  const handleSignOut = async () => {
-    onNavigate?.();
-    const rt = session.refreshToken();
-    if (rt) await logout(rt).catch(() => undefined);
-    queryClient.clear();
-    await session.clear();
   };
 
   if (!user) return null;
@@ -72,7 +63,7 @@ export function MoreMenuContent({ onNavigate }: { onNavigate?: () => void }) {
           title="Sign out"
           subtitle="Sign out of Vastu Kitchen on this phone"
           destructive
-          onPress={() => void handleSignOut()}
+          onPress={() => confirmSignOut(onNavigate)}
         />
       </Card>
     </View>

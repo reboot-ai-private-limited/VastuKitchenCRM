@@ -12,7 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space } from '@/constants/theme';
+import { colors, font, radius, space, tone } from '@/constants/theme';
+import { AUDIENCE_LABEL, AUDIENCE_TONE } from './project-meta';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { usePhotoAttachments } from './use-photo-attachments';
 
@@ -103,18 +104,26 @@ export function PostComposer({ projectId, placeholder, kind, onSubmit, onCancel 
 
       {kind === 'post' ? (
         <View style={styles.visibilityRow}>
+          <Text variant="caption" muted>
+            Audience
+          </Text>
           {(['TEAM', 'CLIENT'] as const).map((v) => {
             const active = visibility === v;
-            const fg = active ? colors.primaryForeground : colors.mutedForeground;
+            const t = tone[AUDIENCE_TONE[v]];
             return (
               <PressableScale
                 key={v}
                 onPress={() => setVisibility(v)}
-                style={[styles.chip, active && styles.chipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                style={[
+                  styles.chip,
+                  { backgroundColor: active ? t.bg : colors.muted, borderColor: active ? t.fg : 'transparent' },
+                ]}
               >
-                <Feather name={v === 'TEAM' ? 'lock' : 'eye'} size={13} color={fg} />
-                <Text variant="caption" numberOfLines={1} color={fg}>
-                  {v === 'TEAM' ? 'Team only' : 'Visible to customer'}
+                <Feather name={v === 'TEAM' ? 'lock' : 'eye'} size={13} color={active ? t.fg : colors.mutedForeground} />
+                <Text variant="caption" numberOfLines={1} color={active ? t.fg : colors.mutedForeground}>
+                  {AUDIENCE_LABEL[v]}
                 </Text>
               </PressableScale>
             );
@@ -225,7 +234,6 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   chip: {
-    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -234,7 +242,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: radius.full,
-    backgroundColor: colors.muted,
+    borderWidth: 1,
   },
-  chipActive: { backgroundColor: colors.primary },
 });

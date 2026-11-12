@@ -15,8 +15,18 @@ export default function AppLayout() {
         header: (props) => <AppHeader {...props} />,
       }}
     >
+      {/* Staff-only pushed screens live in this guard so a customer cannot open them by deep link. */}
       <Stack.Protected guard={!isCustomer}>
         <Stack.Screen name="(staff)" />
+        <Stack.Screen name="proposals/index" />
+        <Stack.Screen name="proposals/[id]" />
+        <Stack.Screen name="customers/[id]" />
+        <Stack.Screen name="leads/new" />
+        <Stack.Screen name="leads/[id]" />
+        <Stack.Screen name="attendance/index" />
+        <Stack.Screen name="attendance/board" />
+        <Stack.Screen name="attendance/[userId]" />
+        <Stack.Screen name="todos/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={isCustomer}>
         <Stack.Screen name="(customer)" />

@@ -15,6 +15,7 @@
     "seed": "tsx src/scripts/seed.ts",
     "seed:demo": "tsx src/scripts/seed-demo.ts",
     "seed:targets": "tsx src/scripts/seed-targets.ts",
+    "seed:stock": "tsx src/scripts/seed-stock.ts",
     "check:storage": "tsx src/scripts/check-storage.ts",
     "check:whatsapp": "tsx src/scripts/check-whatsapp.ts"
   },

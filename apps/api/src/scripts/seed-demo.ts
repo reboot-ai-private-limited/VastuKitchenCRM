@@ -2,6 +2,7 @@
 import mongoose from 'mongoose';
 import { env } from '@/config/env.js';
 import { buildIdentityContainer } from '@/modules/identity/identity.container.js';
+import { DEMO_STOCK } from './demo-stock.js';
 import { DEMO_TARGETS, targetMonths } from './demo-targets.js';
 
 /**
@@ -453,45 +454,11 @@ async function main() {
   // ── let the reminders speak ──────────────────────────────────────────────
   // ── stock ────────────────────────────────────────────────────────────────
   console.warn('Adding stock…');
-  const stock = [
-    {
-      name: 'Plywood 18mm (BWP)',
-      category: 'Boards',
-      unit: 'sheet',
-      minLevel: 10,
-      openingQuantity: 42,
-    },
-    {
-      name: 'Soft-close hinges',
-      category: 'Hardware',
-      unit: 'pcs',
-      minLevel: 50,
-      openingQuantity: 36,
-    },
-    {
-      name: 'Telescopic channels 18"',
-      category: 'Hardware',
-      unit: 'pcs',
-      minLevel: 20,
-      openingQuantity: 80,
-    },
-    {
-      name: 'Laminate 1mm (white)',
-      category: 'Boards',
-      unit: 'sheet',
-      minLevel: 8,
-      openingQuantity: 0,
-    },
-    {
-      name: 'Edge-band tape',
-      category: 'Finishing',
-      unit: 'm',
-      minLevel: 100,
-      openingQuantity: 450,
-    },
-    { name: 'Fevicol SH', category: 'Finishing', unit: 'kg', minLevel: 5, openingQuantity: 12 },
-  ];
-  for (const item of stock) await call('POST', '/stocks/items', admin, item);
+  for (const { moves, ...item } of DEMO_STOCK) {
+    const made = await call('POST', '/stocks/items', admin, item);
+    for (const [type, quantity, note] of moves)
+      await call('POST', `/stocks/items/${made.id}/movements`, admin, { type, quantity, note });
+  }
 
   const reminded = await call('POST', '/reminders/run', admin);
   console.warn('Reminders created:', JSON.stringify(reminded));

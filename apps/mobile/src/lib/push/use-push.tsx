@@ -73,7 +73,8 @@ export function usePush() {
     if (!userId) return;
     void (async () => {
       const perm = await Notifications.getPermissionsAsync();
-      if (perm.status === 'undetermined') await askForPermission(userId);
+      // Android 13+ can report 'denied' before the first ask, so test canAskAgain, not 'undetermined'.
+      if (!perm.granted && perm.canAskAgain) await askForPermission(userId).catch(() => undefined);
     })();
   }, [userId]);
 

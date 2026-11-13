@@ -7,32 +7,15 @@ import {
   type LeadSource,
   type LeadStatus,
 } from '@vastu/contracts';
-import {
-  Clock,
-  Columns3,
-  FileUp,
-  MoreHorizontal,
-  Phone,
-  Plus,
-  Rows3,
-  Search,
-  Users,
-} from 'lucide-react';
+import { Clock, Columns3, FileUp, Plus, Rows3, Search, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { PageBody, PageHeader } from '@/components/common/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -60,9 +43,8 @@ import {
   filtersToSearch,
   formatPhone,
   leadPermissions,
+  leadRowActions,
   parseFilters,
-  telUrl,
-  whatsappUrl,
   type LeadFilters,
 } from '@/lib/leads';
 import { cn } from '@/lib/utils';
@@ -285,7 +267,7 @@ export function LeadsView() {
                     <TableHead className="hidden lg:table-cell">Assigned to</TableHead>
                     <TableHead className="hidden sm:table-cell">Status changed</TableHead>
                     <TableHead className="hidden xl:table-cell">Created</TableHead>
-                    <TableHead className="w-10">
+                    <TableHead className="w-px whitespace-nowrap">
                       <span className="sr-only">Actions</span>
                     </TableHead>
                   </TableRow>
@@ -333,13 +315,19 @@ function LeadRow({
   can: ReturnType<typeof leadPermissions>;
   onAction: (kind: 'status' | 'assign') => void;
 }) {
-  const locked = lead.status === 'WON';
+  const router = useRouter();
+  const href = `/leads/${lead.id}`;
+  const actions = leadRowActions(can, lead.status);
+  const label = { status: 'Change status', assign: 'Assign', proposal: 'Send proposal' } as const;
+  // The whole row opens the lead; the name stays a real link (keyboard, middle-click) and the
+  // action links stop the click so they do not also navigate.
   return (
-    <TableRow>
+    <TableRow className="cursor-pointer" onClick={() => router.push(href)}>
       <TableCell>
         <Link
-          href={`/leads/${lead.id}`}
-          className="focus-visible:ring-ring block rounded-sm outline-none hover:underline focus-visible:ring-2"
+          href={href}
+          onClick={(e) => e.stopPropagation()}
+          className="focus-visible:ring-ring block rounded-sm outline-none focus-visible:ring-2"
         >
           <span className="font-semibold">{lead.name}</span>
         </Link>
@@ -367,38 +355,34 @@ function LeadRow({
       <TableCell className="text-muted-foreground hidden xl:table-cell">
         {relativeAge(lead.createdAt)}
       </TableCell>
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={`Actions for ${lead.name}`}>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/leads/${lead.id}`}>Open</Link>
-            </DropdownMenuItem>
-            {can.changeStatus && !locked && (
-              <DropdownMenuItem onSelect={() => onAction('status')}>
-                Change status…
-              </DropdownMenuItem>
-            )}
-            {can.assign && (
-              <DropdownMenuItem onSelect={() => onAction('assign')}>Assign…</DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a href={telUrl(lead.phone)}>
-                <Phone /> Call
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href={whatsappUrl(lead.phone)} target="_blank" rel="noopener noreferrer">
-                WhatsApp
-              </a>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-2 text-sm whitespace-nowrap">
+          {actions.map((a, i) => (
+            <Fragment key={a}>
+              {i > 0 && (
+                <span aria-hidden className="text-muted-foreground/50">
+                  |
+                </span>
+              )}
+              {a === 'proposal' ? (
+                <Link
+                  href={`/proposals/new?leadId=${lead.id}`}
+                  className="text-primary hover:underline focus-visible:underline focus-visible:outline-none"
+                >
+                  {label[a]}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onAction(a)}
+                  className="text-primary cursor-pointer hover:underline focus-visible:underline focus-visible:outline-none"
+                >
+                  {label[a]}
+                </button>
+              )}
+            </Fragment>
+          ))}
+        </div>
       </TableCell>
     </TableRow>
   );

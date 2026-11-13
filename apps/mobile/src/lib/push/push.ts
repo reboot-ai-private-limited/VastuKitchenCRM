@@ -8,7 +8,6 @@ import { registerDevice, removeDevice } from '@/lib/api/endpoints/notifications'
 
 // SecureStore keys allow only letters, digits, '.', '-', '_'.
 const DEVICE_KEY = 'push.device'; // JSON { id, token, userId }
-const ASKED_KEY = 'push.asked';
 // Channel ids must match the backend (channelFor in pushFanout.ts); a push whose channel does not
 // exist on the phone falls back to the default one.
 const CHANNELS = [
@@ -53,16 +52,12 @@ const read = async (): Promise<Registered | null> => {
   }
 };
 
-export const hasBeenAsked = async () =>
-  (await SecureStore.getItemAsync(ASKED_KEY).catch(() => null)) === '1';
-
 /**
  * Asks for permission (once only; a refusal is respected and the in-app inbox still works), then
  * registers. Call it after a first meaningful event, never at launch.
  */
 export async function askForPermission(userId: string): Promise<void> {
   if (!Device.isDevice) return;
-  await SecureStore.setItemAsync(ASKED_KEY, '1').catch(() => undefined);
   await ensureChannel();
   const res = await Notifications.requestPermissionsAsync();
   if (res.granted) await registerForPush(userId);

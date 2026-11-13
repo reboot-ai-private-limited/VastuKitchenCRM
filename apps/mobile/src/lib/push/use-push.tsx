@@ -12,7 +12,6 @@ import {
   askForPermission,
   configurePushHandling,
   ensureChannel,
-  hasBeenAsked,
   registerForPush,
   setBadge,
   unregisterPush,
@@ -69,11 +68,10 @@ export function usePush() {
     return () => sub.remove();
   }, [userId]);
 
-  // Ask for notification permission right after sign-in (once; a refusal is respected).
+  // Ask for notification permission right after sign-in (the OS only shows it while undetermined).
   useEffect(() => {
     if (!userId) return;
     void (async () => {
-      if (await hasBeenAsked()) return;
       const perm = await Notifications.getPermissionsAsync();
       if (perm.status === 'undetermined') await askForPermission(userId);
     })();

@@ -66,6 +66,12 @@ export interface LeadsPublicContract {
   openLeadIds(limit: number): Promise<string[]>;
   /** Ids of leads won (status last changed) in `[from, to)`, at most `limit`. */
   wonLeadIds(from: Date, to: Date, limit: number): Promise<string[]>;
+  /** Leads won in `[from, to)` with their assignee, at most `limit` — per-person sales. */
+  wonLeads(
+    from: Date,
+    to: Date,
+    limit: number,
+  ): Promise<Array<{ leadId: string; assignedToId: string | null }>>;
   /** Current status/assignee of these leads (unknown ids are absent). For reminders. */
   getLeadStates(ids: string[]): Promise<LeadState[]>;
   /**

@@ -204,7 +204,7 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
               .map((r, n) => (
                 <div
                   key={r.label}
-                  className="grid grid-cols-[170px_1fr] gap-3 px-4 py-2 text-[13px]"
+                  className="ps-spec grid grid-cols-[170px_1fr] gap-3 px-4 py-2 text-[13px]"
                   style={n % 2 === 0 ? { background: 'var(--t-tint)' } : undefined}
                 >
                   <dt className="font-semibold opacity-70">{r.label}</dt>
@@ -219,7 +219,7 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
       const rows = ctx.rows ?? { items: doc.items, offset: 0, showTotals: true };
       return (
         <div>
-          <table className="w-full text-[13px]">
+          <table className="ps-table w-full text-[13px]">
             <thead>
               <tr
                 className="text-left text-[11px] tracking-wider text-white uppercase"
@@ -260,7 +260,7 @@ export function Block({ block, ctx }: { block: ProposalBlock; ctx: BlockCtx }) {
             </tbody>
           </table>
           {rows.showTotals ? (
-            <dl className="tabular mt-4 ml-auto w-[300px] space-y-1.5 text-[13px]">
+            <dl className="ps-totals tabular mt-4 ml-auto w-[300px] space-y-1.5 text-[13px]">
               <div className="flex justify-between">
                 <dt className="opacity-65">Subtotal</dt>
                 <dd>{formatINR(doc.subtotal)}</dd>

@@ -6,9 +6,21 @@ import type {
   GeneratedRow,
   NewAttendance,
   SalaryRow,
+  SalesTarget,
 } from '../domain/hr.entity.js';
-import type { AttendanceRepositoryPort, SalaryRepositoryPort } from '../domain/ports.js';
-import { AttendanceModel, SalaryModel, type AttendanceDoc, type SalaryDoc } from './hr.schemas.js';
+import type {
+  AttendanceRepositoryPort,
+  SalaryRepositoryPort,
+  SalesTargetRepositoryPort,
+} from '../domain/ports.js';
+import {
+  AttendanceModel,
+  SalaryModel,
+  SalesTargetModel,
+  type AttendanceDoc,
+  type SalaryDoc,
+  type SalesTargetDoc,
+} from './hr.schemas.js';
 
 const oid = (v: string) => new Types.ObjectId(v);
 const idOrNull = (v: { toString(): string } | null): string | null => (v ? v.toString() : null);
@@ -242,5 +254,32 @@ export class MongoSalaryRepository implements SalaryRepositoryPort {
       { $set: { finalizedAt: at, finalizedById: oid(byId) } },
     );
     return res.modifiedCount;
+  }
+}
+
+const toTarget = (d: HydratedDocument<SalesTargetDoc>): SalesTarget => ({
+  month: d.month,
+  userId: d.userId.toString(),
+  amount: d.amount,
+  setById: d.setById.toString(),
+  setAt: d.setAt,
+});
+
+export class MongoSalesTargetRepository implements SalesTargetRepositoryPort {
+  async set(month: string, userId: string, amount: number, byId: string, at: Date) {
+    const d = await SalesTargetModel.findOneAndUpdate(
+      { month, userId: oid(userId) },
+      { $set: { amount, setById: oid(byId), setAt: at } },
+      { upsert: true, new: true },
+    );
+    return toTarget(d);
+  }
+
+  async forMonth(month: string) {
+    return (await SalesTargetModel.find({ month })).map(toTarget);
+  }
+
+  async upToMonth(month: string) {
+    return (await SalesTargetModel.find({ month: { $lte: month } })).map(toTarget);
   }
 }

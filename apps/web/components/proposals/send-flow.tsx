@@ -109,7 +109,7 @@ export function SendFlow({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         {result ? (
           <>
             <DialogHeader>
@@ -127,8 +127,10 @@ export function SendFlow({
                     : 'The customer’s link is the same every time you send this proposal.'}
               </DialogDescription>
             </DialogHeader>
-            <p className="bg-secondary tabular rounded-md p-2.5 text-xs break-all">{link}</p>
-            <DialogFooter className="sm:justify-between">
+            <p className="bg-secondary tabular min-w-0 rounded-md p-2.5 text-xs break-all">
+              {link}
+            </p>
+            <DialogFooter className="flex-wrap sm:justify-between">
               <Button variant="outline" onClick={() => void copyLink(link)}>
                 <Copy /> Copy link
               </Button>
@@ -159,7 +161,7 @@ export function SendFlow({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5">
               <Label htmlFor="wa-to">Send to</Label>
               <div className="relative">
                 <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-sm">
@@ -183,7 +185,7 @@ export function SendFlow({
               </p>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5">
               <p className="text-muted-foreground text-xs font-medium">The message they get</p>
               <div className="bg-secondary space-y-2 rounded-xl p-3 text-sm">
                 <p>{proposalMessagePreview(firstName, proposal.number)}</p>
@@ -193,24 +195,28 @@ export function SendFlow({
               </div>
             </div>
 
+            <button
+              type="button"
+              disabled={busy}
+              onClick={shareManually}
+              className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs underline disabled:cursor-default disabled:opacity-50"
+            >
+              Share the link myself instead
+            </button>
+
             {error && (
-              <p role="alert" className="text-danger text-sm">
+              <p role="alert" className="text-danger min-w-0 text-sm break-words">
                 {error}
               </p>
             )}
-            <DialogFooter className="sm:justify-between">
-              <Button variant="ghost" size="sm" disabled={busy} onClick={shareManually}>
-                Share the link myself instead
+            <DialogFooter className="flex-wrap">
+              <Button variant="outline" onClick={close} disabled={busy}>
+                Cancel
               </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={close} disabled={busy}>
-                  Cancel
-                </Button>
-                <Button disabled={busy || !parsed.success} onClick={sendTemplate}>
-                  <Send />
-                  {sendWhatsapp.isPending ? 'Sending…' : 'Send on WhatsApp'}
-                </Button>
-              </div>
+              <Button disabled={busy || !parsed.success} onClick={sendTemplate}>
+                <Send />
+                {sendWhatsapp.isPending ? 'Sending…' : 'Send on WhatsApp'}
+              </Button>
             </DialogFooter>
           </>
         )}

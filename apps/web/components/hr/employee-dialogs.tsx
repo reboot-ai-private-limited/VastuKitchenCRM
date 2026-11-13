@@ -15,7 +15,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiError } from '@/lib/api/client';
-import { useSetEmployeePassword, useUpdateEmployee } from '@/lib/api/hr';
+import { useSetEmployeePassword, useSetTarget, useTargets, useUpdateEmployee } from '@/lib/api/hr';
+import { formatINR } from '@/lib/format';
+import { monthLabel } from '@/lib/hr';
+import { MonthStepper } from './month-stepper';
 
 const message = (e: unknown) =>
   e instanceof ApiError ? e.message : 'Something went wrong. Please try again.';
@@ -132,6 +135,85 @@ export function DeactivateDialog({ user, onClose }: { user: UserDto; onClose: ()
             {update.isPending ? 'Deactivating…' : 'Deactivate'}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Set one person's rupee sales target for a month. A month nobody set carries the last one forward. */
+export function TargetDialog({
+  user,
+  initialMonth,
+  onClose,
+}: {
+  user: UserDto;
+  initialMonth: string;
+  onClose: () => void;
+}) {
+  const [month, setMonth] = useState(initialMonth);
+  const targets = useTargets(month);
+  const set = useSetTarget(month, user.id);
+  const current =
+    targets.data?.month === month ? targets.data.rows.find((r) => r.userId === user.id) : undefined;
+  const [draft, setDraft] = useState<{ month: string; value: string } | null>(null);
+  const text = draft && draft.month === month ? draft.value : current ? String(current.amount) : '';
+  const amount = Number(text);
+  const invalid = text.trim() === '' || !Number.isInteger(amount) || amount < 0;
+  return (
+    <Dialog open onOpenChange={(o) => !o && !set.isPending && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Sales target · {user.name}</DialogTitle>
+          <DialogDescription>
+            What {user.name} should sell in the month, in rupees. What they have won is counted
+            automatically from their won leads.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (invalid) return;
+            set.mutate(
+              { amount },
+              {
+                onSuccess: () => {
+                  toast.success(`Target saved for ${monthLabel(month)}`);
+                  onClose();
+                },
+                onError: (err) => toast.error(message(err)),
+              },
+            );
+          }}
+        >
+          <MonthStepper month={month} onChange={setMonth} />
+          <div className="space-y-1.5">
+            <Label htmlFor="target-amount">Target (₹)</Label>
+            <Input
+              id="target-amount"
+              inputMode="numeric"
+              autoFocus
+              value={text}
+              onChange={(e) => setDraft({ month, value: e.target.value.replace(/[^\d]/g, '') })}
+              placeholder="e.g. 600000"
+            />
+            <p className="text-muted-foreground text-xs">
+              {current?.carriedFrom
+                ? `Carried over from ${monthLabel(current.carriedFrom)}; saving sets it for ${monthLabel(month)}.`
+                : !invalid
+                  ? formatINR(amount)
+                  : 'Whole rupees. 0 means no target.'}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={set.isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={invalid || set.isPending}>
+              Save target
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

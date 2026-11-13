@@ -34,6 +34,7 @@ Nav is filtered by role (the reference does this with an `ownerOnly` flag; gener
 | Projects (FolderKanban) | ✅ | – | summary of own leads' projects | ✅ | ✅ | ✅ | **own** |
 | To-dos (ListChecks) → "My assignments" | ✅ | – | ✅ | ✅ | ✅ | ✅ | – |
 | Complaints (LifeBuoy) | ✅ all | – | ✅ own / raise on own projects | ✅ same | ✅ assigned | ✅ all | ✅ own |
+| Stocks (Boxes) | ✅ | – | – | – | – | ✅ | – |
 | Attendance (CalendarCheck) | ✅ | ✅ | own | own | own | own | – |
 | Employees (BadgeCheck) + Designations | ✅ | ✅ | – | – | – | – | – |
 | Salary (Wallet) | ✅ | ✅ | – | – | – | – | – |
@@ -63,6 +64,6 @@ Phone rules: primary action is a floating "+" (Add lead) bottom-right above the 
 7. **Public proposal page:** no shell; branded header, Playfair headings, print-friendly, "Download PDF", WhatsApp contact button.
 
 ## URL & state conventions
-- Routes: `/` dashboard, `/leads`, `/leads/[id]`, `/proposals`, `/proposals/[id]`, `/projects`, `/projects/[id]` (`?tab=feed|todos|docs|activity`, feed sub-switch `&feed=client|team`, deep links `&post=` `&todo=` `&file=`), `/todos` (My assignments), `/complaints`, `/complaints/[id]`, `/attendance`, `/employees` (`/employees/designations`), `/salary`, `/settings`, `/notifications`, `/login`, **`/invite/[token]`** (customer one-time sign-in), `/p/[token]` (public proposal). There is **no** forgot/reset route.
+- Routes: `/` dashboard, `/leads`, `/leads/[id]`, `/proposals`, `/proposals/[id]`, `/projects`, `/projects/[id]` (`?tab=feed|todos|docs|activity`, feed sub-switch `&feed=client|team`, deep links `&post=` `&todo=` `&file=`), `/todos` (My assignments), `/complaints`, `/complaints/[id]`, `/stocks`, `/attendance`, `/employees` (`/employees/designations`), `/salary`, `/settings`, `/notifications`, `/login`, **`/invite/[token]`** (customer one-time sign-in), `/p/[token]` (public proposal). There is **no** forgot/reset route.
 - Filters, search, sort, page and the Kanban/table toggle live in the **URL search params** so views are shareable and survive refresh.
 - **Auth is client-side** (see [implementation-guide §Auth](implementation-guide.md#auth--sessions)): Next middleware only checks that the session cookie exists and redirects to `/login`; the signed-in user (`GET /identity/auth/me`) then drives the nav and landing page. The nav filter is cosmetic only, the API enforces access. A role that opens a page it may not use gets the calm "not found" page (the API's rule).

@@ -61,7 +61,7 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
 
   if (def.layout === 'minimal' || !def.image) {
     return (
-      <div className="flex h-full flex-col justify-between p-[70px]">
+      <div className="proposal-feature ps-pad flex h-full flex-col justify-between p-[70px]">
         <div className="flex items-center justify-between">
           {logo(false)}
           {cover && <p className={`${kicker} opacity-60`}>Proposal</p>}
@@ -78,8 +78,8 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
 
   if (def.layout === 'split') {
     return (
-      <div className="flex h-full">
-        <div className="flex w-[52%] flex-col justify-between p-[54px]">
+      <div className="proposal-feature ps-split flex h-full">
+        <div className="ps-pad flex w-[52%] flex-col justify-between p-[54px]">
           {logo(false)}
           <div>
             <div className="mb-5 h-1 w-14" style={{ background: 'var(--t-accent)' }} />
@@ -90,14 +90,14 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
             {cover ? facts : <div className="space-y-5">{facts}</div>}
           </div>
         </div>
-        <img src={def.image} alt="" className="h-full w-[48%] object-cover" />
+        <img src={def.image} alt="" className="ps-split-img h-full w-[48%] object-cover" />
       </div>
     );
   }
 
   // hero: full-bleed picture, dark wash, text over the bottom.
   return (
-    <div className="relative h-full text-white">
+    <div className="proposal-feature relative h-full text-white">
       <img src={def.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div
         className="absolute inset-0"
@@ -106,7 +106,7 @@ function Feature({ def, template, ctx, cover }: PageProps & { cover: boolean }) 
             'linear-gradient(180deg, rgb(20 14 10 / .55) 0%, rgb(20 14 10 / .15) 35%, rgb(20 14 10 / .85) 100%)',
         }}
       />
-      <div className="relative flex h-full flex-col justify-between p-[60px]">
+      <div className="ps-pad relative flex h-full flex-col justify-between p-[60px]">
         {logo(true)}
         <div className="space-y-6">
           <div className="h-1 w-16" style={{ background: 'var(--t-primary)' }} />
@@ -124,7 +124,7 @@ function Interior({ def, template, ctx, n, of, continued }: PageProps) {
   const h = headingClass(template.theme);
   const title = def.title ? fillTokens(def.title, ctx.values) : '';
   return (
-    <div className="flex h-full flex-col px-[58px] pt-[46px] pb-[34px]">
+    <div className="ps-interior flex h-full flex-col px-[58px] pt-[46px] pb-[34px]">
       <header
         className="flex items-center justify-between border-b pb-3"
         style={{ borderColor: 'var(--t-accent)' }}
@@ -138,7 +138,7 @@ function Interior({ def, template, ctx, n, of, continued }: PageProps) {
           {continued ? <span className="text-[16px] opacity-60"> (continued)</span> : null}
         </h2>
       )}
-      <div className="mt-6 flex-1 space-y-6 overflow-hidden">
+      <div className="ps-body mt-6 flex-1 space-y-6 overflow-hidden">
         {def.blocks.map((b, i) => (
           <Block key={i} block={b} ctx={ctx} />
         ))}

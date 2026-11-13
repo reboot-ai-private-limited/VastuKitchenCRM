@@ -65,11 +65,10 @@ export class DeleteProposalUseCase {
 
   async execute(actor: ActorRef, id: string): Promise<void> {
     const current = await this.access.load(id, actor);
-    if (current.status !== 'DRAFT') {
-      throw AppError.conflict('A sent proposal cannot be deleted: the customer may have the link.');
-    }
-    if (!(await this.proposals.deleteDraft(id))) {
-      throw AppError.conflict('A sent proposal cannot be deleted: the customer may have the link.');
-    }
+    // A draft is private to the team. A sent one is also the customer's: deleting it kills their
+    // link, so only an Admin may.
+    if (current.status !== 'DRAFT' && actor.role !== 'ADMIN')
+      throw AppError.forbidden('Only an Admin can delete a proposal that has been sent.');
+    if (!(await this.proposals.deleteById(id))) throw AppError.notFound('Proposal not found.');
   }
 }

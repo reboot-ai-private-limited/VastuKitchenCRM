@@ -34,6 +34,8 @@ export function leadPermissions(role: RoleName | undefined) {
     edit: role === 'ADMIN' || role === 'SALES',
     changeStatus: role === 'ADMIN' || role === 'SALES',
     assign: role === 'ADMIN',
+    /** Office has no access to proposals. */
+    sendProposal: role === 'ADMIN' || role === 'SALES',
     filterByAssignee: role === 'ADMIN',
     /** Sales only see their own leads, so the "assigned to" filter makes no sense for them. */
     importCsv: role === 'ADMIN' || role === 'OFFICE',
@@ -101,4 +103,16 @@ export const telUrl = (phone: string): string => `tel:+91${phone.replace(/\D/g, 
 export function formatPhone(phone: string): string {
   const d = phone.replace(/\D/g, '').slice(-10);
   return d.length === 10 ? `${d.slice(0, 5)} ${d.slice(5)}` : phone;
+}
+
+/** The row's inline actions, in order: what this person may do to this lead. */
+export function leadRowActions(
+  can: ReturnType<typeof leadPermissions>,
+  status: LeadStatus,
+): Array<'status' | 'assign' | 'proposal'> {
+  return [
+    ...(can.changeStatus && status !== 'WON' ? (['status'] as const) : []),
+    ...(can.assign ? (['assign'] as const) : []),
+    ...(can.sendProposal ? (['proposal'] as const) : []),
+  ];
 }

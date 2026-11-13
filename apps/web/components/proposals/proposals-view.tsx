@@ -40,6 +40,7 @@ import { useAuth } from '@/lib/auth';
 import { formatINR, relativeAge } from '@/lib/format';
 import { DEFAULT_FILTERS, STATUS_LABEL, formatPhone } from '@/lib/leads';
 import { proposalChip } from '@/lib/proposals';
+import { DeleteProposalDialog } from './delete-proposal-dialog';
 import { cn } from '@/lib/utils';
 
 const ALL = '__all__';
@@ -56,6 +57,10 @@ export function ProposalsView() {
   const status = (['DRAFT', 'SENT'] as const).find((s) => s === params.get('status')) ?? null;
   const page = Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1);
   const [picking, setPicking] = useState(false);
+  const [deleting, setDeleting] = useState<ProposalDto | null>(null);
+  // Admin can delete anything (a sent one also disappears for the customer); the person who made a draft can delete it.
+  const canDelete = (p: ProposalDto) =>
+    user?.role === 'ADMIN' || (p.status === 'DRAFT' && p.createdBy?.id === user?.id);
   const q = useProposals({ page, status });
   const data = q.data;
 
@@ -136,15 +141,23 @@ export function ProposalsView() {
                   <TableHead className="hidden md:table-cell">Sent</TableHead>
                   <TableHead className="hidden lg:table-cell">Seen</TableHead>
                   <TableHead className="hidden lg:table-cell">Owner</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.items.map((p) => (
-                  <TableRow key={p.id}>
+                  <TableRow
+                    key={p.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/proposals/${p.id}`)}
+                  >
                     <TableCell>
                       <Link
                         href={`/proposals/${p.id}`}
-                        className="focus-visible:ring-ring rounded-sm font-semibold outline-none hover:underline focus-visible:ring-2"
+                        onClick={(e) => e.stopPropagation()}
+                        className="focus-visible:ring-ring rounded-sm font-semibold outline-none focus-visible:ring-2"
                       >
                         <span className="tabular">{p.number}</span>
                       </Link>
@@ -168,6 +181,17 @@ export function ProposalsView() {
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden lg:table-cell">
                       {p.createdBy?.name ?? '—'}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {canDelete(p) && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(p)}
+                          className="text-danger cursor-pointer text-sm hover:underline focus-visible:underline focus-visible:outline-none"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -203,6 +227,13 @@ export function ProposalsView() {
         ) : null}
       </div>
       <LeadPicker open={picking} onOpenChange={setPicking} />
+      {deleting && (
+        <DeleteProposalDialog
+          proposal={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => setDeleting(null)}
+        />
+      )}
     </PageBody>
   );
 }

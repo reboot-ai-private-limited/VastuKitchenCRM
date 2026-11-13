@@ -29,3 +29,4 @@ export * from './docs.js';
 export * from './complaints.js';
 export * from './hr.js';
 export * from './dashboard.js';
+export * from './stocks.js';

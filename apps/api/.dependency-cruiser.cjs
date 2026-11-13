@@ -37,7 +37,7 @@ const MODULE_TIERS = [
   ['health', 'config', 'settings'], //    Tier 0 — no dependencies (settings: Admin-editable values)
   ['identity'], //                        Tier 1 — users, roles, auth, customer magic link
   ['notifications'], //                   Tier 2 — in-app notifications / push
-  ['leads', 'hr'], //                     Tier 3 — leads + calls + visits; employees, attendance, salary
+  ['leads', 'hr', 'stocks'], //                     Tier 3 — leads + calls + visits; employees, attendance, salary
   ['proposals'], //                       Tier 4 — reads leads
   ['projects'], //                       Tier 5 — projects, feed, timeline
   ['todos', 'docs', 'complaints'], //   Tier 6 — to-dos, docs (read projects); complaints (reads projects, identity)

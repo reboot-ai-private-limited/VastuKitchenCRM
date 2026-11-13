@@ -73,6 +73,15 @@ export const dashboardPersonSchema = z.object({
       comments: count,
     })
     .nullable(),
+  /** Rupee sales target for a month and what has been won so far. Null for HR. */
+  target: z
+    .object({
+      month: z.string(),
+      amount: count,
+      achieved: count,
+      carriedFrom: z.string().nullable(),
+    })
+    .nullable(),
 });
 export type DashboardPersonDto = z.infer<typeof dashboardPersonSchema>;
 

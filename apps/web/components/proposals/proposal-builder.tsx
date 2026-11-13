@@ -12,20 +12,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { PageBody } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
 import { useProposalTemplate } from '@/lib/api/proposal-templates';
-import { useCreateProposal, useDeleteProposal, useUpdateProposal } from '@/lib/api/proposals';
+import { useCreateProposal, useUpdateProposal } from '@/lib/api/proposals';
 import { formatINR } from '@/lib/format';
 import {
   buildBody,
@@ -39,6 +31,7 @@ import {
   type ProposalForm,
 } from '@/lib/proposals';
 import { cn } from '@/lib/utils';
+import { DeleteProposalDialog } from './delete-proposal-dialog';
 import { TemplatePicker } from './render/template-picker';
 import { TemplateDocument } from './render/template-document';
 
@@ -75,7 +68,6 @@ export function ProposalBuilder({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const create = useCreateProposal();
   const update = useUpdateProposal(proposal?.id ?? '');
-  const remove = useDeleteProposal();
   // The saved snapshot while the design is unchanged; otherwise the chosen one (built-ins are bundled).
   const chosen = useProposalTemplate(
     proposal?.templateKey === form.templateKey || findBuiltinTemplate(form.templateKey)
@@ -115,8 +107,10 @@ export function ProposalBuilder({
     return { items, ...computeTotals(items, previewDiscount(form)) };
   }, [form]);
 
-  function save() {
+  /** Saves; with `thenSend`, opens the WhatsApp confirmation once it is saved. */
+  function save(thenSend = false) {
     setBanner(null);
+    if (thenSend && proposal && !dirty) return onSend();
     const built = buildBody(form, proposal ? null : (lead?.id ?? null));
     if (!built.ok) {
       setErrors(built.errors);
@@ -135,7 +129,7 @@ export function ProposalBuilder({
         onSuccess: (p) => {
           setSaved(signature(form));
           toast.success(`Draft ${p.number} saved`);
-          router.replace(`/proposals/${p.id}`);
+          router.replace(`/proposals/${p.id}${thenSend ? '?send=1' : ''}`);
         },
         onError,
       });
@@ -144,6 +138,7 @@ export function ProposalBuilder({
         onSuccess: () => {
           setSaved(signature(form));
           toast.success('Draft saved');
+          if (thenSend) onSend();
         },
         onError,
       });
@@ -176,10 +171,12 @@ export function ProposalBuilder({
               <Trash2 /> Delete draft
             </Button>
           )}
-          <Button variant="outline" onClick={save} disabled={saving || !dirty}>
-            <Save /> Save draft
+          <Button variant="outline" onClick={() => save()} disabled={saving || !dirty}>
+            <Save /> {saving ? 'Saving…' : 'Save'}
           </Button>
-          {proposal && <SendButton dirty={dirty} onSend={onSend} />}
+          <Button onClick={() => save(true)} disabled={saving}>
+            <Send /> Save &amp; send on WhatsApp
+          </Button>
         </div>
       </div>
 
@@ -458,45 +455,17 @@ export function ProposalBuilder({
         </div>
       </div>
 
-      <Dialog open={confirmDelete} onOpenChange={(o) => !remove.isPending && setConfirmDelete(o)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this draft?</DialogTitle>
-            <DialogDescription>
-              The draft is removed for good. Sent proposals can’t be deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDelete(false)}
-              disabled={remove.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() =>
-                proposal &&
-                remove.mutate(proposal.id, {
-                  onSuccess: () => {
-                    setSaved(signature(form)); // nothing left to lose: don't warn on the way out
-                    toast.success('Draft deleted');
-                    router.replace('/proposals');
-                  },
-                  onError: (e) => {
-                    setConfirmDelete(false);
-                    setBanner(e instanceof ApiError ? e.message : 'Couldn’t delete the draft.');
-                  },
-                })
-              }
-            >
-              {remove.isPending ? 'Deleting…' : 'Delete draft'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {confirmDelete && proposal && (
+        <DeleteProposalDialog
+          proposal={proposal}
+          onClose={() => setConfirmDelete(false)}
+          onError={setBanner}
+          onDeleted={() => {
+            setSaved(signature(form)); // nothing left to lose: don't warn on the way out
+            router.replace('/proposals');
+          }}
+        />
+      )}
     </PageBody>
   );
 }
@@ -507,14 +476,5 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="text-sm font-semibold">{title}</h2>
       {children}
     </section>
-  );
-}
-
-/** Sending freezes the draft, so unsaved edits must be saved first: the customer gets what is saved. */
-function SendButton({ dirty, onSend }: { dirty: boolean; onSend: () => void }) {
-  return (
-    <Button disabled={dirty} title={dirty ? 'Save your changes first' : undefined} onClick={onSend}>
-      <Send /> Send on WhatsApp
-    </Button>
   );
 }

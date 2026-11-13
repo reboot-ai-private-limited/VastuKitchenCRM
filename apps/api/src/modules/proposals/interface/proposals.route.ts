@@ -27,7 +27,7 @@ const security = [{ bearerAuth: [] }];
 const json = (schema: z.ZodTypeAny) => ({ content: { 'application/json': { schema } } });
 const params = { params: proposalIdParamsSchema };
 const notFound = errorResponse('Not found (also returned when the lead is outside your scope)');
-const sentAlready = errorResponse('Already sent: sent proposals cannot be changed or deleted');
+const sentAlready = errorResponse('Already sent: sent proposals cannot be changed');
 
 openApiRegistry.registerPath({
   method: 'post',
@@ -77,9 +77,15 @@ openApiRegistry.registerPath({
   path: '/api/proposals/{id}',
   tags: TAG,
   security,
-  summary: 'Delete a draft',
+  summary: 'Delete a proposal',
+  description:
+    'A draft can be deleted by whoever can edit it. A sent proposal can be deleted by an Admin only; the customer’s link then stops working (not found).',
   request: params,
-  responses: { 200: okResponse('Deleted', z.object({})), 404: notFound, 409: sentAlready },
+  responses: {
+    200: okResponse('Deleted', z.object({})),
+    403: errorResponse('Only an Admin can delete a sent proposal'),
+    404: notFound,
+  },
 });
 openApiRegistry.registerPath({
   method: 'post',

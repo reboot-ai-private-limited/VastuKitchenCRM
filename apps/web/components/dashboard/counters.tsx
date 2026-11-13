@@ -1,6 +1,6 @@
 import type { DashboardCountersDto, DashboardDto } from '@vastu/contracts';
 import { StatCard } from '@/components/common/stat-card';
-import { formatINR, formatINRShort } from '@/lib/format';
+import { DUMMY_MEETINGS_TODAY } from '@/lib/dashboard-dummy';
 
 type Staff = NonNullable<DashboardDto['staff']>;
 
@@ -25,68 +25,33 @@ export function Counters({
   staff: Staff | null;
 }) {
   const c = counters;
+  const upcoming = DUMMY_MEETINGS_TODAY.total - DUMMY_MEETINGS_TODAY.done;
   return (
-    <>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard
-          label="Open leads"
-          value={c.leads.open}
-          sub={`${c.leads.newInRange} new in this period`}
-          href="/leads"
-        />
-        <StatCard
-          label="Running projects"
-          value={c.projects.running}
-          sub={`Design ${c.projects.design} · Site ${c.projects.site}`}
-          href="/projects"
-        />
-        <StatCard
-          label="Complaints pending"
-          value={c.complaints.pending}
-          sub={`Open ${c.complaints.OPEN} · Assigned ${c.complaints.ASSIGNED} · To close ${c.complaints.RESOLVED}`}
-          href="/complaints"
-        />
-        <StaffCard staff={staff} />
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Pipeline"
-          value={formatINRShort(c.value.pipeline)}
-          title={formatINR(c.value.pipeline)}
-          sub={
-            c.value.pipelineCapped ? 'Open leads (first 2,000)' : 'Open leads, latest sent proposal'
-          }
-        />
-        <StatCard
-          label="Won in this period"
-          value={formatINRShort(c.value.wonInRange)}
-          title={formatINR(c.value.wonInRange)}
-          sub="By latest sent proposal"
-        />
-        <StatCard
-          label="New leads in this period"
-          value={c.leads.newInRange}
-          href="/leads"
-          className="col-span-2 sm:col-span-1"
-        />
-      </div>
-    </>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <StatCard label="New leads" value={c.leads.newInRange} sub="In this period" href="/leads" />
+      {/* Placeholder until meetings are tracked. */}
+      <StatCard
+        label="Today’s meetings"
+        value={DUMMY_MEETINGS_TODAY.total}
+        sub={`${DUMMY_MEETINGS_TODAY.done} done · ${upcoming} upcoming`}
+      />
+      <StatCard
+        label="Pending follow-ups"
+        value={c.leads.byStatus.FOLLOW_UP ?? 0}
+        sub="Leads in follow-up"
+        href="/leads?status=FOLLOW_UP"
+      />
+      <StaffCard staff={staff} />
+    </div>
   );
 }
 
 export function CountersSkeleton() {
   return (
-    <>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <StatCard key={i} label="" value="" loading />
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <StatCard key={i} label="" value="" loading />
-        ))}
-      </div>
-    </>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => (
+        <StatCard key={i} label="" value="" loading />
+      ))}
+    </div>
   );
 }

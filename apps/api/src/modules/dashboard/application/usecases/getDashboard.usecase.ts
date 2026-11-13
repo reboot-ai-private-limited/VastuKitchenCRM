@@ -21,7 +21,7 @@ import type {
   TodosSource,
 } from '../../domain/ports.js';
 import { AttentionBuilder } from '../services/attention.js';
-import { buildPeople } from '../services/people.js';
+import { buildPeople, type PeopleTargets } from '../services/people.js';
 
 export interface DashboardSources {
   leads: LeadsSource;
@@ -37,6 +37,10 @@ export interface DashboardSources {
 /** Open leads valued per request, at most (a pipeline bigger than this is flagged, not guessed). */
 export const VALUE_LEAD_CAP = 2000;
 const RECENT_FEED = 15;
+const logTargetFailure = (err: unknown): null => {
+  logger.error({ err: String(err), block: 'targets' }, 'dashboard targets failed');
+  return null;
+};
 const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1;
 
@@ -151,7 +155,32 @@ export class GetDashboardUseCase {
           ]).then(([leads, calls, proposals, feed]) => ({ leads, calls, proposals, feed }))
         : Promise.resolve(null),
     ]);
-    return buildPeople({ staff, attendance, activity });
+    // Targets are a bonus column: if they fail to load, everything else still shows.
+    const targets = isAdmin ? await this.targets(to, end).catch(logTargetFailure) : null;
+    return buildPeople({ staff, attendance, activity, targets });
+  }
+
+  /** The month of the range's end: its targets, and what each person has won in it so far. */
+  private async targets(to: string, end: Date): Promise<PeopleTargets> {
+    const month = to.slice(0, 7);
+    const [rows, won] = await Promise.all([
+      this.src.hr.targetsForMonth(month),
+      this.src.leads.wonLeads(this.clock.at(`${month}-01`, '00:00'), end, VALUE_LEAD_CAP),
+    ]);
+    const totals = new Map(
+      (await this.src.proposals.latestSentTotals(won.map((w) => w.leadId))).map((t) => [
+        t.leadId,
+        t.total,
+      ]),
+    );
+    const achieved = new Map<string, number>();
+    for (const w of won)
+      if (w.assignedToId)
+        achieved.set(
+          w.assignedToId,
+          (achieved.get(w.assignedToId) ?? 0) + (totals.get(w.leadId) ?? 0),
+        );
+    return { month, targets: rows, achieved };
   }
 
   private async attentionBlocks(now: Date) {

@@ -25,6 +25,7 @@ Role is **what you can do**. Two per-person attributes are separate:
 | Proposals | all | – | own | – | – | – | view (link) |
 | Projects & feed | all | – | summary + lead journey (own leads) | member | member | member | own (client tab) |
 | Complaints | all, assign, close | – | raise (own projects), see own | raise (own projects), see own | assigned: resolve | all, raise | raise/own, reopen |
+| Stocks | all, manage | – | – | – | – | all, manage | – |
 | Employees | all | non-Admin/HR | – | – | – | – | – |
 | Attendance (all staff) | ✅ | ✅ | – | – | – | – | – |
 | Salary | ✅ | ✅ | – | – | – | – | – |

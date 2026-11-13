@@ -18,6 +18,7 @@ export type LeadsSource = Pick<
   | 'callStats'
   | 'openLeadIds'
   | 'wonLeadIds'
+  | 'wonLeads'
   | 'getLeadStates'
   | 'findStuckLeads'
 >;
@@ -31,7 +32,10 @@ export type ProjectsSource = Pick<
 >;
 export type ComplaintsSource = Pick<ComplaintsPublicContract, 'countByStatus' | 'findStale'>;
 export type TodosSource = Pick<TodosPublicContract, 'findOverdue'>;
-export type HrSource = Pick<HrPublicContract, 'dayCounts' | 'attendanceSummary'>;
+export type HrSource = Pick<
+  HrPublicContract,
+  'dayCounts' | 'attendanceSummary' | 'targetsForMonth'
+>;
 export type DirectorySource = Pick<IdentityPublicContract, 'getStaff' | 'getUserSummaries'>;
 
 /** The day-count thresholds the alerts use (Admin-editable; the same ones the reminders use). */

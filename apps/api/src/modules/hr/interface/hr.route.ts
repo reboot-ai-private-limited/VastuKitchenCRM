@@ -14,6 +14,8 @@ import {
   salaryRowParamsSchema,
   salarySheetSchema,
   setDayBodySchema,
+  setTargetBodySchema,
+  targetsSheetSchema,
   simulateBodySchema,
   simulateResultSchema,
   updateSalaryBodySchema,
@@ -267,6 +269,40 @@ export function buildSalaryRouter(c: SalaryControllers): Router {
     '/:month/users/:userId',
     validate({ params: salaryRowParamsSchema, body: updateSalaryBodySchema }),
     c.edit,
+  );
+  return router;
+}
+
+export interface TargetControllers {
+  get: RequestHandler;
+  set: RequestHandler;
+}
+
+doc(
+  S,
+  'get',
+  '/api/targets/{month}',
+  'Every person’s sales target for a month (carried forward when not set)',
+  { params: salaryMonthParamsSchema },
+  { 200: okResponse('Targets', targetsSheetSchema), 403: hrOnly },
+);
+doc(
+  S,
+  'put',
+  '/api/targets/{month}/users/{userId}',
+  'Set one person’s rupee sales target for a month',
+  { params: salaryRowParamsSchema, body: json(setTargetBodySchema) },
+  { 200: okResponse('Targets', targetsSheetSchema), 403: hrOnly, 404: notFound },
+);
+
+export function buildTargetsRouter(c: TargetControllers): Router {
+  const router = Router();
+  router.use(authenticate, requireRole('ADMIN', 'HR'));
+  router.get('/:month', validate({ params: salaryMonthParamsSchema }), c.get);
+  router.put(
+    '/:month/users/:userId',
+    validate({ params: salaryRowParamsSchema, body: setTargetBodySchema }),
+    c.set,
   );
   return router;
 }

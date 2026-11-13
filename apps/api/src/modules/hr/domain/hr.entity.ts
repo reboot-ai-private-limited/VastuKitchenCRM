@@ -52,3 +52,12 @@ export type GeneratedRow = Pick<
   | 'computedPayable'
   | 'weeklyOff'
 >;
+
+/** A rupee sales target for one person and one month (`YYYY-MM`). */
+export interface SalesTarget {
+  month: string;
+  userId: string;
+  amount: number;
+  setById: string;
+  setAt: Date;
+}

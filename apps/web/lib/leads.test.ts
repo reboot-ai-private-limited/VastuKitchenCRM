@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILTERS, filtersToSearch, formatPhone, leadPermissions, parseFilters, telUrl, whatsappUrl } from './leads';
+import { DEFAULT_FILTERS, filtersToSearch, formatPhone, leadPermissions, leadRowActions, parseFilters, telUrl, whatsappUrl } from './leads';
 
 const params = (q: string) => new URLSearchParams(q);
 
@@ -34,5 +34,17 @@ describe('lead permissions', () => {
   it('only admin assigns', () => {
     expect(leadPermissions('ADMIN').assign).toBe(true);
     expect(leadPermissions('SALES').assign).toBe(false);
+  });
+});
+
+describe('the row actions', () => {
+  it('Admin: status, assign, proposal; Sales: status, proposal; Office: none', () => {
+    expect(leadRowActions(leadPermissions('ADMIN'), 'NEW')).toEqual(['status', 'assign', 'proposal']);
+    expect(leadRowActions(leadPermissions('SALES'), 'NEW')).toEqual(['status', 'proposal']);
+    expect(leadRowActions(leadPermissions('OFFICE'), 'NEW')).toEqual([]);
+  });
+
+  it('a won lead cannot change status any more', () => {
+    expect(leadRowActions(leadPermissions('ADMIN'), 'WON')).toEqual(['assign', 'proposal']);
   });
 });

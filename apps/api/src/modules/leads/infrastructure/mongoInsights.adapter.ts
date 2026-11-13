@@ -59,4 +59,14 @@ export class MongoLeadInsights implements LeadInsightsPort {
       .select('_id');
     return docs.map((d) => d.id as string);
   }
+
+  async wonLeads(from: Date, to: Date, limit: number) {
+    const docs = await LeadModel.find({ status: 'WON', statusChangedAt: { $gte: from, $lt: to } })
+      .limit(limit)
+      .select('_id assignedToId');
+    return docs.map((d) => ({
+      leadId: d.id as string,
+      assignedToId: d.assignedToId ? d.assignedToId.toString() : null,
+    }));
+  }
 }

@@ -90,3 +90,27 @@ salarySchema.index({ month: 1, userId: 1 }, { unique: true });
 export const SalaryModel: Model<SalaryDoc> =
   (mongoose.models['SalaryRow'] as Model<SalaryDoc>) ??
   mongoose.model<SalaryDoc>('SalaryRow', salarySchema);
+
+export interface SalesTargetDoc {
+  month: string;
+  userId: Types.ObjectId;
+  amount: number;
+  setById: Types.ObjectId;
+  setAt: Date;
+}
+
+const salesTargetSchema = new Schema<SalesTargetDoc>(
+  {
+    month: { type: String, required: true },
+    userId: { type: Schema.Types.ObjectId, required: true },
+    amount: { type: Number, required: true },
+    setById: { type: Schema.Types.ObjectId, required: true },
+    setAt: { type: Date, required: true },
+  },
+  { timestamps: true },
+);
+salesTargetSchema.index({ month: 1, userId: 1 }, { unique: true });
+
+export const SalesTargetModel: Model<SalesTargetDoc> =
+  (mongoose.models['SalesTarget'] as Model<SalesTargetDoc>) ??
+  mongoose.model<SalesTargetDoc>('SalesTarget', salesTargetSchema);

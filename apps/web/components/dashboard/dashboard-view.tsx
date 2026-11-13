@@ -11,8 +11,8 @@ import { businessDate, formatDay } from '@/lib/format';
 import { AttentionCard } from './attention';
 import { Counters, CountersSkeleton, StaffCard } from './counters';
 import { PeopleBlock } from './people';
-import { RecentBlock } from './recent';
-import { RangePicker, type DateRange } from './range-picker';
+import { ComplaintsCard } from './complaints';
+import { RangePicker, daysIn, type DateRange } from './range-picker';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -113,6 +113,21 @@ export function DashboardView() {
             </div>
           )}
 
+          <Card title={isHr ? 'Attendance' : 'Team'} subtitle={label}>
+            {query.isPending ? (
+              <CardSkeleton rows={6} />
+            ) : failed('people') || !d?.people ? (
+              <ErrorState title="Couldn’t load staff activity" onRetry={retry} />
+            ) : (
+              <PeopleBlock
+                people={d.people}
+                days={daysIn(range)}
+                offDay={d.staff?.offDay ?? false}
+                attendanceOnly={isHr}
+              />
+            )}
+          </Card>
+
           {!isHr && (
             <div className="grid items-start gap-5 xl:grid-cols-2">
               <Card title="Needs attention" subtitle="Right now">
@@ -124,27 +139,20 @@ export function DashboardView() {
                   <ErrorState title="Couldn’t load what needs attention" onRetry={retry} />
                 )}
               </Card>
-              <Card title="Recent customer activity">
+              <Card title="Complaints" subtitle="Pending now">
                 {query.isPending ? (
                   <CardSkeleton rows={4} />
-                ) : failed('recent') || !d?.recent ? (
-                  <ErrorState title="Couldn’t load recent activity" onRetry={retry} />
+                ) : d?.counters && d.attention ? (
+                  <ComplaintsCard
+                    counts={d.counters.complaints}
+                    overdue={d.attention.overdueComplaints}
+                  />
                 ) : (
-                  <RecentBlock items={d.recent} />
+                  <ErrorState title="Couldn’t load complaints" onRetry={retry} />
                 )}
               </Card>
             </div>
           )}
-
-          <Card title={isHr ? 'Attendance' : 'Staff activity'} subtitle={label}>
-            {query.isPending ? (
-              <CardSkeleton rows={6} />
-            ) : failed('people') || !d?.people ? (
-              <ErrorState title="Couldn’t load staff activity" onRetry={retry} />
-            ) : (
-              <PeopleBlock people={d.people} multiDay={multiDay} attendanceOnly={isHr} />
-            )}
-          </Card>
         </>
       )}
     </PageBody>

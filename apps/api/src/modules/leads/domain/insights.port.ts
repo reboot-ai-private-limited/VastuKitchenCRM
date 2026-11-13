@@ -19,4 +19,10 @@ export interface LeadInsightsPort {
   openLeadIds(limit: number): Promise<string[]>;
   /** Won with the status last changed in `[from, to)`. */
   wonLeadIds(from: Date, to: Date, limit: number): Promise<string[]>;
+  /** The same leads as `wonLeadIds`, with who each is assigned to. */
+  wonLeads(
+    from: Date,
+    to: Date,
+    limit: number,
+  ): Promise<Array<{ leadId: string; assignedToId: string | null }>>;
 }

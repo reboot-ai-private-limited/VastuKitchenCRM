@@ -128,14 +128,25 @@ describe('editing', () => {
     });
   });
 
-  it('freezes a sent proposal: no edit, no delete', async () => {
-    const { create, update, remove, send } = setup();
+  it('freezes a sent proposal: it cannot be edited', async () => {
+    const { create, update, send } = setup();
     const p = await create.execute(sales1, body());
     await send.execute(sales1, p.id);
     await expect(update.execute(sales1, p.id, { title: 'Changed' })).rejects.toMatchObject({
       statusCode: 409,
     });
-    await expect(remove.execute(sales1, p.id)).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it('lets only an Admin delete a sent proposal, which removes it for the customer too', async () => {
+    const { w, create, remove, send, getPublic } = setup();
+    const p = await create.execute(sales1, body());
+    const sent = await send.execute(sales1, p.id);
+    const token = sent.publicUrl.split('/').pop()!;
+    await expect(remove.execute(sales1, p.id)).rejects.toMatchObject({ statusCode: 403 });
+    expect(w.proposals.rows).toHaveLength(1);
+    await remove.execute(admin, p.id);
+    expect(w.proposals.rows).toHaveLength(0);
+    await expect(getPublic.execute(token)).rejects.toMatchObject({ statusCode: 404 });
   });
 
   it('lets a draft be deleted', async () => {

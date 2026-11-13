@@ -8,7 +8,7 @@ import { Text } from './text';
  * One header for every pushed screen: status-bar inset + a 48 dp bar with a back arrow and a title.
  * Replaces the native header, which added a second top inset on edge-to-edge Android and left a large gap.
  */
-type HeaderProps = { options: { title?: string }; back?: unknown; navigation: { goBack: () => void } };
+type HeaderProps = { options: { title?: string; headerRight?: (props: any) => React.ReactNode }; back?: unknown; navigation: { goBack: () => void } };
 
 export function AppHeader({ options, back, navigation }: HeaderProps) {
   const insets = useSafeAreaInsets();
@@ -34,6 +34,7 @@ export function AppHeader({ options, back, navigation }: HeaderProps) {
             {title}
           </Text>
         ) : null}
+        {options.headerRight ? options.headerRight({}) : null}
       </View>
     </View>
   );

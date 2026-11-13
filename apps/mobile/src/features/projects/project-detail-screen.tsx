@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Chip } from '@/components/ui/chip';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -19,6 +19,12 @@ import { ComplaintsSegment, DocsSegment, TodosSegment } from './project-segments
 import { useProjectDetail, useScreenActive, type FeedMode } from './use-projects';
 
 type Tab = 'chat' | 'todos' | 'complaints' | 'docs';
+const TAB_ICON: Record<Tab, React.ComponentProps<typeof Feather>['name']> = {
+  chat: 'message-circle',
+  todos: 'check-square',
+  complaints: 'life-buoy',
+  docs: 'folder',
+};
 
 export function ProjectDetailScreen() {
   const {
@@ -44,6 +50,7 @@ export function ProjectDetailScreen() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [mode, setMode] = useState<FeedMode>('ALL');
   const [infoOpen, setInfoOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [finalRequest, setFinalRequest] = useState(0);
   const [viewer, setViewer] = useState<{ photos: ViewerPhoto[]; index: number } | null>(null);
 
@@ -60,6 +67,26 @@ export function ProjectDetailScreen() {
         title: p?.name ?? '',
         headerShadowVisible: false,
         headerTintColor: colors.primary,
+        headerRight: p
+          ? () => (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <PressableScale
+                  onPress={() => setInfoOpen(true)}
+                  accessibilityLabel="Project info"
+                  style={styles.headBtn}
+                >
+                  <Feather name="info" size={22} color={colors.primary} />
+                </PressableScale>
+                <PressableScale
+                  onPress={() => setMenuOpen(true)}
+                  accessibilityLabel="Project sections"
+                  style={styles.headBtn}
+                >
+                  <Feather name="more-vertical" size={22} color={colors.primary} />
+                </PressableScale>
+              </View>
+            )
+          : undefined,
       }}
     />
   );
@@ -106,11 +133,11 @@ export function ProjectDetailScreen() {
     <View style={styles.root}>
       {header}
       <View style={styles.sub}>
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text muted numberOfLines={1}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+          <Text muted numberOfLines={1} style={{ flexShrink: 1 }}>
             {p.customer.name}
           </Text>
-          <View style={{ flexDirection: 'row', gap: space[1], flexWrap: 'wrap' }}>
+          <View style={{ flexDirection: 'row', gap: space[1], flexShrink: 0 }}>
             <Badge label={STAGE_LABEL[p.stage]} t={STAGE_TONE[p.stage]} />
             {p.stage === 'DESIGN' ? (
               <Badge label={DESIGN_LABEL[p.designStage]} t={DESIGN_TONE[p.designStage]} />
@@ -137,33 +164,33 @@ export function ProjectDetailScreen() {
               size={14}
               color={mode === 'CLIENT' ? colors.primaryForeground : colors.mutedForeground}
             />
-            <Text
-              variant="caption"
-              color={mode === 'CLIENT' ? colors.primaryForeground : colors.mutedForeground}
-            >
-              Client view
-            </Text>
           </PressableScale>
         ) : null}
-        <PressableScale
-          onPress={() => setInfoOpen(true)}
-          accessibilityLabel="Project info"
-          style={styles.infoBtn}
-        >
-          <Feather name="info" size={22} color={colors.primary} />
-        </PressableScale>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabs}
-        contentContainerStyle={{ paddingHorizontal: space[3], gap: space[1] }}
-      >
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="Project">
         {tabs.map((t) => (
-          <Chip key={t.key} label={t.label} active={tab === t.key} onPress={() => setTab(t.key)} />
+          <PressableScale
+            key={t.key}
+            onPress={() => {
+              setTab(t.key);
+              setMenuOpen(false);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: tab === t.key }}
+            style={[styles.menuRow, tab === t.key && { backgroundColor: colors.primarySoft }]}
+          >
+            <Feather
+              name={TAB_ICON[t.key]}
+              size={20}
+              color={tab === t.key ? colors.primary : colors.mutedForeground}
+            />
+            <Text variant="label" color={tab === t.key ? colors.primary : colors.foreground}>
+              {t.label}
+            </Text>
+          </PressableScale>
         ))}
-      </ScrollView>
+      </BottomSheet>
 
       <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>
         <ChatSegment
@@ -214,14 +241,21 @@ export function ProjectDetailScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   sub: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], gap: space[2] },
-  infoBtn: { width: hit, height: hit, alignItems: 'center', justifyContent: 'center' },
-  tabs: { flexGrow: 0 },
+  headBtn: { width: 40, height: hit, alignItems: 'center', justifyContent: 'center' },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    minHeight: hit,
+    paddingHorizontal: space[3],
+    borderRadius: 12,
+  },
   clientToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: 17,
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
 });

@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loginBodySchema, otpRequestBodySchema, otpVerifyBodySchema } from '@vastu/contracts';
@@ -296,9 +297,12 @@ export function LoginScreen() {
           </Text>
         ) : null}
         {error ? (
-          <Text variant="caption" color={colors.destructive}>
-            {error}
-          </Text>
+          <Animated.View entering={FadeIn} style={styles.errorBox} accessibilityRole="alert" accessibilityLiveRegion="assertive">
+            <Feather name="alert-circle" size={18} color={colors.destructive} />
+            <Text color={colors.destructive} style={{ flex: 1 }}>
+              {error}
+            </Text>
+          </Animated.View>
         ) : null}
       </View>
 
@@ -329,6 +333,16 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    padding: space[3],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.destructive,
+    backgroundColor: colors.destructiveSoft,
+  },
   root: { flex: 1, backgroundColor: colors.background, paddingHorizontal: space[4], gap: space[6] },
   segment: {
     flexDirection: 'row',

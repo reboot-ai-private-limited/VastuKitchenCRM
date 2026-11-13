@@ -25,6 +25,8 @@ type Props = {
   onCancel?: () => void;
   /** Staff on an open project may post a Final delivery (photos required, always client-visible). */
   allowFinalDelivery?: boolean;
+  /** A customer posting: always visible to the customer side, so the audience chips are hidden. */
+  fixedClient?: boolean;
   /** Changing this number switches the composer into Final delivery mode (used by the Close flow). */
   finalDeliveryRequest?: number;
   /** Resolves when the server accepted it; the composer then clears itself. */
@@ -44,6 +46,7 @@ export function PostComposer({
   onSubmit,
   onCancel,
   allowFinalDelivery,
+  fixedClient,
   finalDeliveryRequest,
 }: Props) {
   const photos = usePhotoAttachments(
@@ -51,7 +54,7 @@ export function PostComposer({
     kind === 'post' ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT,
   );
   const [text, setText] = useState('');
-  const [pickedVisibility, setVisibility] = useState<PostVisibility>('TEAM');
+  const [pickedVisibility, setVisibility] = useState<PostVisibility>(fixedClient ? 'CLIENT' : 'TEAM');
   const [final, setFinal] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +86,7 @@ export function PostComposer({
       setText('');
       photos.clear();
       // The audience is never sticky: every new post starts as Team only.
-      setVisibility('TEAM');
+      setVisibility(fixedClient ? 'CLIENT' : 'TEAM');
       setFinal(false);
     } catch (e) {
       setError(describe(e));
@@ -93,7 +96,7 @@ export function PostComposer({
   };
 
   const shownError = error ?? photos.problem;
-  const tinted = kind === 'post' && visibility === 'CLIENT';
+  const tinted = kind === 'post' && visibility === 'CLIENT' && !fixedClient;
 
   return (
     <View style={[styles.wrap, tinted && styles.clientTint]}>
@@ -139,7 +142,7 @@ export function PostComposer({
         </ScrollView>
       ) : null}
 
-      {kind === 'post' ? (
+      {kind === 'post' && !fixedClient ? (
         <View style={styles.visibilityRow}>
           {(['TEAM', 'CLIENT'] as const).map((v) => {
             const active = visibility === v;
@@ -239,13 +242,19 @@ export function PostComposer({
             {onCancel ? (
               <Button title="Cancel" variant="ghost" size="sm" onPress={onCancel} />
             ) : null}
-            <Button
-              title="Reply"
-              size="sm"
+            <PressableScale
               onPress={() => void send()}
-              loading={sending}
               disabled={!canSend}
-            />
+              accessibilityRole="button"
+              accessibilityLabel="Send reply"
+              style={[styles.sendBtn, { opacity: canSend ? 1 : 0.4 }]}
+            >
+              {sending ? (
+                <ActivityIndicator color={colors.primaryForeground} />
+              ) : (
+                <Feather name="send" size={20} color={colors.primaryForeground} />
+              )}
+            </PressableScale>
           </View>
         </>
       ) : (
@@ -261,22 +270,28 @@ export function PostComposer({
             onChangeText={setText}
             placeholder={
               final
-                ? 'Final delivery: add at least one photo'
+                ? 'Add a photo to post'
                 : tinted
-                  ? 'Message the customer'
+                  ? 'Message customer'
                   : placeholder
             }
             placeholderTextColor={colors.placeholder}
             multiline
             style={styles.input}
           />
-          <Button
-            title={final ? 'Post' : 'Send'}
-            size="sm"
+          <PressableScale
             onPress={() => void send()}
-            loading={sending}
             disabled={!canSend}
-          />
+            accessibilityRole="button"
+            accessibilityLabel={final ? 'Post final delivery' : 'Send'}
+            style={[styles.sendBtn, { opacity: canSend ? 1 : 0.4 }]}
+          >
+            {sending ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Feather name="send" size={20} color={colors.primaryForeground} />
+            )}
+          </PressableScale>
         </View>
       )}
     </View>
@@ -289,6 +304,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: space[1] },
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   input: {
     flex: 1,
     minHeight: 44,

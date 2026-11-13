@@ -20,13 +20,15 @@ type Props = {
   onRemove: (key: string) => void;
   onRetry: (key: string) => void;
   disabled?: boolean;
+  /** Only the strip of chosen photos: the caller shows its own camera/gallery icons (e.g. in a chat composer). */
+  hideActions?: boolean;
 };
 
 /** Camera/gallery buttons plus a strip of the chosen photos with remove/retry. Pairs with useSignedAttachments. */
-export function PhotoAttachBar({ items, problem, onCamera, onGallery, onRemove, onRetry, disabled }: Props) {
+export function PhotoAttachBar({ items, problem, onCamera, onGallery, onRemove, onRetry, disabled, hideActions }: Props) {
   return (
     <View style={{ gap: space[2] }}>
-      <View style={{ flexDirection: 'row', gap: space[2] }}>
+      <View style={{ flexDirection: 'row', gap: space[2], display: hideActions ? 'none' : 'flex' }}>
         <PressableScale
           onPress={onCamera}
           disabled={disabled}

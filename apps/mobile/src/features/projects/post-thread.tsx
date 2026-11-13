@@ -86,7 +86,7 @@ export function PostThread({ projectId, post, mine, closed, onClose, onOpenPhoto
           )}
         </ScrollView>
         {!closed ? (
-          <View style={[styles.composer, { paddingBottom: insets.bottom + space[3] }]}>
+          <View style={[styles.composer, { paddingBottom: (kb.open ? 0 : insets.bottom) + space[3] }]}>
             <PostComposer
               projectId={projectId}
               kind="reply"

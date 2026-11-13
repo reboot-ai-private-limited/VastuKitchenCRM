@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors, hit, radius } from '@/constants/theme';
 import { initials } from '@/lib/format';
 import { PressableScale } from './pressable-scale';
@@ -8,11 +9,13 @@ type Props = {
   name: string;
   size?: 32 | 36 | 40 | 52;
   accent?: boolean;
+  /** Show a person icon instead of the initials (used for the profile button on home screens). */
+  icon?: boolean;
   onPress?: () => void;
   accessibilityLabel?: string;
 };
 
-export function Avatar({ name, size = 36, accent = false, onPress, accessibilityLabel }: Props) {
+export function Avatar({ name, size = 36, accent = false, icon = false, onPress, accessibilityLabel }: Props) {
   const circle = (
     <View
       style={[
@@ -25,13 +28,17 @@ export function Avatar({ name, size = 36, accent = false, onPress, accessibility
         },
       ]}
     >
-      <Text
-        variant="caption"
-        color={accent ? colors.primaryPressed : colors.mutedForeground}
-        style={{ fontSize: size >= 48 ? 16 : 12 }}
-      >
-        {initials(name)}
-      </Text>
+      {icon ? (
+        <Feather name="user" size={Math.round(size * 0.55)} color={accent ? colors.primaryPressed : colors.mutedForeground} />
+      ) : (
+        <Text
+          variant="caption"
+          color={accent ? colors.primaryPressed : colors.mutedForeground}
+          style={{ fontSize: size >= 48 ? 16 : 12 }}
+        >
+          {initials(name)}
+        </Text>
+      )}
     </View>
   );
 

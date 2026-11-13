@@ -129,7 +129,7 @@ export function AdminGlanceHome() {
           <Avatar
             name={user.name}
             size={36}
-            accent
+            accent icon
             onPress={() => router.push('/profile' as Href)}
             accessibilityLabel={`${user.name}, open profile`}
           />

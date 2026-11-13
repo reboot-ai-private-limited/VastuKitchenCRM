@@ -17,6 +17,7 @@ import { ApiError } from '@/lib/api/client';
 import { formatDate, formatINR, formatPhone, timeAgo } from '@/lib/format';
 import { normalizePhone } from '@/lib/phone';
 import { newRequestId } from '@/lib/request-id';
+import { ProposalPreview } from './proposal-preview';
 import {
   useDuplicateProposal,
   useProposalDetail,
@@ -42,6 +43,7 @@ function ProposalDetail() {
   const duplicate = useDuplicateProposal(id);
   const p = q.data;
 
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
   const [phone, setPhone] = useState('');
   const [requestId, setRequestId] = useState('');
@@ -153,16 +155,9 @@ function ProposalDetail() {
                   fullWidth
                 />
               </View>
-              {p.publicUrl ? (
-                <View style={{ flex: 1 }}>
-                  <Button
-                    title="Open preview"
-                    variant="outline"
-                    onPress={() => void Linking.openURL(p.publicUrl!)}
-                    fullWidth
-                  />
-                </View>
-              ) : null}
+              <View style={{ flex: 1 }}>
+                <Button title="Preview" variant="outline" onPress={() => setPreviewOpen(true)} fullWidth />
+              </View>
             </View>
             {p.status === 'DRAFT' ? (
               <Button
@@ -353,6 +348,25 @@ function ProposalDetail() {
         }}
       >
         {body}
+        {p ? (
+          <ProposalPreview
+            visible={previewOpen}
+            onClose={() => setPreviewOpen(false)}
+            data={{
+              number: p.number,
+              title: p.title,
+              customerName: p.customer.name,
+              customerPhone: formatPhone(p.customer.phone),
+              city: p.customer.city,
+              siteAddress: p.customer.siteAddress,
+              items: p.items,
+              discount: p.discount,
+              notes: p.notes,
+              terms: p.terms,
+              validUntil: p.validUntil,
+            }}
+          />
+        ) : null}
       </ScrollView>
 
       <BottomSheet

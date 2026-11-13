@@ -37,6 +37,8 @@ type Props = {
   /** Staff-only filter: everything (timeline) or exactly what the customer sees. */
   mode: FeedMode;
   isStaff: boolean;
+  /** The customer app: same chat, but the customer can post and always sees the client feed. */
+  isCustomer?: boolean;
   active: boolean;
   /** `?post=` deep link: scroll to and highlight this post. */
   targetPostId?: string;
@@ -112,6 +114,7 @@ export function ChatSegment({
   userId,
   mode,
   isStaff,
+  isCustomer = false,
   active,
   targetPostId,
   finalDeliveryRequest,
@@ -195,14 +198,16 @@ export function ChatSegment({
     [stream, openComplaint, flash],
   );
 
-  const renderItem = ({ item }: { item: StreamItem }) => {
+  const renderItem = ({ item, index }: { item: StreamItem; index: number }) => {
     switch (item.type) {
       case 'day':
         return (
           <View style={styles.day}>
-            <Text variant="caption" muted>
-              {item.label}
-            </Text>
+            <View style={styles.dayPill}>
+              <Text variant="caption" muted>
+                {item.label}
+              </Text>
+            </View>
           </View>
         );
       case 'post':
@@ -213,9 +218,13 @@ export function ChatSegment({
               projectId={project.id}
               mine={item.post.author.id === userId}
               highlighted={highlightKey === item.key}
+              hideAudience={isCustomer}
               closed={closed}
               onOpenPhotos={onOpenPhotos}
               onReply={() => setThreadPostId(item.post.id)}
+              onReplyOpen={() =>
+                setTimeout(() => listRef.current?.scrollToIndex({ index, viewPosition: 0, viewOffset: 16, animated: true }), 120)
+              }
             />
           </View>
         );
@@ -286,12 +295,12 @@ export function ChatSegment({
     );
   }
 
-  const showComposer = mode === 'ALL' && isStaff;
+  const showComposer = isCustomer || (mode === 'ALL' && isStaff);
 
 
   return (
     <View ref={kb.ref} collapsable={false} style={{ flex: 1, paddingBottom: kb.pad }}>
-      {mode === 'CLIENT' ? (
+      {mode === 'CLIENT' && !isCustomer ? (
         <View style={styles.banner}>
           <Feather name="eye" size={14} color={tone.success.fg} />
           <Text variant="caption" color={tone.success.fg}>
@@ -299,7 +308,7 @@ export function ChatSegment({
           </Text>
         </View>
       ) : null}
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.muted }}>
         <FlatList
           ref={listRef}
           inverted
@@ -364,12 +373,13 @@ export function ChatSegment({
             </Text>
           </View>
         ) : (
-          <View style={[styles.composer, { paddingBottom: insets.bottom + space[2] }]}>
+          <View style={[styles.composer, { paddingBottom: (kb.open ? 0 : insets.bottom) + space[2] }]}>
             <PostComposer
               projectId={project.id}
               kind="post"
               placeholder="Message..."
-              allowFinalDelivery
+              allowFinalDelivery={!isCustomer}
+              fixedClient={isCustomer}
               finalDeliveryRequest={finalDeliveryRequest}
               onSubmit={async (body) => {
                 sender.send(body);
@@ -394,7 +404,27 @@ export function ChatSegment({
 const styles = StyleSheet.create({
   item: { marginVertical: space[2] },
   day: { alignItems: 'center', paddingVertical: space[2] },
-  activity: { alignItems: 'center', paddingVertical: space[1], paddingHorizontal: space[4], gap: space[1] },
+  dayPill: {
+    paddingHorizontal: space[3],
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  activity: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    marginVertical: space[1],
+    maxWidth: '92%',
+    paddingVertical: 4,
+    paddingHorizontal: space[3],
+    gap: space[1],
+    borderRadius: radius.full,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   pending: {
     maxWidth: '88%',
     padding: space[2],

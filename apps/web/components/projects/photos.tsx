@@ -36,8 +36,9 @@ export function PhotoGrid({ images }: { images: ImageDto[] }) {
               alt=""
               loading="lazy"
               className={cn(
-                'w-full object-cover',
-                shown.length === 1 ? 'max-h-96' : 'aspect-square',
+                shown.length === 1
+                  ? 'h-auto max-h-96 w-auto max-w-full object-contain'
+                  : 'aspect-square w-full object-cover',
               )}
             />
             {extra > 0 && i === 3 && (

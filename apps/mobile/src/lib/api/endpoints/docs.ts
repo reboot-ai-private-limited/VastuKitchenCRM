@@ -1,4 +1,10 @@
-import type { DocFileDto, RegisterFileBodyDto, UploadTicketDto } from '@vastu/contracts';
+import type {
+  DocFileDto,
+  RegisterFileBodyDto,
+  SaveFromPhotosBodyDto,
+  SaveResultDto,
+  UploadTicketDto,
+} from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
 export type ProjectFilesQuery = {
@@ -33,3 +39,7 @@ export const signFileUpload = (projectId: string) =>
 /** Registers a file the phone has just uploaded, so it shows up in Docs. */
 export const registerProjectFile = (projectId: string, body: RegisterFileBodyDto) =>
   request<DocFileDto>('POST', `/projects/${encodeURIComponent(projectId)}/files`, body);
+
+/** "Save to Docs": photos already in a post. Nothing is uploaded again; saving twice returns the same file. */
+export const saveFromPhotos = (projectId: string, body: Omit<SaveFromPhotosBodyDto, 'visibility'> & { visibility: 'TEAM' | 'CLIENT' }) =>
+  request<SaveResultDto>('POST', `/projects/${encodeURIComponent(projectId)}/files/from-photos`, body);

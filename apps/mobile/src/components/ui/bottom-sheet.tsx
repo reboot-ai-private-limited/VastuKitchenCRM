@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, hit, radius, shadow, space } from '@/constants/theme';
 import { PressableScale } from './pressable-scale';
 import { Text } from './text';
@@ -22,16 +22,28 @@ type Props = {
   footer?: ReactNode;
 };
 
-export function BottomSheet({ visible, onClose, title, subtitle, children, footer }: Props) {
-  const insets = useSafeAreaInsets();
+export function BottomSheet(props: Props) {
+  // A Modal is its own window: give it its own safe-area provider so the insets are real.
   return (
     <Modal
-      visible={visible}
+      visible={props.visible}
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onClose}
+      navigationBarTranslucent
+      onRequestClose={props.onClose}
     >
+      <SafeAreaProvider>
+        <SheetBody {...props} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function SheetBody({ onClose, title, subtitle, children, footer }: Props) {
+  const insets = useSafeAreaInsets();
+  return (
+    <>
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.overlay}
@@ -77,7 +89,7 @@ export function BottomSheet({ visible, onClose, title, subtitle, children, foote
           {footer ? <View style={styles.footer}>{footer}</View> : null}
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </>
   );
 }
 

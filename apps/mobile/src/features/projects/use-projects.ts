@@ -11,7 +11,7 @@ import type {
   TimelineItemDto,
 } from '@vastu/contracts';
 import { listComplaints } from '@/lib/api/endpoints/complaints';
-import { listProjectFiles } from '@/lib/api/endpoints/docs';
+import { listProjectFiles, saveFromPhotos } from '@/lib/api/endpoints/docs';
 import {
   approvePost,
   changeDesignStage,
@@ -181,6 +181,14 @@ export function useCreateComment(projectId: string, postId: string) {
     // TODO(outbox): enqueue the reply instead of sending directly.
     mutationFn: (body: CreateCommentBodyDto) => createComment(projectId, postId, body),
     onSuccess: invalidate,
+  });
+}
+
+export function useSaveToDocs(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof saveFromPhotos>[1]) => saveFromPhotos(projectId, body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['projects', 'files', projectId] }),
   });
 }
 

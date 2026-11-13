@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ProposalPreview } from './proposal-preview';
 import type React from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -174,6 +175,7 @@ function ProposalForm({ leadId, existing }: { leadId: string; existing?: Proposa
   );
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [error, setError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const setItem = (i: number, patch: Partial<ItemForm>) =>
     setItems((cur) => cur.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -360,6 +362,7 @@ function ProposalForm({ leadId, existing }: { leadId: string; existing?: Proposa
               {error ?? apiError}
             </Text>
           ) : null}
+          <Button title="Preview" variant="outline" size="lg" onPress={() => setPreviewOpen(true)} fullWidth />
           <Button
             title={existing ? 'Save changes' : 'Create draft'}
             size="lg"
@@ -369,6 +372,23 @@ function ProposalForm({ leadId, existing }: { leadId: string; existing?: Proposa
           />
         </ScrollView>
       </KeyboardAvoidingView>
+      <ProposalPreview
+        visible={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        data={{
+          number: existing?.number ?? null,
+          title: title.trim(),
+          customerName: existing?.customer.name ?? null,
+          customerPhone: existing?.customer.phone ?? null,
+          city: existing?.customer.city ?? null,
+          siteAddress: siteAddress.trim() || null,
+          items: parsedItems,
+          discount: shownDiscount,
+          notes: notes.trim() || null,
+          terms: existing?.terms ?? null,
+          validUntil: Number.isInteger(Number(days)) && Number(days) > 0 ? inDays(Number(days)) : null,
+        }}
+      />
     </>
   );
 }

@@ -136,7 +136,7 @@ export function Feed({
       <div
         ref={scroller}
         onScroll={(e) => e.currentTarget.scrollTop < 120 && loadOlder()}
-        className="min-h-0 flex-1 overflow-y-auto px-3 sm:px-4"
+        className="bg-muted/40 min-h-0 flex-1 overflow-y-auto px-3 py-2 sm:px-4"
       >
         <div className="mx-auto w-full max-w-170">
           {q.isPending ? (
@@ -410,9 +410,8 @@ function Composer({
       {(open || up.items.length > 0) && (
         <div className="space-y-2">
           {asFinal && (
-            <p className="bg-success-soft text-success rounded-md p-2 text-xs">
-              Final delivery: add at least one photo. It is always visible to the customer, and
-              closing the project needs it.
+            <p className="bg-success-soft text-success rounded-md px-2 py-1 text-xs">
+              Final delivery: add at least one photo. The customer sees it.
             </p>
           )}
           <PhotoAttach
@@ -446,11 +445,6 @@ function Composer({
                   />
                   <Label htmlFor="post-final">Final delivery</Label>
                 </div>
-                <span className="text-muted-foreground text-xs">
-                  {clientVisible
-                    ? 'This post will be visible to the customer.'
-                    : 'This post is for the team only.'}
-                </span>
               </div>
             )}
             <Button variant="ghost" size="sm" disabled={create.isPending} onClick={cancel}>
@@ -481,7 +475,6 @@ function Composer({
           value={text}
           maxLength={5000}
           className="max-h-32 min-h-10 flex-1 resize-none rounded-2xl py-2"
-          onFocus={() => setOpen(true)}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

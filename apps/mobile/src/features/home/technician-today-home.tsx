@@ -70,7 +70,7 @@ export function TechnicianTodayHome() {
           </Text>
         </View>
         {user ? (
-          <Avatar name={user.name} size={36} accent onPress={() => router.push('/profile' as Href)} />
+          <Avatar name={user.name} size={36} accent icon onPress={() => router.push('/profile' as Href)} />
         ) : null}
       </View>
 

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { FlatList, Modal, Platform, ScrollView, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, hit, radius, space } from '@/constants/theme';
@@ -12,7 +12,25 @@ export type ViewerPhoto = { publicId: string; url: string; thumbUrl: string };
 type Props = { photos: ViewerPhoto[]; startIndex: number; onClose: () => void };
 
 /** Full-screen photo pager: swipe between photos, pinch to zoom (iOS), share, close. */
-export function PhotoViewer({ photos, startIndex, onClose }: Props) {
+export function PhotoViewer(props: Props) {
+  // A Modal is its own window, so it needs its own safe-area provider or the insets read as 0.
+  return (
+    <Modal
+      visible={props.photos.length > 0}
+      transparent
+      animationType="fade"
+      onRequestClose={props.onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      <SafeAreaProvider>
+        <ViewerBody {...props} />
+      </SafeAreaProvider>
+    </Modal>
+  );
+}
+
+function ViewerBody({ photos, startIndex, onClose }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(startIndex);
@@ -26,7 +44,7 @@ export function PhotoViewer({ photos, startIndex, onClose }: Props) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <>
       <View style={styles.backdrop} accessibilityViewIsModal>
         {visible ? (
           <FlatList
@@ -42,7 +60,7 @@ export function PhotoViewer({ photos, startIndex, onClose }: Props) {
             renderItem={({ item }) => (
               <ScrollView
                 style={{ width, height }}
-                contentContainerStyle={{ width, height, justifyContent: 'center' }}
+                contentContainerStyle={{ width, height, justifyContent: 'center', paddingTop: insets.top + hit, paddingBottom: insets.bottom + hit }}
                 maximumZoomScale={4}
                 minimumZoomScale={1}
                 centerContent
@@ -52,7 +70,7 @@ export function PhotoViewer({ photos, startIndex, onClose }: Props) {
                 <Image
                   source={{ uri: item.url }}
                   placeholder={{ uri: item.thumbUrl }}
-                  style={{ width, height: height * 0.8 }}
+                  style={{ width, height: height - insets.top - insets.bottom - hit * 2 }}
                   contentFit="contain"
                   accessibilityLabel="Photo"
                 />
@@ -73,12 +91,12 @@ export function PhotoViewer({ photos, startIndex, onClose }: Props) {
           </PressableScale>
         </View>
       </View>
-    </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  backdrop: { flex: 1, backgroundColor: '#000' },
   bar: { position: 'absolute', left: space[3], right: space[3], flexDirection: 'row', alignItems: 'center', gap: space[2] },
   btn: {
     width: hit,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Dimensions, Keyboard, View } from 'react-native';
+import { Dimensions, Keyboard, Platform, StatusBar, View } from 'react-native';
 
 /**
  * Lifts a screen's content above the on-screen keyboard. Measures where the container really ends
@@ -10,22 +10,41 @@ import { Dimensions, Keyboard, View } from 'react-native';
 export function useKeyboardAvoid() {
   const ref = useRef<ComponentRef<typeof View>>(null);
   const [pad, setPad] = useState(0);
+  const [open, setOpen] = useState(false);
+  // Measured while the keyboard is closed: once it opens, Android may shrink the window itself.
+  // measureInWindow is relative to the app window; on Android that window starts below the status bar
+  // and ends above the system navigation bar. Only the status bar shifts the measurement, so using the
+  // whole screen-minus-window difference would count the navigation bar twice and leave a gap.
+  const offsetRef = useRef(
+    Platform.OS === 'android'
+      ? (StatusBar.currentHeight ?? 0)
+      : Math.max(0, Dimensions.get('screen').height - Dimensions.get('window').height),
+  );
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      ref.current?.measureInWindow((_x, y, _w, h) => {
+      setOpen(true);
+      // Measure after the OS has had its turn at resizing the window, or the gap is added twice.
+      clearTimeout(timer);
+      timer = setTimeout(() => ref.current?.measureInWindow((_x, y, _w, h) => {
         // measureInWindow is relative to the app window, the keyboard frame to the whole screen.
         // On edge-to-edge devices the window starts lower than the screen, so add the difference.
-        const offset = Math.max(0, Dimensions.get('screen').height - Dimensions.get('window').height);
+        const offset = offsetRef.current;
         setPad(Math.max(0, Math.round(y + h + offset - e.endCoordinates.screenY)));
-      });
+      }), 150);
     });
-    const hide = Keyboard.addListener('keyboardDidHide', () => setPad(0));
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setPad(0);
+      setOpen(false);
+    });
     return () => {
+      clearTimeout(timer);
       show.remove();
       hide.remove();
     };
   }, []);
 
-  return { ref, pad };
+  /** `open`: the keyboard is up, so the system navigation bar is hidden behind it and the bottom inset no longer applies. */
+  return { ref, pad, open };
 }

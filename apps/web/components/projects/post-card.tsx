@@ -24,11 +24,11 @@ import {
   useDeleteComment,
   useDeletePost,
 } from '@/lib/api/projects';
-import { formatDate, initials, relativeAge } from '@/lib/format';
+import { useAuth } from '@/lib/auth';
+import { formatDate, formatTime, initials, relativeAge } from '@/lib/format';
 import { MAX_IMAGES_PER_COMMENT } from '@/lib/upload';
 import { cn } from '@/lib/utils';
 import { SaveToDocsDialog } from '@/components/docs/save-to-docs-dialog';
-import { RowTime } from './feed-rows';
 import { PhotoAttach, PhotoGrid } from './photos';
 
 const fail = (e: unknown, fallback: string) =>
@@ -45,6 +45,8 @@ export function PostCard({
   closed: boolean;
   isCustomer?: boolean;
 }) {
+  const { user } = useAuth();
+  const own = user?.id === post.author.id;
   const [saving, setSaving] = useState(false);
   const approve = useApprovePost(projectId);
   const del = useDeletePost(projectId);
@@ -56,27 +58,26 @@ export function PostCard({
   const hidden = post.commentCount - comments.length;
 
   return (
-    <li
-      className={cn(
-        'group flex gap-3 border-b py-4 last:border-b-0',
-        post.kind === 'FINAL_DELIVERY' && 'border-l-success -ml-3 border-l-2 pl-3',
+    <li className={cn('group flex gap-2 py-1', own ? 'flex-row-reverse' : 'flex-row')}>
+      {!own && (
+        <Avatar className="mt-1 size-8 shrink-0">
+          <AvatarFallback className="text-xs">{initials(post.author.name)}</AvatarFallback>
+        </Avatar>
       )}
-    >
-      <RowTime iso={post.createdAt} />
-      <Avatar className="size-9 shrink-0">
-        <AvatarFallback>{initials(post.author.name)}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
+      <div
+        className={cn(
+          'max-w-[85%] min-w-0 rounded-2xl px-3 py-2 shadow-sm sm:max-w-[75%]',
+          own ? 'bg-primary-soft rounded-tr-sm' : 'bg-card rounded-tl-sm border',
+          post.kind === 'FINAL_DELIVERY' && 'ring-success/60 ring-2',
+        )}
+      >
         <header className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="font-semibold">{post.author.name}</span>
-              <span className="text-muted-foreground text-sm">
+            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+              <span className="text-primary font-semibold">{own ? 'You' : post.author.name}</span>
+              <span className="text-muted-foreground text-xs">
                 {post.author.isCustomer ? 'Customer' : (post.author.designation ?? '')}
               </span>
-              <time dateTime={post.createdAt} className="text-muted-foreground text-xs sm:hidden">
-                {relativeAge(post.createdAt)}
-              </time>
               {post.visibility === 'TEAM' && (
                 <span className="bg-secondary text-muted-foreground rounded-full px-1.5 text-xs">
                   Team only
@@ -94,7 +95,7 @@ export function PostCard({
               variant="ghost"
               size="icon-sm"
               aria-label="Delete post"
-              className="text-muted-foreground md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100"
+              className="text-muted-foreground -mt-1 -mr-1 size-6 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100"
               onClick={() => setConfirmDelete(true)}
             >
               <Trash2 />
@@ -102,7 +103,7 @@ export function PostCard({
           )}
         </header>
 
-        {post.text && <p className="mt-1 whitespace-pre-line">{post.text}</p>}
+        {post.text && <p className="mt-1 text-sm whitespace-pre-line">{post.text}</p>}
         {post.images.length > 0 && (
           <div className="mt-3 space-y-1.5">
             <PhotoGrid images={post.images} />
@@ -187,6 +188,13 @@ export function PostCard({
               </button>
             ))}
         </div>
+        <time
+          dateTime={post.createdAt}
+          title={`${formatDate(post.createdAt)}, ${formatTime(post.createdAt)}`}
+          className="text-muted-foreground mt-1 block text-right text-[11px]"
+        >
+          {formatTime(post.createdAt)}
+        </time>
       </div>
 
       <Dialog open={confirmDelete} onOpenChange={(o) => !del.isPending && setConfirmDelete(o)}>

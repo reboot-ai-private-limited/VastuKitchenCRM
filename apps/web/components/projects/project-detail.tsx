@@ -58,7 +58,7 @@ import { DocsTab } from '@/components/docs/docs-tab';
 import { TodosTab } from '@/components/todos/todos-tab';
 import { canRaiseComplaint } from '@/lib/complaints';
 import { ComplaintsTab } from './complaints-tab';
-import { WorkspaceNav, type WorkspaceSection } from './workspace-nav';
+import { SECTION_META, type WorkspaceSection } from './workspace-nav';
 import { DesignStageChip } from './design-stage-chip';
 import { Feed, FeedViewToggle } from './feed';
 import { CloseDialog, EditProjectDialog, InviteDialog, MembersDialog } from './project-dialogs';
@@ -117,32 +117,25 @@ export function ProjectDetail({ id }: { id: string }) {
   const raisable = canRaiseComplaint(user?.role) && !can.summaryOnly;
   const closed = p.stage === 'CLOSED';
 
+  const showSections = !can.summaryOnly;
   const hasMenu =
+    showSections ||
     can.editProject ||
     can.manageMembers ||
     (can.invite && !can.isCustomer) ||
     (can.isAdmin && !closed);
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col border-b md:w-60 md:border-r md:border-b-0">
-        <div className="p-3 pb-1 md:p-4 md:pb-2">
-          <Link
-            href={back.href}
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
-          >
-            <ArrowLeft className="size-3.5" aria-hidden /> {back.label}
-          </Link>
-        </div>
-        {!can.summaryOnly && (
-          <div className="px-3 pb-2 md:pb-4">
-            <WorkspaceNav sections={allowed} value={tab} onChange={setTab} />
-          </div>
-        )}
-      </aside>
-
+    <div className="flex h-full flex-col">
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-3 py-2 sm:px-4">
+          <Link
+            href={back.href}
+            aria-label={`Back to ${back.label}`}
+            className="text-muted-foreground hover:text-foreground -ml-1 inline-flex shrink-0 items-center"
+          >
+            <ArrowLeft className="size-5" aria-hidden />
+          </Link>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
             <h1 className="max-w-full truncate text-base font-semibold">{p.name}</h1>
             <span className="text-muted-foreground truncate text-sm">{p.customer.name}</span>
@@ -169,6 +162,24 @@ export function ProjectDetail({ id }: { id: string }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {showSections &&
+                    allowed.map((s) => {
+                      const meta = SECTION_META[s];
+                      return (
+                        <DropdownMenuItem
+                          key={s}
+                          onSelect={() => setTab(s)}
+                          className={s === tab ? 'bg-primary-soft text-primary' : undefined}
+                        >
+                          <meta.icon /> {meta.label}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  {showSections &&
+                    (can.editProject ||
+                      can.manageMembers ||
+                      (can.invite && !can.isCustomer) ||
+                      (can.isAdmin && !closed)) && <DropdownMenuSeparator />}
                   {can.editProject && (
                     <DropdownMenuItem onSelect={() => setDialog('edit')}>
                       <Pencil /> Edit project

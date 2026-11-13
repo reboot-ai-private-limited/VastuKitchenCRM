@@ -41,7 +41,7 @@ function SharedFileCard({ file, index, highlighted }: { file: DocFileDto; index:
           )}
 
           <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="label" numberOfLines={2}>
+            <Text variant="label" numberOfLines={1} ellipsizeMode="middle">
               {file.name}
             </Text>
             <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>

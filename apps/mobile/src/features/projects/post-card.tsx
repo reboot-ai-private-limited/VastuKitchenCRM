@@ -1,4 +1,5 @@
-import { Alert, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import type { CommentDto, ImageDto, PostDto, PostVisibility } from '@vastu/contracts';
@@ -6,13 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
-import { colors, radius, space, tone } from '@/constants/theme';
+import { colors, font, radius, space, tone } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { formatDate, formatTime } from '@/lib/format';
 import { AUDIENCE_LABEL, AUDIENCE_TONE } from './project-meta';
-import { useApprovePost, useDeletePost } from './use-projects';
+import { useApprovePost, useCreateComment, useDeletePost, useSaveToDocs } from './use-projects';
 
 export type OpenPhotos = (images: ImageDto[], index: number) => void;
+
+/** A single photo keeps its own shape (so the whole picture shows); extreme panoramas / tall strips are limited. */
+function ratioOf(img: ImageDto): number {
+  if (!img.width || !img.height) return 4 / 3;
+  return Math.min(2, Math.max(0.5, img.width / img.height));
+}
 
 export function PhotoGrid({ images, onOpen }: { images: ImageDto[]; onOpen: OpenPhotos }) {
   const shown = images.slice(0, 4);
@@ -24,12 +31,12 @@ export function PhotoGrid({ images, onOpen }: { images: ImageDto[]; onOpen: Open
           key={img.publicId}
           onPress={() => onOpen(images, i)}
           accessibilityLabel={`Open photo ${i + 1} of ${images.length}`}
-          style={{ width: single ? '100%' : '49.5%', aspectRatio: single ? 4 / 3 : 1 }}
+          style={{ width: single ? '100%' : '49.5%', aspectRatio: single ? ratioOf(img) : 1 }}
         >
           <Image
-            source={{ uri: img.thumbUrl }}
+            source={{ uri: single ? img.url : img.thumbUrl }}
             style={{ flex: 1, borderRadius: radius.md, backgroundColor: colors.muted }}
-            contentFit="cover"
+            contentFit={single ? 'contain' : 'cover'}
           />
           {i === 3 && images.length > 4 ? (
             <View style={styles.more}>
@@ -89,6 +96,47 @@ export function CommentBubble({
   );
 }
 
+/** A one-line reply box that opens right under the post, like the website. */
+function InlineReply({ projectId, postId, onDone }: { projectId: string; postId: string; onDone: () => void }) {
+  const [text, setText] = useState('');
+  const reply = useCreateComment(projectId, postId);
+  const canSend = text.trim().length > 0 && !reply.isPending;
+  const send = () =>
+    reply.mutate(
+      { text: text.trim() },
+      { onSuccess: onDone, onError: (e) => Alert.alert('Could not send', errorMessage(e)) },
+    );
+  return (
+    <View style={styles.inlineReply}>
+      <TextInput
+        autoFocus
+        value={text}
+        onChangeText={setText}
+        placeholder="Add a comment here..."
+        placeholderTextColor={colors.placeholder}
+        multiline
+        maxLength={2000}
+        style={styles.inlineInput}
+      />
+      <PressableScale onPress={onDone} accessibilityLabel="Cancel reply" style={styles.inlineBtn}>
+        <Feather name="x" size={20} color={colors.mutedForeground} />
+      </PressableScale>
+      <PressableScale
+        onPress={send}
+        disabled={!canSend}
+        accessibilityLabel="Send reply"
+        style={[styles.inlineBtn, styles.inlineSend, { opacity: canSend ? 1 : 0.4 }]}
+      >
+        {reply.isPending ? (
+          <ActivityIndicator color={colors.primaryForeground} />
+        ) : (
+          <Feather name="send" size={18} color={colors.primaryForeground} />
+        )}
+      </PressableScale>
+    </View>
+  );
+}
+
 type Props = {
   post: PostDto;
   projectId: string;
@@ -98,12 +146,18 @@ type Props = {
   onOpenPhotos: OpenPhotos;
   /** Opens the thread. Omitted inside the thread itself. */
   onReply?: () => void;
+  /** The inline reply box just opened: the list scrolls this post into view. */
+  onReplyOpen?: () => void;
+  /** Customer app: every message is already client-side, so the audience chip is noise. */
+  hideAudience?: boolean;
   onDeleted?: () => void;
 };
 
-export function PostCard({ post, projectId, mine, highlighted, closed, onOpenPhotos, onReply, onDeleted }: Props) {
+export function PostCard({ post, projectId, mine, highlighted, closed, onOpenPhotos, onReply, onReplyOpen, hideAudience, onDeleted }: Props) {
   const del = useDeletePost(projectId);
   const approve = useApprovePost(projectId);
+  const saveDocs = useSaveToDocs(projectId);
+  const [replying, setReplying] = useState(false);
   const final = post.kind === 'FINAL_DELIVERY';
 
   const confirmDelete = () => {
@@ -140,10 +194,36 @@ export function PostCard({ post, projectId, mine, highlighted, closed, onOpenPho
           {post.author.isCustomer ? ' · Customer' : post.author.designation ? ` · ${post.author.designation}` : ''}
         </Text>
         <View style={{ flexDirection: 'row', gap: space[1], flexWrap: 'wrap' }}>
-          <AudienceChip v={post.visibility} />
+          {hideAudience ? null : <AudienceChip v={post.visibility} />}
           {final ? <Badge label="Final delivery" t="success" /> : null}
         </View>
         {post.images.length > 0 ? <PhotoGrid images={post.images} onOpen={onOpenPhotos} /> : null}
+        {post.images.length > 0 ? (
+          <PressableScale
+            disabled={saveDocs.isPending}
+            onPress={() =>
+              saveDocs.mutate(
+                { items: post.images.slice(0, 20).map((i) => ({ publicId: i.publicId })), visibility: post.visibility },
+                {
+                  onSuccess: (r) =>
+                    Alert.alert(
+                      r.every((x) => !x.created) ? 'Already in Docs' : 'Saved to Docs',
+                      r.every((x) => !x.created) ? undefined : `${r.filter((x) => x.created).length} file(s) added.`,
+                    ),
+                  onError: (e) => Alert.alert('Could not save', errorMessage(e)),
+                },
+              )
+            }
+            accessibilityLabel="Save photos to Docs"
+            hitSlop={6}
+            style={styles.saveDocs}
+          >
+            <Feather name="folder-plus" size={13} color={colors.mutedForeground} />
+            <Text variant="caption" muted>
+              {saveDocs.isPending ? 'Saving...' : 'Save to Docs'}
+            </Text>
+          </PressableScale>
+        ) : null}
         {post.text ? <Text>{post.text}</Text> : null}
         {post.approval ? (
           <Badge label={`Approved by ${post.approval.by.name} · ${formatDate(post.approval.at)}`} t="success" />
@@ -186,11 +266,21 @@ export function PostCard({ post, projectId, mine, highlighted, closed, onOpenPho
           ))
         : null}
       {onReply && !closed ? (
-        <PressableScale onPress={onReply} accessibilityLabel="Reply" style={styles.indent} hitSlop={8}>
-          <Text variant="caption" color={colors.primary}>
-            Reply{post.commentCount > 0 ? ` · ${post.commentCount}` : ''}
-          </Text>
-        </PressableScale>
+        replying ? (
+          <View style={[styles.indent, { alignSelf: 'stretch', marginRight: space[2] }]}>
+            <InlineReply projectId={projectId} postId={post.id} onDone={() => setReplying(false)} />
+          </View>
+        ) : (
+          <PressableScale onPress={() => {
+              setReplying(true);
+              onReplyOpen?.();
+            }}
+            accessibilityLabel="Reply" style={styles.indent} hitSlop={8}>
+            <Text variant="caption" color={colors.primary}>
+              Reply{post.commentCount > 0 ? ` · ${post.commentCount}` : ''}
+            </Text>
+          </PressableScale>
+        )
       ) : null}
     </View>
   );
@@ -206,12 +296,31 @@ const styles = StyleSheet.create({
     gap: space[1],
   },
   mine: { backgroundColor: colors.primarySoft, borderBottomRightRadius: radius.sm },
-  theirs: { backgroundColor: colors.muted, borderBottomLeftRadius: radius.sm },
+  theirs: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: radius.sm },
   team: { borderWidth: 1, borderColor: tone.orange.bg },
   final: { borderLeftWidth: 4, borderLeftColor: tone.success.fg },
   highlight: { borderWidth: 2, borderColor: colors.primary },
   replyBubble: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
   indent: { marginLeft: space[5] },
+  saveDocs: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  inlineReply: { flexDirection: 'row', alignItems: 'flex-end', gap: space[1] },
+  inlineInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.input,
+    backgroundColor: colors.background,
+    fontFamily: font.regular,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+  inlineBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  inlineSend: { borderRadius: 20, backgroundColor: colors.primary },
   audience: {
     flexDirection: 'row',
     alignItems: 'center',

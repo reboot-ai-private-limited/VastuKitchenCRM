@@ -17,6 +17,7 @@
         "ACCESS_COARSE_LOCATION"
       ],
       "allowBackup": false,
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -58,6 +59,13 @@
       "expo-router",
       "expo-secure-store",
       "expo-image",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0BAE8A"
+        }
+      ],
       [
         "expo-location",
         {

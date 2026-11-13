@@ -1,8 +1,7 @@
 import { Stack } from 'expo-router';
 import { AppHeader } from '@/components/ui/app-header';
 import { useSession } from '@/lib/auth/session';
-// Push notifications are switched off for now (not required). Re-enable by restoring these two lines.
-// import { PushBoot } from '@/lib/push/use-push';
+import { PushBoot } from '@/lib/push/use-push';
 
 export default function AppLayout() {
   const { user } = useSession();
@@ -10,7 +9,7 @@ export default function AppLayout() {
 
   return (
     <>
-      {/* <PushBoot /> */}
+      <PushBoot />
       <Stack
         screenOptions={{
           headerShown: false,

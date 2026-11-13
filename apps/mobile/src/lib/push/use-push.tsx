@@ -69,16 +69,15 @@ export function usePush() {
     return () => sub.remove();
   }, [userId]);
 
-  // The permission prompt comes after the first meaningful event: the first time this person has
-  // an alert waiting, not at launch.
+  // Ask for notification permission right after sign-in (once; a refusal is respected).
   useEffect(() => {
-    if (!userId || !unread) return;
+    if (!userId) return;
     void (async () => {
       if (await hasBeenAsked()) return;
       const perm = await Notifications.getPermissionsAsync();
       if (perm.status === 'undetermined') await askForPermission(userId);
     })();
-  }, [userId, unread]);
+  }, [userId]);
 
   // The app icon badge follows the unread count.
   useEffect(() => {

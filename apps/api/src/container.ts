@@ -8,6 +8,7 @@ import { buildSettingsContainer } from '@/modules/settings/settings.container.js
 import { buildCustomersContainer } from '@/modules/customers/customers.container.js';
 import { buildComplaintsContainer } from '@/modules/complaints/complaints.container.js';
 import { buildDashboardContainer } from '@/modules/dashboard/dashboard.container.js';
+import { buildStocksContainer } from '@/modules/stocks/stocks.container.js';
 import { buildHrContainer } from '@/modules/hr/hr.container.js';
 import { buildDocsContainer } from '@/modules/docs/docs.container.js';
 import { buildTodosContainer } from '@/modules/todos/todos.container.js';
@@ -29,6 +30,7 @@ export interface AppContainers {
   complaints: ReturnType<typeof buildComplaintsContainer>;
   customers: ReturnType<typeof buildCustomersContainer>;
   hr: ReturnType<typeof buildHrContainer>;
+  stocks: ReturnType<typeof buildStocksContainer>;
   dashboard: ReturnType<typeof buildDashboardContainer>;
   reminders: ReturnType<typeof buildRemindersContainer>;
   /** In-process bus; modules above subscribe to what modules below announce. */
@@ -86,6 +88,7 @@ export function buildContainers(): AppContainers {
     identity: identity.contract,
   });
   const hr = buildHrContainer({ identity: identity.contract, settings: settings.contract });
+  const stocks = buildStocksContainer({ identity: identity.contract });
   const reminders = buildRemindersContainer({
     leads: leads.contract,
     proposals: proposals.contract,
@@ -120,6 +123,7 @@ export function buildContainers(): AppContainers {
     complaints,
     customers,
     hr,
+    stocks,
     dashboard,
     reminders,
     events,

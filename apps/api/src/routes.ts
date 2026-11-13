@@ -20,6 +20,7 @@ export function buildApiRouter(containers: AppContainers): Router {
   router.use('/attendance', containers.hr.buildAttendanceRouter());
   router.use('/salary', containers.hr.buildSalaryRouter());
   router.use('/targets', containers.hr.buildTargetsRouter());
+  router.use('/stocks', containers.stocks.buildRouter());
   router.use('/dashboard', containers.dashboard.buildRouter());
   router.use('/reminders', containers.reminders.buildRouter());
   // To-dos own full paths (/projects/:id/todos, /todos/:id …), so this router is mounted at the root

@@ -4,7 +4,7 @@ import { STAFF_ROLES, type StaffRole, type UserDto } from '@vastu/contracts';
 import { Plus, Search, Tags, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
@@ -199,7 +199,7 @@ export function EmployeesView() {
                   <TableHead className="hidden sm:table-cell text-right">Salary</TableHead>
                   <TableHead className="hidden text-right sm:table-cell">Target</TableHead>
                   <TableHead>Active</TableHead>
-                  <TableHead className="w-10">
+                  <TableHead className="w-px whitespace-nowrap">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 </TableRow>
@@ -292,6 +292,15 @@ function EmployeeRow({
   const update = useUpdateEmployee(u.id);
   // You can't switch yourself off, and HR can't touch Admin or HR accounts.
   const lockedSwitch = !canManage || isMe || update.isPending;
+  const actions = [
+    ...(canManage
+      ? [
+          { label: 'Edit', onClick: () => onAction('edit') },
+          { label: u.canLogin ? 'Password' : 'Create login', onClick: () => onAction('password') },
+        ]
+      : []),
+    ...(u.attendanceType !== null ? [{ label: 'Target', onClick: onTarget }] : []),
+  ];
   return (
     <TableRow className={cn(!u.active && 'text-muted-foreground')}>
       <TableCell>
@@ -347,22 +356,23 @@ function EmployeeRow({
         />
       </TableCell>
       <TableCell>
-        <div className="flex flex-wrap items-center justify-end gap-x-1">
-          {canManage && (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => onAction('edit')}>
-                Edit
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => onAction('password')}>
-                {u.canLogin ? 'Password' : 'Create login'}
-              </Button>
-            </>
-          )}
-          {u.attendanceType !== null && (
-            <Button variant="ghost" size="sm" onClick={onTarget}>
-              Target
-            </Button>
-          )}
+        <div className="flex items-center justify-end gap-2 text-sm whitespace-nowrap">
+          {actions.map((a, i) => (
+            <Fragment key={a.label}>
+              {i > 0 && (
+                <span aria-hidden className="text-muted-foreground/50">
+                  |
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={a.onClick}
+                className="text-primary cursor-pointer hover:underline focus-visible:underline focus-visible:outline-none"
+              >
+                {a.label}
+              </button>
+            </Fragment>
+          ))}
         </div>
       </TableCell>
     </TableRow>

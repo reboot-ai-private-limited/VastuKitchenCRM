@@ -278,3 +278,36 @@
   background-repeat: repeat;
   background-position: top left;
 }
+
+/* "Coming soon" panels (project Announcements / Meetings). Motion is switched off by the reduced-motion rule above. */
+@keyframes soon-float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
+}
+@keyframes soon-ring {
+  0% { transform: scale(0.7); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes soon-glow {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+@keyframes soon-card {
+  0%, 12% { opacity: 0; transform: translateY(14px) scale(0.98); }
+  28%, 82% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.99); }
+}
+@keyframes soon-shimmer {
+  0% { background-position: -150% 0; }
+  100% { background-position: 250% 0; }
+}
+.soon-float { animation: soon-float 3.6s ease-in-out infinite; }
+.soon-ring { animation: soon-ring 2.2s ease-out infinite; }
+.soon-glow { animation: soon-glow 3.6s ease-in-out infinite; }
+.soon-card { animation: soon-card 6s ease-in-out infinite; }
+.soon-shimmer {
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.55) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: soon-shimmer 2.8s ease-in-out infinite;
+}

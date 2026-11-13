@@ -1,15 +1,25 @@
 'use client';
 
-import { FileText, LifeBuoy, ListChecks, MessagesSquare, type LucideIcon } from 'lucide-react';
+import {
+  CalendarClock,
+  FileText,
+  LifeBuoy,
+  ListChecks,
+  Megaphone,
+  MessagesSquare,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type WorkspaceSection = 'feed' | 'todos' | 'complaints' | 'docs';
+export type WorkspaceSection = 'feed' | 'todos' | 'complaints' | 'docs' | 'announcements' | 'meetings';
 
-const ITEMS: Array<{ id: WorkspaceSection; label: string; icon: LucideIcon }> = [
+const ITEMS: Array<{ id: WorkspaceSection; label: string; icon: LucideIcon; soon?: boolean }> = [
   { id: 'feed', label: 'Chat', icon: MessagesSquare },
   { id: 'todos', label: 'To-do', icon: ListChecks },
   { id: 'complaints', label: 'Complaints', icon: LifeBuoy },
   { id: 'docs', label: 'Docs', icon: FileText },
+  { id: 'announcements', label: 'Announcements', icon: Megaphone, soon: true },
+  { id: 'meetings', label: 'Schedule', icon: CalendarClock, soon: true },
 ];
 
 /**
@@ -47,6 +57,11 @@ export function WorkspaceNav({
           >
             <i.icon className="size-4" aria-hidden />
             {i.label}
+            {i.soon && (
+              <span className="soon-shimmer bg-primary-soft text-primary ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase">
+                Soon
+              </span>
+            )}
           </button>
         );
       })}

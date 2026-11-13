@@ -3,6 +3,7 @@
 import type { CustomerDto } from '@vastu/contracts';
 import { Contact, FileUp, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
@@ -11,6 +12,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { CUSTOMER_PAGE_SIZE, useCustomers } from '@/lib/api/customers';
 import { initials, relativeAge } from '@/lib/format';
 import { formatPhone } from '@/lib/leads';
@@ -18,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { ImportCustomersDialog } from './import-customers-dialog';
 
-/** Customers: people with an account, those with a project first. A card opens their page. */
+/** Customers: people with an account, those with a project first. A row opens their page. */
 export function CustomersView() {
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -76,9 +85,9 @@ export function CustomersView() {
           <ErrorState error={q.error} onRetry={() => q.refetch()} />
         </div>
       ) : q.isPending ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
-          {Array.from({ length: 6 }, (_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+        <div className="bg-card shadow-card space-y-2 rounded-xl border p-3" aria-hidden>
+          {Array.from({ length: 8 }, (_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
       ) : data && data.items.length === 0 ? (
@@ -95,11 +104,24 @@ export function CustomersView() {
         </div>
       ) : data ? (
         <div className={cn(q.isPlaceholderData && 'opacity-60 transition-opacity')}>
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {data.items.map((c) => (
-              <CustomerCard key={c.id} c={c} />
-            ))}
-          </ul>
+          <div className="bg-card shadow-card overflow-hidden rounded-xl border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Projects</TableHead>
+                  <TableHead className="hidden md:table-cell">City</TableHead>
+                  <TableHead className="hidden lg:table-cell">Owner</TableHead>
+                  <TableHead className="hidden sm:table-cell">Last active</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((c) => (
+                  <CustomerRow key={c.id} c={c} />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           {data.totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between gap-3">
               <p className="text-muted-foreground tabular text-xs">
@@ -135,26 +157,31 @@ export function CustomersView() {
   );
 }
 
-function CustomerCard({ c }: { c: CustomerDto }) {
+function CustomerRow({ c }: { c: CustomerDto }) {
+  const router = useRouter();
+  const href = `/customers/${c.id}`;
+  // The whole row opens the customer; the name stays a real link (keyboard, middle-click).
   return (
-    <li>
-      <Link
-        href={`/customers/${c.id}`}
-        className="bg-card shadow-card hover:shadow-card-hover focus-visible:ring-ring block rounded-xl border p-4 transition-all outline-none hover:-translate-y-px focus-visible:ring-2"
-      >
-        <div className="flex items-start gap-3">
-          <Avatar className="size-10 shrink-0">
+    <TableRow className="cursor-pointer" onClick={() => router.push(href)}>
+      <TableCell>
+        <Link
+          href={href}
+          onClick={(e) => e.stopPropagation()}
+          className="focus-visible:ring-ring flex items-center gap-3 rounded-sm outline-none focus-visible:ring-2"
+        >
+          <Avatar className="size-9 shrink-0">
             <AvatarFallback>{initials(c.name)}</AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate font-semibold">{c.name}</h2>
-            <p className="text-muted-foreground tabular truncate text-xs">
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{c.name}</span>
+            <span className="text-muted-foreground tabular block truncate text-xs">
               {formatPhone(c.phone)}
-              {c.city ? ` · ${c.city}` : ''}
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+            </span>
+          </span>
+        </Link>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {c.projectsCount === 0 ? (
             <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 font-medium">
               No project yet
@@ -171,10 +198,12 @@ function CustomerCard({ c }: { c: CustomerDto }) {
             </span>
           )}
         </div>
-        <p className="text-muted-foreground mt-3 truncate text-xs">
-          {c.owner ? `Owner: ${c.owner.name}` : 'No owner'} · active {relativeAge(c.lastActivityAt)}
-        </p>
-      </Link>
-    </li>
+      </TableCell>
+      <TableCell className="text-muted-foreground hidden md:table-cell">{c.city ?? '—'}</TableCell>
+      <TableCell className="hidden lg:table-cell">{c.owner?.name ?? '—'}</TableCell>
+      <TableCell className="text-muted-foreground hidden text-xs sm:table-cell">
+        {relativeAge(c.lastActivityAt)}
+      </TableCell>
+    </TableRow>
   );
 }

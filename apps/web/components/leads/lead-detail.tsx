@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { NotFoundView } from '@/components/common/not-found-view';
 import { PageBody } from '@/components/common/page-header';
+import { TimelineThread } from '@/components/common/timeline-thread';
 import { StatusBadge } from '@/components/common/status-badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,7 +27,6 @@ import { useLeadProjects } from '@/lib/api/projects';
 import { useProposals } from '@/lib/api/proposals';
 import { ProposalChipBadge } from '@/components/proposals/proposals-view';
 import { useAuth } from '@/lib/auth';
-import { describeActivity } from '@/lib/lead-activity';
 import { formatDate, formatDuration, formatINR, formatTime, relativeAge } from '@/lib/format';
 import { SOURCE_LABEL, formatPhone, leadPermissions, telUrl, whatsappUrl } from '@/lib/leads';
 import { EditLeadDialog } from './edit-lead-dialog';
@@ -76,8 +76,13 @@ export function LeadDetail({ id }: { id: string }) {
                   <Clock className="size-3.5" aria-hidden /> Stuck: no movement for a while
                 </span>
               )}
-              <span className="tabular text-muted-foreground text-sm">{formatPhone(l.phone)}</span>
             </div>
+            <a
+              href={telUrl(l.phone)}
+              className="tabular text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm"
+            >
+              <Phone className="size-3.5" aria-hidden /> {formatPhone(l.phone)}
+            </a>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {can.changeStatus && (
@@ -158,26 +163,33 @@ export function LeadDetail({ id }: { id: string }) {
           )}
           <TabsContent value="details">
             <Panel>
-              <dl className="divide-y">
-                <Row label="Phone">{formatPhone(l.phone)}</Row>
-                <Row label="Alternate phone">{l.altPhone ? formatPhone(l.altPhone) : '—'}</Row>
-                <Row label="Email">{l.email ?? '—'}</Row>
-                <Row label="City">{l.city ?? '—'}</Row>
-                <Row label="Notes">{l.notes ?? '—'}</Row>
+              <dl className="grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2">
+                <Field label="Phone">{formatPhone(l.phone)}</Field>
+                <Field label="Alternate phone">{l.altPhone ? formatPhone(l.altPhone) : null}</Field>
+                <Field label="Email">{l.email}</Field>
+                <Field label="City">{l.city}</Field>
+                <Field label="Notes" wide>
+                  {l.notes}
+                </Field>
               </dl>
             </Panel>
           </TabsContent>
         </Tabs>
 
         <aside className="bg-card shadow-card h-fit rounded-xl border p-4">
-          <h2 className="mb-2 text-sm font-semibold">Summary</h2>
-          <dl className="divide-y text-sm">
-            <Row label="Assigned to">{l.assignedTo?.name ?? 'Unassigned'}</Row>
-            <Row label="Source">{SOURCE_LABEL[l.source]}</Row>
-            <Row label="Status changed">{relativeAge(l.statusChangedAt)}</Row>
-            <Row label="Created">{formatDate(l.createdAt)}</Row>
-            {l.lostReason && <Row label="Lost because">{l.lostReason}</Row>}
+          <h2 className="mb-3 text-sm font-semibold">Summary</h2>
+          <dl className="space-y-3.5 text-sm">
+            <Field label="Assigned to">{l.assignedTo?.name ?? 'Unassigned'}</Field>
+            <Field label="Source">{SOURCE_LABEL[l.source]}</Field>
+            <Field label="Status changed">{relativeAge(l.statusChangedAt)}</Field>
+            <Field label="Created">{formatDate(l.createdAt)}</Field>
           </dl>
+          {l.lostReason && (
+            <div className="bg-danger-soft text-danger mt-4 rounded-lg p-3 text-xs">
+              <p className="font-semibold">Lost because</p>
+              <p className="mt-0.5">{l.lostReason}</p>
+            </div>
+          )}
           {locked && projects.data && projects.data.items.length > 0 && (
             <div className="mt-3 space-y-1">
               <p className="text-muted-foreground text-xs font-medium">Project</p>
@@ -211,10 +223,23 @@ const Panel = ({ children }: { children: ReactNode }) => (
   <div className="bg-card shadow-card mt-3 overflow-hidden rounded-xl border">{children}</div>
 );
 
-const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="flex items-baseline justify-between gap-4 px-0 py-2 first:pt-0 last:pb-0 [&:is(dl_dl_*)]:px-0">
-    <dt className="text-muted-foreground shrink-0 text-xs font-medium">{label}</dt>
-    <dd className="min-w-0 text-right break-words">{children}</dd>
+/** A label over its value; an empty value reads as a soft "Not added" instead of a bare dash. */
+export const Field = ({
+  label,
+  children,
+  wide,
+}: {
+  label: string;
+  children?: ReactNode;
+  wide?: boolean;
+}) => (
+  <div className={wide ? 'sm:col-span-2' : undefined}>
+    <dt className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+      {label}
+    </dt>
+    <dd className="mt-0.5 min-w-0 break-words">
+      {children ? children : <span className="text-muted-foreground/70">Not added</span>}
+    </dd>
   </div>
 );
 
@@ -223,29 +248,7 @@ export function Timeline({ id }: { id: string }) {
   if (q.isPending) return <ListSkeleton />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
   if (q.data.length === 0) return <EmptyState icon={Clock} title="Nothing here yet" />;
-  return (
-    <ol className="divide-y">
-      {q.data.map((a) => {
-        const { title, detail } = describeActivity(a);
-        return (
-          <li key={a.id} className="flex gap-3 px-4 py-3">
-            <span aria-hidden className="bg-primary mt-1.5 size-2 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">{title}</p>
-              {detail && <p className="text-muted-foreground text-xs">{detail}</p>}
-            </div>
-            <time
-              dateTime={a.at}
-              className="text-muted-foreground shrink-0 text-xs"
-              title={`${formatDate(a.at)}, ${formatTime(a.at)}`}
-            >
-              {relativeAge(a.at)}
-            </time>
-          </li>
-        );
-      })}
-    </ol>
-  );
+  return <TimelineThread items={q.data} />;
 }
 
 function Calls({ id, active }: { id: string; active: boolean }) {

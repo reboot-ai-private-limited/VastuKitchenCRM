@@ -58,6 +58,7 @@ import { DocsTab } from '@/components/docs/docs-tab';
 import { TodosTab } from '@/components/todos/todos-tab';
 import { canRaiseComplaint } from '@/lib/complaints';
 import { ComplaintsTab } from './complaints-tab';
+import { ComingSoon } from './coming-soon';
 import { WorkspaceNav, type WorkspaceSection } from './workspace-nav';
 import { DesignStageChip } from './design-stage-chip';
 import { Feed, FeedViewToggle } from './feed';
@@ -69,7 +70,14 @@ const BACK_LINKS = [
   { href: '/complaints', label: 'Complaints' },
   { href: '/todos', label: 'My to-dos' },
 ];
-const SECTIONS: readonly WorkspaceSection[] = ['feed', 'todos', 'complaints', 'docs'];
+const SECTIONS: readonly WorkspaceSection[] = [
+  'feed',
+  'todos',
+  'complaints',
+  'docs',
+  'announcements',
+  'meetings',
+];
 
 export function ProjectDetail({ id }: { id: string }) {
   const { user } = useAuth();
@@ -240,6 +248,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 isCustomer={can.isCustomer}
               />
             )}
+            {(tab === 'announcements' || tab === 'meetings') && <ComingSoon kind={tab} />}
           </div>
         )}
       </section>

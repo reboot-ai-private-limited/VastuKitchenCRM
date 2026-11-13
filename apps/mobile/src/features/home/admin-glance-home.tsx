@@ -4,9 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import type { DashboardAttentionDto, RecentFeedItemDto } from '@vastu/contracts';
+import type { DashboardAttentionDto } from '@vastu/contracts';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
@@ -17,6 +16,7 @@ import { Text } from '@/components/ui/text';
 import { colors, radius, space, tone, type Tone } from '@/constants/theme';
 import { routeFor } from '@/features/alerts/route-for';
 import { CheckInCard } from '@/features/attendance/check-in-card';
+import { ComplaintsCard, KpiRow, TeamCard } from './admin-dashboard-parts';
 import { NetworkError } from '@/lib/api/client';
 import { getDashboard } from '@/lib/api/endpoints/dashboard';
 import { useSession } from '@/lib/auth/session';
@@ -24,7 +24,6 @@ import {
   addDays,
   businessDate,
   businessMonth,
-  formatINRShort,
   formatTime,
   timeAgo,
 } from '@/lib/format';
@@ -51,17 +50,10 @@ const ATTENTION_META: {
   { key: 'overdueTodos', label: 'Overdue to-dos', tone: 'violet', icon: 'check-square' },
 ];
 
-const RECENT_ICON: Record<RecentFeedItemDto['kind'], keyof typeof Feather.glyphMap> = {
-  POST: 'layers',
-  COMMENT: 'message-square',
-  APPROVAL: 'check-circle',
-};
-
-const RECENT_VERB: Record<RecentFeedItemDto['kind'], string> = {
-  POST: 'posted an update',
-  COMMENT: 'commented',
-  APPROVAL: 'approved the design',
-};
+function daysInRange(r: { from: string; to: string }): number {
+  const ms = new Date(r.to + 'T00:00:00Z').getTime() - new Date(r.from + 'T00:00:00Z').getTime();
+  return Math.max(1, Math.round(ms / 86_400_000) + 1);
+}
 
 function computeRange(preset: RangePreset): { from: string; to: string } {
   const today = businessDate();
@@ -173,6 +165,24 @@ export function AdminGlanceHome() {
             </Card>
           ) : null}
 
+          {/* KPI ROW + TEAM (same order as the website dashboard) */}
+          {data.counters ? (
+            <Reveal>
+              <KpiRow counters={data.counters} staff={data.staff} />
+            </Reveal>
+          ) : null}
+
+          {data.people ? (
+            <Reveal index={1}>
+              <View style={{ gap: space[2] }}>
+                <Text variant="caption" muted style={styles.eyebrow}>
+                  TEAM · {rangeTitle.toUpperCase()}
+                </Text>
+                <TeamCard people={data.people} days={daysInRange(range)} offDay={data.staff?.offDay ?? false} />
+              </View>
+            </Reveal>
+          ) : null}
+
           {/* NEEDS YOUR ATTENTION */}
           {attention ? (
             <Reveal>
@@ -264,191 +274,14 @@ export function AdminGlanceHome() {
             </Reveal>
           ) : null}
 
-          {/* STAFF TODAY */}
-          {data.staff ? (
+          {/* COMPLAINTS */}
+          {data.counters && attention ? (
             <Reveal index={1}>
               <View style={{ gap: space[2] }}>
                 <Text variant="caption" muted style={styles.eyebrow}>
-                  STAFF TODAY
+                  COMPLAINTS · PENDING NOW
                 </Text>
-                <PressableScale onPress={() => router.push('/attendance/board' as Href)}>
-                  <Card style={styles.staffCard}>
-                    <View style={[styles.iconCircle, { backgroundColor: tone.success.bg }]}>
-                      <Feather name="users" size={18} color={tone.success.fg} />
-                    </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-                        <Text variant="section" style={{ fontVariant: ['tabular-nums'] }}>
-                          {data.staff.present} / {data.staff.tracked} in
-                        </Text>
-                        {data.staff.offDay ? <Badge label="Weekly off" t="neutral" /> : null}
-                      </View>
-                      <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
-                        {data.staff.absent} absent today · tap to view board
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-                  </Card>
-                </PressableScale>
-              </View>
-            </Reveal>
-          ) : null}
-
-          {/* COUNTERS & VALUE */}
-          {data.counters ? (
-            <Reveal index={2}>
-              <View style={{ gap: space[2] }}>
-                <Text variant="caption" muted style={styles.eyebrow}>
-                  OVERVIEW ({rangeTitle.toUpperCase()})
-                </Text>
-                <View style={styles.gridRow}>
-                  <PressableScale style={{ flex: 1 }} onPress={() => router.push('/leads' as Href)}>
-                    <Card style={styles.metricTile}>
-                      <Text variant="caption" muted>
-                        Open leads
-                      </Text>
-                      <Text variant="counter" style={{ fontVariant: ['tabular-nums'] }}>
-                        {data.counters.leads.open}
-                      </Text>
-                      <Text variant="caption" color={tone.accent.fg} style={{ fontVariant: ['tabular-nums'] }}>
-                        +{data.counters.leads.newInRange} new
-                      </Text>
-                    </Card>
-                  </PressableScale>
-
-                  <PressableScale style={{ flex: 1 }} onPress={() => router.push('/complaints' as Href)}>
-                    <Card style={styles.metricTile}>
-                      <Text variant="caption" muted>
-                        Complaints
-                      </Text>
-                      <Text variant="counter" style={{ fontVariant: ['tabular-nums'] }}>
-                        {data.counters.complaints.pending}
-                      </Text>
-                      <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
-                        {data.counters.complaints.OPEN} unassigned
-                      </Text>
-                    </Card>
-                  </PressableScale>
-                </View>
-
-                <PressableScale onPress={() => router.push('/projects' as Href)}>
-                  <Card style={styles.wideMetric}>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text variant="caption" muted>
-                        Running projects
-                      </Text>
-                      <Text variant="counter" style={{ fontVariant: ['tabular-nums'] }}>
-                        {data.counters.projects.running}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: space[2] }}>
-                      <Badge label={`${data.counters.projects.design} design`} t="violet" />
-                      <Badge label={`${data.counters.projects.site} site`} t="orange" />
-                    </View>
-                  </Card>
-                </PressableScale>
-
-                <View style={styles.gridRow}>
-                  <PressableScale style={{ flex: 1 }} onPress={() => router.push('/proposals' as Href)}>
-                    <Card style={styles.metricTile}>
-                      <Text variant="caption" muted>
-                        Pipeline
-                      </Text>
-                      <Text variant="counter" style={{ fontVariant: ['tabular-nums'] }}>
-                        {formatINRShort(data.counters.value.pipeline)}
-                        {data.counters.value.pipelineCapped ? '+' : ''}
-                      </Text>
-                      <Text variant="caption" muted>
-                        Open quotes
-                      </Text>
-                    </Card>
-                  </PressableScale>
-
-                  <PressableScale style={{ flex: 1 }} onPress={() => router.push('/customers' as Href)}>
-                    <Card style={styles.metricTile}>
-                      <Text variant="caption" muted>
-                        Won ({rangeTitle.toLowerCase()})
-                      </Text>
-                      <Text variant="counter" color={colors.primary} style={{ fontVariant: ['tabular-nums'] }}>
-                        {formatINRShort(data.counters.value.wonInRange)}
-                      </Text>
-                      <Text variant="caption" muted>
-                        Converted value
-                      </Text>
-                    </Card>
-                  </PressableScale>
-                </View>
-              </View>
-            </Reveal>
-          ) : null}
-
-          {/* CUSTOMER ACTIVITY */}
-          {data.recent ? (
-            <Reveal index={3}>
-              <View style={{ gap: space[2] }}>
-                <Text variant="caption" muted style={styles.eyebrow}>
-                  CUSTOMER ACTIVITY
-                </Text>
-                {data.recent.length === 0 ? (
-                  <Card>
-                    <Text muted>No recent project updates yet.</Text>
-                  </Card>
-                ) : (
-                  <Card style={{ gap: space[3] }}>
-                    {data.recent.slice(0, 5).map((item, idx) => (
-                      <PressableScale
-                        key={`${item.postId}-${item.kind}-${idx}`}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/projects/[id]',
-                            params: { id: item.projectId },
-                          } as Href)
-                        }
-                        style={[
-                          styles.recentRow,
-                          idx < Math.min(data.recent!.length, 5) - 1 && styles.recentDivider,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.recentIcon,
-                            {
-                              backgroundColor:
-                                item.kind === 'APPROVAL' ? tone.success.bg : colors.muted,
-                            },
-                          ]}
-                        >
-                          <Feather
-                            name={RECENT_ICON[item.kind]}
-                            size={15}
-                            color={
-                              item.kind === 'APPROVAL' ? tone.success.fg : colors.mutedForeground
-                            }
-                          />
-                        </View>
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space[2] }}>
-                            <Text variant="label" numberOfLines={1} style={{ flex: 1 }}>
-                              {item.projectName}
-                            </Text>
-                            <Text variant="caption" muted>
-                              {timeAgo(item.at)}
-                            </Text>
-                          </View>
-                          <Text variant="caption" muted numberOfLines={1}>
-                            {item.authorName} {RECENT_VERB[item.kind]}
-                            {item.hasPhotos ? ' · 📷' : ''}
-                          </Text>
-                          {item.snippet ? (
-                            <Text variant="caption" numberOfLines={1}>
-                              {item.snippet}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </PressableScale>
-                    ))}
-                  </Card>
-                )}
+                <ComplaintsCard counts={data.counters.complaints} overdue={attention.overdueComplaints} />
               </View>
             </Reveal>
           ) : null}

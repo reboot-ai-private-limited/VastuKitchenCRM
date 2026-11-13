@@ -1,0 +1,90 @@
+import type {
+  ComplaintDto,
+  ComplaintStatus,
+  PaginatedDto,
+  RaiseComplaintBodyDto,
+  UploadTicketDto,
+  ImageInputDto,
+} from '@vastu/contracts';
+import { request } from '@/lib/api/client';
+
+export type ComplaintsQuery = {
+  page: number;
+  pageSize?: number;
+  status?: ComplaintStatus;
+  projectId?: string;
+  assignedTo?: string;
+};
+
+function qs(params: Record<string, string | number | undefined>) {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
+export const listComplaints = (
+  pageOrQuery: number | ComplaintsQuery,
+  status?: ComplaintStatus,
+  signal?: AbortSignal,
+) => {
+  const q: ComplaintsQuery =
+    typeof pageOrQuery === 'number' ? { page: pageOrQuery, status } : pageOrQuery;
+  return request<PaginatedDto<ComplaintDto>>(
+    'GET',
+    `/complaints${qs({
+      page: q.page,
+      pageSize: q.pageSize ?? 20,
+      status: q.status,
+      projectId: q.projectId,
+      assignedTo: q.assignedTo,
+    })}`,
+    undefined,
+    { signal },
+  );
+};
+
+export const getComplaint = (id: string, signal?: AbortSignal) =>
+  request<ComplaintDto>('GET', `/complaints/${encodeURIComponent(id)}`, undefined, { signal });
+
+export const raiseComplaint = (body: RaiseComplaintBodyDto) =>
+  request<ComplaintDto>('POST', '/complaints', body);
+
+export const addComment = (id: string, text: string, images?: ImageInputDto[]) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/comments`, {
+    ...(text ? { text } : {}),
+    ...(images?.length ? { images } : {}),
+  });
+
+export const resolveComplaint = (id: string, note: string, images?: ImageInputDto[]) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/resolve`, {
+    note,
+    ...(images?.length ? { images } : {}),
+  });
+
+export const reopenComplaint = (id: string, reason: string) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/reopen`, { reason });
+
+export const closeComplaint = (id: string, note?: string) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/close`, note ? { note } : {});
+
+/** Upload ticket for photos on a new complaint (raise). */
+export const signRaiseUpload = (projectId: string) =>
+  request<UploadTicketDto>('POST', '/complaints/uploads/sign', { projectId });
+
+/** Upload ticket for resolution photos (only whoever may resolve it). */
+export const signResolveUpload = (id: string) =>
+  request<UploadTicketDto>('POST', `/complaints/${encodeURIComponent(id)}/uploads/sign`, {});
+
+export const assignComplaint = (id: string, assigneeId: string) =>
+  request<unknown>('POST', `/complaints/${encodeURIComponent(id)}/assign`, { assigneeId });
+
+export const deleteComplaintComment = (id: string, commentId: string) =>
+  request<unknown>(
+    'DELETE',
+    `/complaints/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`,
+  );
+
+/** Upload ticket for photos on a message; works for anyone who can see the complaint (not just project members). */
+export const signCommentUpload = (id: string) =>
+  request<UploadTicketDto>('POST', `/complaints/${encodeURIComponent(id)}/comments/uploads/sign`, {});

@@ -28,6 +28,7 @@ export const NOTIFICATION_TYPES = [
   'PROJECT_COMMENT',
   'PROJECT_APPROVED',
   'PROJECT_CLOSED',
+  'ACCOUNT_DELETION_REQUESTED',
 ] as const;
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;

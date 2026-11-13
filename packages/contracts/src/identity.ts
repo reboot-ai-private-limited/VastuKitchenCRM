@@ -63,6 +63,12 @@ export const changePasswordBodySchema = z.object({
 });
 export type ChangePasswordBodyDto = z.infer<typeof changePasswordBodySchema>;
 
+/** Asks for the caller's own account to be deleted. Deactivates it at once; an Admin completes the erasure. */
+export const deleteRequestBodySchema = z.object({ reason: z.string().trim().max(500).optional() });
+export type DeleteRequestBodyDto = z.infer<typeof deleteRequestBodySchema>;
+export const deleteRequestResponseSchema = z.object({ requested: z.literal(true) });
+export type DeleteRequestResponseDto = z.infer<typeof deleteRequestResponseSchema>;
+
 export const authTokensSchema = z.object({
   accessToken: z.string(),
   /** Present only for `X-Client: mobile`; a browser gets it as an httpOnly cookie. */

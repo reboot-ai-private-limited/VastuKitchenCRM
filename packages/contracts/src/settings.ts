@@ -13,6 +13,12 @@ export const SETTING_TYPES = {
   'reminders.stagnantMax': 'number',
   'reminders.complaintDays': 'number',
   'docs.maxFileMb': 'number',
+  'app.android.minVersion': 'text',
+  'app.android.recommendedVersion': 'text',
+  'app.ios.minVersion': 'text',
+  'app.ios.recommendedVersion': 'text',
+  'app.maintenanceActive': 'boolean',
+  'app.maintenanceMessage': 'longText',
   'hr.weeklyOff': 'text',
   'proposals.defaultTerms': 'longText',
   'company.name': 'text',
@@ -41,6 +47,7 @@ export const SETTING_GROUPS = [
   'Documents',
   'HR',
   'Company',
+  'App',
 ] as const;
 
 const settingValueSchema = z.union([z.boolean(), z.number(), z.string()]);

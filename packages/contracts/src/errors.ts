@@ -13,6 +13,8 @@ export const FAULT_CODES = [
   'TOKEN_INVALID',
   /** Too many attempts in a short time (429). */
   'RATE_LIMITED',
+  /** The app build is older than the server still supports (426). */
+  'UPGRADE_REQUIRED',
   /** The request body is bigger than the server accepts (413). */
   'PAYLOAD_TOO_LARGE',
   /** An external dependency (Cloudinary, DB…) is unconfigured or down — retry later. */

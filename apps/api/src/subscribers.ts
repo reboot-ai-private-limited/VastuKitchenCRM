@@ -6,7 +6,12 @@ import type { AppContainers } from './container.js';
  *
  * Handlers must be IDEMPOTENT: a handler that throws is only logged (the event bus), never retried.
  */
-export function registerSubscribers({ events, notifications, projects }: AppContainers): void {
+export function registerSubscribers({
+  events,
+  notifications,
+  projects,
+  identity,
+}: AppContainers): void {
   // A lead was won → create its project. Idempotent (one per won lead), so a replay is harmless.
   events.on('lead.won', async (e) => {
     await projects.contract.createFromWonLead({
@@ -42,5 +47,26 @@ export function registerSubscribers({ events, notifications, projects }: AppCont
       body: `${e.leadName} (${e.leadPhone})`,
       ref: { kind: 'LEAD', id: e.leadId },
     });
+  });
+
+  // A lead was created → tell its owner, or every Admin when nobody owns it yet. The person who
+  // created it already knows.
+  events.on('lead.created', async (e) => {
+    const recipients =
+      e.assignedToId !== null ? [e.assignedToId] : await identity.contract.getActiveAdminIds();
+    await Promise.all(
+      recipients
+        .filter((userId) => userId !== e.byUserId)
+        .map((userId) =>
+          notifications.contract.notify({
+            userId,
+            type: 'LEAD_CREATED',
+            title: 'New lead',
+            body: `${e.leadName} (${e.leadPhone}) via ${e.source}`,
+            ref: { kind: 'LEAD', id: e.leadId },
+            dedupeKey: `lead-created:${e.leadId}`,
+          }),
+        ),
+    );
   });
 }

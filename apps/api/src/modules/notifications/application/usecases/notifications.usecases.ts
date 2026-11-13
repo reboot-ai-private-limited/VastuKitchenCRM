@@ -2,13 +2,31 @@ import type { ListNotificationsQueryDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import type { NewNotification, Notification } from '../../domain/notification.entity.js';
 import type { NotificationRepositoryPort } from '../../domain/notification.repository.port.js';
+import type { PushFanout } from '../services/pushFanout.js';
 
 /** Delivers an in-app notification. `created` is false when the dedupeKey was already delivered. */
+/** Recurring reminders replace each other on the phone instead of piling up. */
+const COLLAPSING_TYPES = new Set<Notification['type']>([
+  'LEAD_STAGNANT',
+  'PROPOSAL_UNSEEN',
+  'PROPOSAL_NO_ACTION',
+  'TODO_OVERDUE',
+  'COMPLAINT_OVERDUE',
+]);
+
 export class NotifyUseCase {
-  constructor(private readonly notifications: NotificationRepositoryPort) {}
+  constructor(
+    private readonly notifications: NotificationRepositoryPort,
+    private readonly push?: PushFanout,
+  ) {}
 
   async execute(input: NewNotification): Promise<{ created: boolean }> {
-    return { created: (await this.notifications.createIfNew(input)) !== null };
+    const stored = await this.notifications.createIfNew(input);
+    // A deduped notification was already delivered (and pushed): never push it twice.
+    if (stored && this.push) {
+      await this.push.deliver(stored, COLLAPSING_TYPES.has(stored.type) ? stored.type : undefined);
+    }
+    return { created: stored !== null };
   }
 }
 

@@ -104,6 +104,16 @@ const schema = z.object({
   /** How often the reminder job runs. It is idempotent, so a shorter interval only means quicker alerts. */
   REMINDER_INTERVAL_MINUTES: z.coerce.number().positive().default(60),
 
+  /**
+   * Push (FCM). The Firebase service-account JSON, raw or base64. Optional: without it (or with
+   * PUSH_ENABLED=false) nothing is pushed and in-app notifications still work. Never commit it.
+   */
+  FIREBASE_SERVICE_ACCOUNT_JSON: blankAsUnset(z.string().min(1).optional()),
+  PUSH_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+
   /** Run scheduled jobs in this process. True on exactly one instance. */
   ENABLE_CRON: z
     .enum(['true', 'false'])

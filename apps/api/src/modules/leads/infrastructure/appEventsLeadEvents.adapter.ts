@@ -1,4 +1,9 @@
-import type { EventBus, LeadAssignedEvent, LeadWonEvent } from '@/shared/events/appEvents.js';
+import type {
+  EventBus,
+  LeadAssignedEvent,
+  LeadCreatedEvent,
+  LeadWonEvent,
+} from '@/shared/events/appEvents.js';
 import type { LeadEventsPort } from '../domain/leadEvents.port.js';
 
 export class AppEventsLeadEvents implements LeadEventsPort {
@@ -6,6 +11,10 @@ export class AppEventsLeadEvents implements LeadEventsPort {
 
   leadWon(event: LeadWonEvent): void {
     this.bus.emit('lead.won', event);
+  }
+
+  leadCreated(event: LeadCreatedEvent): void {
+    this.bus.emit('lead.created', event);
   }
 
   leadAssigned(event: LeadAssignedEvent): void {

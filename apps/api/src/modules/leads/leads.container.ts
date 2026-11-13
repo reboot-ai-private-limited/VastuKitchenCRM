@@ -86,7 +86,7 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
   const stuckDays = () => settings.get('leads.stuckDays');
   const views = new LeadViewBuilder(directory, stuckDays);
   const getLead = new GetLeadUseCase(access, views);
-  const createLead = new CreateLeadUseCase(leads, activities);
+  const createLead = new CreateLeadUseCase(leads, activities, undefined, leadEvents);
   const listLeads = new ListLeadsUseCase(leads, views, stuckDays);
   const updateLead = new UpdateLeadUseCase(access, leads, views);
   const assignLead = new AssignLeadUseCase(leads, activities, directory, leadEvents, views);

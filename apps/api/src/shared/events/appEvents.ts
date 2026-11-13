@@ -38,7 +38,18 @@ export interface LeadAssignedEvent {
   byUserId: string;
 }
 
+export interface LeadCreatedEvent {
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  source: string;
+  /** The assignee if the lead was created owned, else null (Admins are told instead). */
+  assignedToId: string | null;
+  byUserId: string;
+}
+
 export interface AppEventMap {
+  'lead.created': LeadCreatedEvent;
   'lead.won': LeadWonEvent;
   'lead.assigned': LeadAssignedEvent;
   'proposal.seen': ProposalSeenEvent;

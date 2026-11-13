@@ -1,10 +1,13 @@
 import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 import {
+  deviceIdParamsSchema,
+  deviceSchema,
   listNotificationsQuerySchema,
   notificationIdParamsSchema,
   notificationPageSchema,
   readAllResultSchema,
+  registerDeviceSchema,
   unreadCountSchema,
 } from '@vastu/contracts';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
@@ -52,7 +55,28 @@ openApiRegistry.registerPath({
   },
 });
 
+openApiRegistry.registerPath({
+  method: 'post',
+  path: '/api/notifications/devices',
+  tags: TAG,
+  security,
+  summary: 'Register (or refresh) this phone for push. Upserted by token',
+  request: { body: { content: { 'application/json': { schema: registerDeviceSchema } } } },
+  responses: { 200: okResponse('The device', deviceSchema) },
+});
+openApiRegistry.registerPath({
+  method: 'delete',
+  path: '/api/notifications/devices/{id}',
+  tags: TAG,
+  security,
+  summary: 'Stop push to one of my phones (call on sign-out)',
+  request: { params: deviceIdParamsSchema },
+  responses: { 200: okResponse('Removed', z.object({})), 404: errorResponse('Not found') },
+});
+
 export interface NotificationsControllers {
+  registerDevice: RequestHandler;
+  removeDevice: RequestHandler;
   list: RequestHandler;
   unreadCount: RequestHandler;
   markRead: RequestHandler;
@@ -65,6 +89,8 @@ export function buildNotificationsRouter(c: NotificationsControllers): Router {
   router.use(authenticate);
   router.get('/', validate({ query: listNotificationsQuerySchema }), c.list);
   router.get('/unread-count', c.unreadCount);
+  router.post('/devices', validate({ body: registerDeviceSchema }), c.registerDevice);
+  router.delete('/devices/:id', validate({ params: deviceIdParamsSchema }), c.removeDevice);
   // Fixed path before `/:id/read`, so "read-all" is never read as an id.
   router.post('/read-all', c.markAllRead);
   router.post('/:id/read', validate({ params: notificationIdParamsSchema }), c.markRead);

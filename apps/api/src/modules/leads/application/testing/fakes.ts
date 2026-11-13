@@ -1,5 +1,5 @@
 import { AppError } from '@/shared/errors/AppError.js';
-import type { LeadAssignedEvent, LeadWonEvent } from '@/shared/events/appEvents.js';
+import type { LeadAssignedEvent, LeadCreatedEvent, LeadWonEvent } from '@/shared/events/appEvents.js';
 import type { CallRecord, CallStat, NewCallRecord } from '../../domain/call.entity.js';
 import type { CallRepositoryPort } from '../../domain/call.repository.port.js';
 import type { Lead, LeadListFilter, LeadPatch, NewLead } from '../../domain/lead.entity.js';
@@ -154,6 +154,10 @@ export class FakeEvents implements LeadEventsPort {
   won: LeadWonEvent[] = [];
   leadWon(event: LeadWonEvent) {
     this.won.push(event);
+  }
+  created: LeadCreatedEvent[] = [];
+  leadCreated(event: LeadCreatedEvent) {
+    this.created.push(event);
   }
   assigned: LeadAssignedEvent[] = [];
   leadAssigned(event: LeadAssignedEvent) {

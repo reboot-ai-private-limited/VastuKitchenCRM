@@ -14,4 +14,6 @@ export interface NotifyInput {
 export interface NotificationsPublicContract {
   /** `created` is false when `dedupeKey` was already delivered to that person. */
   notify(input: NotifyInput): Promise<{ created: boolean }>;
+  /** Stops push to every phone of a user (sign-out everywhere, deactivation). Returns how many. */
+  removeDevicesFor(userId: string): Promise<number>;
 }

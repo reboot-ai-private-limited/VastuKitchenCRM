@@ -33,3 +33,16 @@ describe('CreateLeadUseCase', () => {
     });
   });
 });
+
+describe('CreateLeadUseCase events', () => {
+  it('announces the new lead', async () => {
+    const w = world();
+    const lead = await new CreateLeadUseCase(w.leads, w.activities, undefined, w.events).execute(
+      sales1,
+      input,
+    );
+    expect(w.events.created).toEqual([
+      expect.objectContaining({ leadId: lead.id, assignedToId: sales1.id, byUserId: sales1.id }),
+    ]);
+  });
+});

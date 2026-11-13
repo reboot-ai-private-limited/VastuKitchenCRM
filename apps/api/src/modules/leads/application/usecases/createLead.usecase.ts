@@ -2,6 +2,7 @@ import type { CreateLeadBodyDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import type { Lead } from '../../domain/lead.entity.js';
 import type { LeadActivityRepositoryPort } from '../../domain/leadActivity.repository.port.js';
+import type { LeadEventsPort } from '../../domain/leadEvents.port.js';
 import type { LeadRepositoryPort } from '../../domain/lead.repository.port.js';
 import type { Actor } from '../services/leadAccess.js';
 
@@ -10,6 +11,7 @@ export class CreateLeadUseCase {
     private readonly leads: LeadRepositoryPort,
     private readonly activities: LeadActivityRepositoryPort,
     private readonly now: () => Date = () => new Date(),
+    private readonly events?: LeadEventsPort,
   ) {}
 
   async execute(actor: Actor, input: CreateLeadBodyDto): Promise<Lead> {
@@ -43,6 +45,14 @@ export class CreateLeadUseCase {
       byUserId: actor.id,
       at: now,
       data: { source: lead.source },
+    });
+    this.events?.leadCreated({
+      leadId: lead.id,
+      leadName: lead.name,
+      leadPhone: lead.phone,
+      source: lead.source,
+      assignedToId: lead.assignedToId,
+      byUserId: actor.id,
     });
     return lead;
   }

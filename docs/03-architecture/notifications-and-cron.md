@@ -26,7 +26,13 @@ Endpoints (any signed-in user, always their own): `GET /api/notifications` (`unr
 
 ## Delivery
 1. **In-app, by polling:** web and app read `unread-count` about every 30 seconds and when the app returns to the foreground ("within ~30 s", not instant).
-2. **Push (FCM)** comes with the mobile app (needs a Firebase project): a `PushSender` port in the notifications module, so it slots in without touching anything else.
+2. **Push (FCM)** is implemented behind the `PushSenderPort` (`FcmPushSender`, firebase-admin). `NotifyUseCase` stores the in-app row, then `PushFanout` sends to the recipient's FCM devices. A deduped notification is never pushed twice, push errors are logged and never fail the request, and tokens FCM reports dead are deleted.
+   - **Devices**: `POST /api/notifications/devices` (upsert by token; `provider: 'fcm'` for raw FCM tokens, absent = legacy Expo token, which is stored but not pushed) and `DELETE /api/notifications/devices/:id`. Devices not seen for 120 days expire.
+   - **Payload**: notification title/body plus data `{notificationId, type, refKind, refId, postId?, projectId?}` for deep links. Android channels: `sales` (leads, proposals), `projects` (projects, files), `general`. The app must create these channel ids.
+   - **Batching**: reminder types (stagnant lead, proposal unseen/no action, to-do/complaint overdue) use a collapse key = type, so a run replaces rather than stacks pushes.
+   - **New lead**: `lead.created` event → `LEAD_CREATED` to the owner, or every Admin if unassigned.
+   - **Config**: `FIREBASE_SERVICE_ACCOUNT_JSON` (raw or base64) and `PUSH_ENABLED`. Without credentials a no-op sender is used.
+   - **Not yet done**: revoking devices on account deactivation (contract `removeDevicesFor` exists, not wired), per-category mute, Expo delivery.
 
 ## Reminder rules
 All thresholds are **system settings** ([settings](settings.md)) in **days** (decimals allowed, e.g. `0.001` ≈ a minute, for demos and tests). The `.env` values (`REMINDER_*`, `LEAD_STUCK_DAYS`) are only the defaults; an Admin's change applies from the next run.

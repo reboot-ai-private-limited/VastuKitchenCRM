@@ -102,17 +102,30 @@ export function usePush() {
     const id = response.notification.request.identifier;
     if (handled.current === id) return;
     handled.current = id;
+    // The backend sends flat string keys (FCM data is string-only).
     const data = response.notification.request.content.data as {
-      notificationId?: string | null;
-      ref?: NotificationRefDto | null;
+      notificationId?: string;
+      refKind?: NotificationRefDto['kind'];
+      refId?: string;
+      postId?: string;
+      projectId?: string;
     };
+    const ref: NotificationRefDto | null =
+      data.refKind && data.refId
+        ? {
+            kind: data.refKind,
+            id: data.refId,
+            ...(data.postId ? { postId: data.postId } : {}),
+            ...(data.projectId ? { projectId: data.projectId } : {}),
+          }
+        : null;
     if (data.notificationId) {
       void markRead(data.notificationId)
         .then(() => qc.invalidateQueries({ queryKey: ['notifications'] }))
         .catch(() => undefined);
     }
     // A role that cannot open the target, or a summary push, lands in the inbox.
-    const href = routeFor(data.ref ?? null, user.role) ?? '/notifications';
+    const href = routeFor(ref, user.role) ?? '/notifications';
     setTimeout(() => {
       try {
         router.push(href);

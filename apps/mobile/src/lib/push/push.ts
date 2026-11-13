@@ -9,7 +9,13 @@ import { registerDevice, removeDevice } from '@/lib/api/endpoints/notifications'
 // SecureStore keys allow only letters, digits, '.', '-', '_'.
 const DEVICE_KEY = 'push.device'; // JSON { id, token, userId }
 const ASKED_KEY = 'push.asked';
-const CHANNEL = 'default';
+// Channel ids must match the backend (channelFor in pushFanout.ts); a push whose channel does not
+// exist on the phone falls back to the default one.
+const CHANNELS = [
+  { id: 'general', name: 'General' },
+  { id: 'sales', name: 'Leads & proposals' },
+  { id: 'projects', name: 'Projects & files' },
+] as const;
 
 type Registered = { id: string; token: string; userId: string };
 
@@ -28,10 +34,14 @@ export function configurePushHandling() {
 /** Android 13+ shows the permission prompt only once a channel exists, so this runs first. */
 export async function ensureChannel() {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL, {
-    name: 'General',
-    importance: AndroidImportance.HIGH,
-  });
+  await Promise.all(
+    CHANNELS.map((c) =>
+      Notifications.setNotificationChannelAsync(c.id, {
+        name: c.name,
+        importance: AndroidImportance.HIGH,
+      }),
+    ),
+  );
 }
 
 const read = async (): Promise<Registered | null> => {
@@ -62,15 +72,16 @@ export async function askForPermission(userId: string): Promise<void> {
 export async function registerForPush(userId: string): Promise<void> {
   try {
     if (!Device.isDevice) return; // simulators and emulators cannot receive remote push
+    if (Platform.OS !== 'android') return; // iOS needs APNs configured in Firebase first
     await ensureChannel();
     const perm = await Notifications.getPermissionsAsync();
     if (!perm.granted) return;
-    const projectId: string | undefined =
-      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-    if (!projectId) return; // the EAS project id has not been set up yet
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    // Native FCM registration token, issued by the Firebase SDK (google-services.json).
+    const { data } = await Notifications.getDevicePushTokenAsync();
+    const token = String(data);
     const device = await registerDevice({
-      platform: Platform.OS === 'ios' ? 'ios' : 'android',
+      platform: 'android',
+      provider: 'fcm',
       pushToken: token,
       appVersion: Constants.expoConfig?.version,
       deviceName: Device.deviceName ?? undefined,

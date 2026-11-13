@@ -3,9 +3,13 @@ packages:
   - "packages/*"
 
 # esbuild ships its binary as a platform package; its postinstall is only an optimisation.
+# firebase-admin's @firebase/util and protobufjs only have optional install scripts, so they are
+# skipped (otherwise `pnpm install` stops with ERR_PNPM_IGNORED_BUILDS on a fresh checkout / the VM).
 allowBuilds:
   '@scarf/scarf': false
+  '@firebase/util': false
   esbuild: false
+  protobufjs: false
 
 # Expo / React Native needs one copy of React and a hoisted node_modules (see docs/mobile/03-architecture.md section 2).
 minimumReleaseAgeExclude:

@@ -1,9 +1,8 @@
-import { StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import type { DashboardAttentionDto, DashboardCountersDto, DashboardDto, DashboardPersonDto } from '@vastu/contracts';
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
@@ -84,10 +83,25 @@ export function KpiRow({ counters, staff }: { counters: DashboardCountersDto; st
   );
 }
 
-function TargetBar({ target }: { target: DashboardPersonDto['target'] }) {
+const ROW_H = 60;
+const HEAD_H = 40;
+const NAME_W = 124;
+const COLS: { key: string; label: string; w: number; right?: boolean }[] = [
+  { key: 'in', label: 'In', w: 82 },
+  { key: 'out', label: 'Out', w: 82 },
+  { key: 'att', label: 'Attendance', w: 104 },
+  { key: 'calls', label: 'Calls', w: 76, right: true },
+  { key: 'leads', label: 'Leads', w: 64, right: true },
+  { key: 'meets', label: 'Meets', w: 64, right: true },
+  { key: 'props', label: 'Proposals', w: 92, right: true },
+  { key: 'target', label: 'Target', w: 168 },
+];
+const TABLE_W = COLS.reduce((n, c) => n + c.w, 0);
+
+function TargetCell({ target }: { target: DashboardPersonDto['target'] }) {
   if (!target || target.amount === 0) {
     return (
-      <Text variant="caption" muted>
+      <Text variant="caption" muted numberOfLines={1}>
         {target ? `${formatINRShort(target.achieved)} won · ` : ''}No target
       </Text>
     );
@@ -95,14 +109,9 @@ function TargetBar({ target }: { target: DashboardPersonDto['target'] }) {
   const pct = Math.round((target.achieved / target.amount) * 100);
   return (
     <View style={{ gap: 4 }}>
-      <View style={styles.targetTop}>
-        <Text variant="caption" muted>
-          Target
-        </Text>
-        <Text variant="caption" style={{ fontVariant: ['tabular-nums'] }}>
-          {formatINRShort(target.achieved)} / {formatINRShort(target.amount)}
-        </Text>
-      </View>
+      <Text variant="caption" style={{ fontVariant: ['tabular-nums'] }} numberOfLines={1}>
+        {formatINRShort(target.achieved)} / {formatINRShort(target.amount)}
+      </Text>
       <View style={styles.track}>
         <View
           style={[
@@ -115,7 +124,10 @@ function TargetBar({ target }: { target: DashboardPersonDto['target'] }) {
   );
 }
 
-/** One row per person: attendance and in/out times, then calls, leads, meets, proposals and the rupee target. */
+/**
+ * The team as a table, like the website: the employee column stays put on the left while the other
+ * columns (In, Out, Attendance, Calls, Leads, Meets, Proposals, Target) scroll sideways.
+ */
 export function TeamCard({
   people,
   days,
@@ -125,7 +137,6 @@ export function TeamCard({
   days: number;
   offDay: boolean;
 }) {
-  const router = useRouter();
   const rows = [...people].sort((a, b) => a.name.localeCompare(b.name));
   if (rows.length === 0) {
     return (
@@ -134,72 +145,78 @@ export function TeamCard({
       </Card>
     );
   }
-  return (
-    <Card style={{ padding: 0, overflow: 'hidden' }}>
-      {rows.map((p, idx) => {
-        const a = p.attendance;
-        const status = !a
-          ? 'Not tracked'
-          : days > 1
-            ? `${a.daysPresent}/${days} days`
-            : a.daysPresent > 0
-              ? 'Present'
-              : offDay
-                ? 'Off'
-                : 'Absent';
-        const present = !!a && a.daysPresent > 0;
-        return (
-          <PressableScale
-            key={p.userId}
-            onPress={() => router.push('/attendance/board' as Href)}
-            style={[styles.person, idx > 0 && styles.personDivider]}
-          >
-            <View style={styles.personHead}>
-              <Avatar name={p.name} size={36} accent />
-              <View style={{ flex: 1, gap: 1 }}>
-                <Text variant="label" numberOfLines={1}>
-                  {p.name}
-                </Text>
-                {p.designation ? (
-                  <Text variant="caption" muted numberOfLines={1}>
-                    {p.designation}
-                  </Text>
-                ) : null}
-              </View>
-              <Badge label={status} t={present ? 'success' : 'neutral'} />
-            </View>
-            {days === 1 && a ? (
-              <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
-                In {a.inAt ? formatTime(a.inAt) : '—'} · Out {a.outAt ? formatTime(a.outAt) : '—'}
-              </Text>
-            ) : null}
-            {p.activity ? (
-              <>
-                <View style={styles.stats}>
-                  <Stat label="Calls" value={`${p.activity.calls}${p.activity.calls > 0 ? ` (${p.activity.answeredCalls})` : ''}`} />
-                  <Stat label="Leads" value={p.activity.leadsHandled} />
-                  <Stat label="Meets" value={dummyMeets(p.userId, days)} />
-                  <Stat label="Proposals" value={p.activity.proposalsGenerated} />
-                </View>
-                <TargetBar target={p.target} />
-              </>
-            ) : null}
-          </PressableScale>
-        );
-      })}
-    </Card>
-  );
-}
+  const clock = (iso: string | null | undefined) => (iso ? formatTime(iso) : '—');
+  const cells = (p: DashboardPersonDto): ReactNode[] => {
+    const a = p.attendance;
+    const status = !a
+      ? 'Not tracked'
+      : days > 1
+        ? `${a.daysPresent}/${days}`
+        : a.daysPresent > 0
+          ? 'Present'
+          : offDay
+            ? 'Off'
+            : 'Absent';
+    const present = !!a && a.daysPresent > 0;
+    const act = p.activity;
+    return [
+      <Text key="in" style={styles.num}>{clock(a?.inAt)}</Text>,
+      <Text key="out" style={styles.num}>{clock(a?.outAt)}</Text>,
+      <Text key="att" variant="label" color={present ? tone.success.fg : colors.mutedForeground}>{status}</Text>,
+      <Text key="calls" style={styles.num}>
+        {act ? `${act.calls}${act.calls > 0 ? ` (${act.answeredCalls})` : ''}` : '—'}
+      </Text>,
+      <Text key="leads" style={styles.num}>{act ? act.leadsHandled : '—'}</Text>,
+      <Text key="meets" style={styles.num}>{act ? dummyMeets(p.userId, days) : '—'}</Text>,
+      <Text key="props" style={styles.num}>{act ? act.proposalsGenerated : '—'}</Text>,
+      <TargetCell key="target" target={p.target} />,
+    ];
+  };
 
-function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <View style={{ flex: 1, gap: 1 }}>
-      <Text variant="label" style={{ fontVariant: ['tabular-nums'] }}>
-        {value}
-      </Text>
-      <Text variant="caption" muted numberOfLines={1}>
-        {label}
-      </Text>
+    <View style={{ flexDirection: 'row' }}>
+      {/* Fixed column: employee */}
+      <View style={{ width: NAME_W, flexShrink: 0 }}>
+        <View style={[styles.headCell, { height: HEAD_H, width: NAME_W }]}>
+          <Text variant="caption" muted>
+            Employee
+          </Text>
+        </View>
+        {rows.map((p) => (
+          <View key={p.userId} style={[styles.rowLine, { height: ROW_H, width: NAME_W, gap: space[2] }]}>
+            <Text variant="label" numberOfLines={1} style={{ flex: 1 }}>
+              {p.name}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Scrolling columns */}
+      <ScrollView horizontal style={{ flex: 1 }} contentOffset={{ x: 0, y: 0 }} showsHorizontalScrollIndicator nestedScrollEnabled bounces={false}>
+        <View style={{ width: TABLE_W }}>
+          <View style={[styles.headRow, { height: HEAD_H }]}>
+            {COLS.map((c) => (
+              <View key={c.key} style={[styles.headCell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
+                <Text variant="caption" muted>
+                  {c.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {rows.map((p) => {
+            const row = cells(p);
+            return (
+              <View key={p.userId} style={[styles.rowLine, { height: ROW_H }]}>
+                {COLS.map((c, i) => (
+                  <View key={c.key} style={[styles.cell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
+                    {row[i]}
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -269,11 +286,17 @@ const styles = StyleSheet.create({
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
   kpiWrap: { width: '48%', flexGrow: 1 },
   kpi: { gap: 4, padding: space[4] },
-  person: { gap: space[2], padding: space[4] },
-  personDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  personHead: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  stats: { flexDirection: 'row', gap: space[2] },
-  targetTop: { flexDirection: 'row', justifyContent: 'space-between' },
+  headRow: { flexDirection: 'row', backgroundColor: colors.muted },
+  headCell: { justifyContent: 'center', paddingHorizontal: space[3], backgroundColor: colors.muted },
+  rowLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: space[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  cell: { justifyContent: 'center', paddingHorizontal: space[1] },
+  num: { fontVariant: ['tabular-nums'] },
   track: { height: 6, borderRadius: radius.full, backgroundColor: colors.muted, overflow: 'hidden' },
   fill: { height: 6, borderRadius: radius.full },
   cRow: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

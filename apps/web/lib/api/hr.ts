@@ -9,6 +9,8 @@ import type {
   DesignationDto,
   PaginatedDto,
   SalarySheetDto,
+  SetTargetBodyDto,
+  TargetsSheetDto,
   SetDayBodyDto,
   SetUserPasswordBodyDto,
   UpdateDesignationBodyDto,
@@ -217,4 +219,23 @@ export async function downloadSalaryCsv(month: string, fileName: string): Promis
   a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/* ── monthly sales targets ──────────────────────────────────────────────────── */
+
+export const useTargets = (month: string, enabled = true) =>
+  useQuery({
+    queryKey: ['hr', 'targets', month],
+    queryFn: ({ signal }) => api<TargetsSheetDto>(`/targets/${month}`, { signal }),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+
+export function useSetTarget(month: string, userId: string) {
+  const refresh = useRefreshHr();
+  return useMutation({
+    mutationFn: (body: SetTargetBodyDto) =>
+      api<TargetsSheetDto>(`/targets/${month}/users/${userId}`, { method: 'PUT', body }),
+    onSuccess: refresh,
+  });
 }

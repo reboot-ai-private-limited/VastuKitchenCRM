@@ -127,6 +127,7 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
       activitySummary: (from, to) => insights.activityByUser(from, to),
       openLeadIds: (limit) => insights.openLeadIds(limit),
       wonLeadIds: (from, to, limit) => insights.wonLeadIds(from, to, limit),
+      wonLeads: (from, to, limit) => insights.wonLeads(from, to, limit),
       getLeadStates: (ids) => reminderQueries.states(ids),
       findStuckLeads: (query) => reminderQueries.findStuck(query),
       getLeadForProposal: (actor, leadId) => getLeadForProposal.execute(actor, leadId),

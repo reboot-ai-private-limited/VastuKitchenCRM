@@ -6,20 +6,25 @@ import { useMemo, useState } from 'react';
 import type { DashboardPersonDto } from '@vastu/contracts';
 import { EmptyState } from '@/components/common/empty-state';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { formatDuration, formatTime, initials } from '@/lib/format';
-import { attendanceHref, currentMonth } from '@/lib/hr';
+import { formatINRShort, formatTime, initials } from '@/lib/format';
+import { dummyMeets } from '@/lib/dashboard-dummy';
+import { attendanceHref, currentMonth, monthLabel } from '@/lib/hr';
 import { cn } from '@/lib/utils';
 
-type SortKey = 'name' | 'in' | 'last' | 'calls' | 'leads' | 'proposals';
+type SortKey = 'name' | 'in' | 'attendance' | 'calls' | 'leads' | 'meets' | 'proposals' | 'target';
 
-const value = (p: DashboardPersonDto, key: SortKey): number | string => {
+const value = (p: DashboardPersonDto, key: SortKey, days: number): number | string => {
   switch (key) {
     case 'name':
       return p.name.toLowerCase();
     case 'in':
       return p.attendance?.inAt ?? '';
-    case 'last':
-      return p.activity?.lastAt ?? '';
+    case 'attendance':
+      return p.attendance?.daysPresent ?? 0;
+    case 'meets':
+      return dummyMeets(p.userId, days);
+    case 'target':
+      return p.target && p.target.amount > 0 ? p.target.achieved / p.target.amount : 0;
     case 'calls':
       return p.activity?.calls ?? 0;
     case 'leads':
@@ -33,11 +38,12 @@ export function sortPeople(
   people: DashboardPersonDto[],
   key: SortKey,
   dir: 'asc' | 'desc',
+  days = 1,
 ): DashboardPersonDto[] {
   const sign = dir === 'asc' ? 1 : -1;
   return [...people].sort((a, b) => {
-    const x = value(a, key);
-    const y = value(b, key);
+    const x = value(a, key, days);
+    const y = value(b, key, days);
     // People with nothing to sort on always sink to the bottom, whichever way it is sorted.
     const xe = x === '' || x === 0;
     const ye = y === '' || y === 0;
@@ -46,20 +52,46 @@ export function sortPeople(
   });
 }
 
-const timeRange = (a: string | null, b: string | null) =>
-  a && b ? `${formatTime(a)} – ${formatTime(b)}` : a ? `${formatTime(a)} –` : '—';
+/** In / Out for a single day; across a range these are the earliest in and latest out. */
+const clock = (iso: string | null) => (iso ? formatTime(iso) : '—');
 
-function Attendance({ p, multiDay }: { p: DashboardPersonDto; multiDay: boolean }) {
+function Attendance({ p, days, offDay }: { p: DashboardPersonDto; days: number; offDay: boolean }) {
   const a = p.attendance;
   if (!a) return <span className="text-muted-foreground">Not tracked</span>;
-  if (multiDay)
+  if (days > 1)
     return (
-      <span className="tabular">
-        {a.daysPresent} day{a.daysPresent === 1 ? '' : 's'}
+      <span className="tabular" title={`Present ${a.daysPresent} of ${days} days`}>
+        {a.daysPresent}/{days}
       </span>
     );
-  if (a.daysPresent === 0) return <span className="text-muted-foreground">Not in yet</span>;
-  return <span className="tabular">{timeRange(a.inAt, a.outAt)}</span>;
+  if (a.daysPresent > 0) return <span className="text-success font-medium">Present</span>;
+  return <span className="text-muted-foreground">{offDay ? 'Off' : 'Absent'}</span>;
+}
+
+function Target({ target }: { target: DashboardPersonDto['target'] }) {
+  if (!target || target.amount === 0)
+    return (
+      <span className="text-muted-foreground ml-auto block text-right text-xs">
+        {target ? `${formatINRShort(target.achieved)} won · ` : ''}No target
+      </span>
+    );
+  const pct = Math.round((target.achieved / target.amount) * 100);
+  return (
+    <div
+      className="ml-auto flex w-40 items-center justify-end gap-2"
+      title={`${pct}% of the ${target.month} target${target.carriedFrom ? ` (carried over from ${target.carriedFrom})` : ''}`}
+    >
+      <span className="tabular text-xs">
+        {formatINRShort(target.achieved)} / {formatINRShort(target.amount)}
+      </span>
+      <span className="bg-muted h-1.5 w-10 shrink-0 overflow-hidden rounded-full" aria-hidden>
+        <span
+          className={cn('block h-full rounded-full', pct >= 100 ? 'bg-success' : 'bg-primary')}
+          style={{ width: `${Math.min(100, pct)}%` }}
+        />
+      </span>
+    </div>
+  );
 }
 
 function SortHeader({
@@ -100,18 +132,20 @@ function SortHeader({
 
 export function PeopleBlock({
   people,
-  multiDay,
+  days,
+  offDay,
   attendanceOnly,
 }: {
   people: DashboardPersonDto[];
-  multiDay: boolean;
+  days: number;
+  offDay: boolean;
   attendanceOnly: boolean;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'name',
     dir: 'asc',
   });
-  const rows = useMemo(() => sortPeople(people, sort.key, sort.dir), [people, sort]);
+  const rows = useMemo(() => sortPeople(people, sort.key, sort.dir, days), [people, sort, days]);
   const onSort = (key: SortKey) =>
     setSort((s) =>
       s.key === key
@@ -128,6 +162,30 @@ export function PeopleBlock({
       />
     );
 
+  const multiDay = days > 1;
+  const month = people.find((p) => p.target)?.target?.month;
+  const targetLabel = month ? `Target · ${monthLabel(month)}` : 'Target';
+  const Name = ({ p }: { p: DashboardPersonDto }) => (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <Avatar className="size-8">
+        <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">
+          {initials(p.name)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <p className="truncate font-medium">
+          <Link
+            href={attendanceHref({ userId: p.userId, month: currentMonth() })}
+            className="focus-visible:ring-ring rounded-sm outline-none hover:underline focus-visible:ring-2"
+          >
+            {p.name}
+          </Link>
+        </p>
+        {p.designation && <p className="text-muted-foreground truncate text-xs">{p.designation}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Tablet and up: a table */}
@@ -135,18 +193,17 @@ export function PeopleBlock({
         <table className="w-full text-left">
           <thead className="bg-muted text-muted-foreground text-xs">
             <tr>
-              <SortHeader label="Person" k="name" sort={sort} onSort={onSort} />
-              <SortHeader
-                label={multiDay ? 'Attendance' : 'In – out'}
-                k="in"
-                sort={sort}
-                onSort={onSort}
-              />
+              <SortHeader label="Employee" k="name" sort={sort} onSort={onSort} />
+              <SortHeader label="In" k="in" sort={sort} onSort={onSort} />
+              <th scope="col" className="px-3 py-2 font-medium">
+                Out
+              </th>
+              <SortHeader label="Attendance" k="attendance" sort={sort} onSort={onSort} />
               {!attendanceOnly && (
                 <>
-                  <SortHeader label="First – last activity" k="last" sort={sort} onSort={onSort} />
                   <SortHeader label="Calls" k="calls" sort={sort} onSort={onSort} align="right" />
                   <SortHeader label="Leads" k="leads" sort={sort} onSort={onSort} align="right" />
+                  <SortHeader label="Meets" k="meets" sort={sort} onSort={onSort} align="right" />
                   <SortHeader
                     label="Proposals"
                     k="proposals"
@@ -154,9 +211,13 @@ export function PeopleBlock({
                     onSort={onSort}
                     align="right"
                   />
-                  <th scope="col" className="px-3 py-2 text-right font-medium">
-                    Feed
-                  </th>
+                  <SortHeader
+                    label={targetLabel}
+                    k="target"
+                    sort={sort}
+                    onSort={onSort}
+                    align="right"
+                  />
                 </>
               )}
             </tr>
@@ -165,49 +226,23 @@ export function PeopleBlock({
             {rows.map((p) => (
               <tr key={p.userId} className="hover:bg-primary-soft/40 h-12 border-b last:border-b-0">
                 <td className="px-3 py-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <Avatar className="size-8">
-                      <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">
-                        {initials(p.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        <Link
-                          href={attendanceHref({ userId: p.userId, month: currentMonth() })}
-                          className="focus-visible:ring-ring rounded-sm outline-none hover:underline focus-visible:ring-2"
-                        >
-                          {p.name}
-                        </Link>
-                      </p>
-                      {p.designation && (
-                        <p className="text-muted-foreground truncate text-xs">{p.designation}</p>
-                      )}
-                    </div>
-                  </div>
+                  <Name p={p} />
                 </td>
+                <td className="tabular px-3 py-1.5">{clock(p.attendance?.inAt ?? null)}</td>
+                <td className="tabular px-3 py-1.5">{clock(p.attendance?.outAt ?? null)}</td>
                 <td className="px-3 py-1.5">
-                  <Attendance p={p} multiDay={multiDay} />
+                  <Attendance p={p} days={days} offDay={offDay} />
                 </td>
                 {!attendanceOnly && p.activity && (
                   <>
-                    <td className="tabular px-3 py-1.5">
-                      {timeRange(p.activity.firstAt, p.activity.lastAt)}
-                    </td>
-                    <td
-                      className="tabular px-3 py-1.5 text-right"
-                      title={
-                        p.activity.talkSeconds
-                          ? `Talk time ${formatDuration(p.activity.talkSeconds)}`
-                          : undefined
-                      }
-                    >
+                    <td className="tabular px-3 py-1.5 text-right">
                       {p.activity.calls}
                       {p.activity.calls > 0 && (
                         <span className="text-muted-foreground"> ({p.activity.answeredCalls})</span>
                       )}
                     </td>
                     <td className="tabular px-3 py-1.5 text-right">{p.activity.leadsHandled}</td>
+                    <td className="tabular px-3 py-1.5 text-right">{dummyMeets(p.userId, days)}</td>
                     <td className="tabular px-3 py-1.5 text-right">
                       {p.activity.proposalsGenerated}
                       {p.activity.proposalsSent > 0 && (
@@ -217,8 +252,8 @@ export function PeopleBlock({
                         </span>
                       )}
                     </td>
-                    <td className="tabular px-3 py-1.5 text-right">
-                      {p.activity.posts + p.activity.comments}
+                    <td className="px-3 py-1.5">
+                      <Target target={p.target} />
                     </td>
                   </>
                 )}
@@ -233,32 +268,25 @@ export function PeopleBlock({
         {rows.map((p) => (
           <li key={p.userId} className="space-y-1.5 px-4 py-3">
             <div className="flex items-center gap-2.5">
-              <Avatar className="size-8">
-                <AvatarFallback className="bg-primary-soft text-primary-hover text-xs font-semibold">
-                  {initials(p.name)}
-                </AvatarFallback>
-              </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
-                  <Link
-                    href={attendanceHref({ userId: p.userId, month: currentMonth() })}
-                    className="focus-visible:ring-ring rounded-sm outline-none hover:underline focus-visible:ring-2"
-                  >
-                    {p.name}
-                  </Link>
-                </p>
-                {p.designation && (
-                  <p className="text-muted-foreground truncate text-xs">{p.designation}</p>
-                )}
+                <Name p={p} />
               </div>
-              <Attendance p={p} multiDay={multiDay} />
+              <Attendance p={p} days={days} offDay={offDay} />
             </div>
-            {!attendanceOnly && p.activity && (
+            {!multiDay && (
               <p className="text-muted-foreground tabular text-xs">
-                Calls {p.activity.calls} ({p.activity.answeredCalls}) · Leads{' '}
-                {p.activity.leadsHandled} · Proposals {p.activity.proposalsGenerated}
-                {p.activity.lastAt && ` · Last ${formatTime(p.activity.lastAt)}`}
+                In {clock(p.attendance?.inAt ?? null)} · Out {clock(p.attendance?.outAt ?? null)}
               </p>
+            )}
+            {!attendanceOnly && p.activity && (
+              <>
+                <p className="text-muted-foreground tabular text-xs">
+                  Calls {p.activity.calls} ({p.activity.answeredCalls}) · Leads{' '}
+                  {p.activity.leadsHandled} · Meets {dummyMeets(p.userId, days)} · Proposals{' '}
+                  {p.activity.proposalsGenerated}
+                </p>
+                <Target target={p.target} />
+              </>
             )}
           </li>
         ))}

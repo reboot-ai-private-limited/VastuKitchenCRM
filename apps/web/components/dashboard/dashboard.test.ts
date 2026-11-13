@@ -25,6 +25,7 @@ const person = (
     posts: 0,
     comments: 0,
   },
+  target: null,
 });
 
 describe('the date range', () => {
@@ -75,9 +76,25 @@ describe('sorting staff activity', () => {
     expect(names(sortPeople(people, 'calls', 'asc'))).toEqual(['Anil', 'Ravi', 'Bimal', 'Rita']);
   });
 
-  it('by last activity, with nobody-active at the bottom either way', () => {
-    expect(names(sortPeople(people, 'last', 'desc'))).toEqual(['Ravi', 'Anil', 'Bimal', 'Rita']);
-    expect(names(sortPeople(people, 'last', 'asc'))).toEqual(['Anil', 'Ravi', 'Bimal', 'Rita']);
+  it('by attendance, most days first, and people with none always last', () => {
+    const ppl = [person('Rita', 0, null), person('Ravi', 1, null, '2026-11-11T04:00:00Z')];
+    ppl[1]!.attendance!.daysPresent = 12;
+    expect(names(sortPeople(ppl, 'attendance', 'desc', 30))).toEqual(['Ravi', 'Rita']);
+    expect(names(sortPeople(ppl, 'attendance', 'asc', 30))).toEqual(['Ravi', 'Rita']);
+  });
+
+  it('by target, furthest along first; no target sinks to the bottom', () => {
+    const t = (name: string, achieved: number, amount: number) => ({
+      ...person(name, 0, null),
+      target: { month: '2026-11', amount, achieved, carriedFrom: null },
+    });
+    const ppl = [
+      person('None', 0, null),
+      t('Half', 300, 600),
+      t('Done', 700, 700),
+      t('Zero', 0, 0),
+    ];
+    expect(names(sortPeople(ppl, 'target', 'desc'))).toEqual(['Done', 'Half', 'None', 'Zero']);
   });
 
   it('does not change the original list', () => {

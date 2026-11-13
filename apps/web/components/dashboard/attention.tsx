@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Clock,
   EyeOff,
-  LifeBuoy,
   ListChecks,
   MousePointerClick,
   TrendingDown,
@@ -35,12 +34,6 @@ const BLOCKS: Array<{
     severity: 'warning',
   },
   { key: 'stagnantLeads', title: 'Stagnant leads', icon: TrendingDown, severity: 'warning' },
-  {
-    key: 'overdueComplaints',
-    title: 'Complaints waiting too long',
-    icon: LifeBuoy,
-    severity: 'danger',
-  },
   { key: 'overdueTodos', title: 'Overdue to-dos', icon: ListChecks, severity: 'danger' },
 ];
 

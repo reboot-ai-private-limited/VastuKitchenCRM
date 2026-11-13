@@ -20,13 +20,23 @@ import {
   GenerateSalarySheetUseCase,
   GetSalarySheetUseCase,
 } from './application/usecases/salary.usecases.js';
+import {
+  GetTargetsUseCase,
+  SetTargetUseCase,
+  targetsFor,
+} from './application/usecases/targets.usecases.js';
 import { IdentityStaffDirectory, SettingsGateway } from './infrastructure/gateways.adapter.js';
 import {
   MongoAttendanceRepository,
   MongoSalaryRepository,
+  MongoSalesTargetRepository,
 } from './infrastructure/mongoHr.adapters.js';
 import * as c from './interface/hr.controller.js';
-import { buildAttendanceRouter, buildSalaryRouter } from './interface/hr.route.js';
+import {
+  buildAttendanceRouter,
+  buildSalaryRouter,
+  buildTargetsRouter,
+} from './interface/hr.route.js';
 import type { HrPublicContract, HrUserAttendance } from './hr.public.js';
 
 export interface HrContainer {
@@ -35,6 +45,8 @@ export interface HrContainer {
   buildAttendanceRouter: () => Router;
   /** Mounted at `/api/salary`. */
   buildSalaryRouter: () => Router;
+  /** Mounted at `/api/targets`. */
+  buildTargetsRouter: () => Router;
 }
 
 export interface HrDeps {
@@ -47,6 +59,7 @@ export function buildHrContainer(deps: HrDeps): HrContainer {
   // 1. Adapters
   const attendance = new MongoAttendanceRepository();
   const salary = new MongoSalaryRepository();
+  const targets = new MongoSalesTargetRepository();
   const staff = new IdentityStaffDirectory(deps.identity);
   const settings = new SettingsGateway(deps.settings);
   const clock = createBusinessClock(env.BUSINESS_TIMEZONE);
@@ -80,6 +93,7 @@ export function buildHrContainer(deps: HrDeps): HrContainer {
         }
         return [...by.values()];
       },
+      targetsForMonth: (month) => targetsFor(targets, month),
     },
     buildAttendanceRouter: () =>
       buildAttendanceRouter({
@@ -101,6 +115,11 @@ export function buildHrContainer(deps: HrDeps): HrContainer {
         edit: c.makeEditRow(new EditSalaryRowUseCase(salary, clock)),
         finalize: c.makeFinalize(new FinalizeSalarySheetUseCase(salary, clock)),
         exportCsv: c.makeExportCsv(new ExportSalaryCsvUseCase(salary)),
+      }),
+    buildTargetsRouter: () =>
+      buildTargetsRouter({
+        get: c.makeGetTargets(new GetTargetsUseCase(targets)),
+        set: c.makeSetTarget(new SetTargetUseCase(staff, targets, clock)),
       }),
   };
 }

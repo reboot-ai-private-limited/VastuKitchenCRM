@@ -1,5 +1,11 @@
 import type { AttendanceMethod, AttendanceType, LocationDto, RoleName } from '@vastu/contracts';
-import type { AttendanceRecord, GeneratedRow, NewAttendance, SalaryRow } from './hr.entity.js';
+import type {
+  AttendanceRecord,
+  GeneratedRow,
+  NewAttendance,
+  SalaryRow,
+  SalesTarget,
+} from './hr.entity.js';
 
 export interface AttendanceRepositoryPort {
   /** Idempotent: when the day already has an in-time, returns it untouched. */
@@ -53,6 +59,15 @@ export interface SalaryRepositoryPort {
   ): Promise<SalaryRow | null>;
   /** Locks every row of the month, once; returns how many it locked (0 = nothing to lock). */
   finalize(month: string, byId: string, at: Date): Promise<number>;
+}
+
+export interface SalesTargetRepositoryPort {
+  /** Upserts the target for one person and month. */
+  set(month: string, userId: string, amount: number, byId: string, at: Date): Promise<SalesTarget>;
+  /** Targets set for exactly this month. */
+  forMonth(month: string): Promise<SalesTarget[]>;
+  /** Targets set for any month up to and including this one (to carry the latest forward). */
+  upToMonth(month: string): Promise<SalesTarget[]>;
 }
 
 export interface StaffRecord {

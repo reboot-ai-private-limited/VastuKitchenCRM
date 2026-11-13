@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { attendanceTypeSchema } from './identity.js';
 
 /** `YYYY-MM-DD` and `YYYY-MM`, in the business timezone. */
-export const dateStringSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'Use YYYY-MM-DD');
+export const dateStringSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'Use YYYY-MM-DD');
 export const monthStringSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Use YYYY-MM');
 
 /** How a day's attendance was recorded. */
@@ -83,14 +85,21 @@ export const boardItemSchema = z.object({
 export const boardSchema = z.object({
   date: z.string(),
   offDay: z.boolean(),
-  counts: z.object({ present: z.number().int(), absent: z.number().int(), missingOut: z.number().int() }),
+  counts: z.object({
+    present: z.number().int(),
+    absent: z.number().int(),
+    missingOut: z.number().int(),
+  }),
   items: z.array(boardItemSchema),
 });
 export type BoardDto = z.infer<typeof boardSchema>;
 
 export const simulateBodySchema = z.object({ days: z.number().int().min(1).max(60).default(14) });
 export type SimulateBodyDto = z.infer<typeof simulateBodySchema>;
-export const simulateResultSchema = z.object({ created: z.number().int(), skipped: z.number().int() });
+export const simulateResultSchema = z.object({
+  created: z.number().int(),
+  skipped: z.number().int(),
+});
 
 /* ── salary ───────────────────────────────────────────────────────────────── */
 
@@ -124,10 +133,35 @@ export const salarySheetSchema = z.object({
 export type SalarySheetDto = z.infer<typeof salarySheetSchema>;
 
 export const salaryMonthParamsSchema = z.object({ month: monthStringSchema });
-export const salaryRowParamsSchema = z.object({ month: monthStringSchema, userId: z.string().min(1) });
+export const salaryRowParamsSchema = z.object({
+  month: monthStringSchema,
+  userId: z.string().min(1),
+});
 
 export const updateSalaryBodySchema = z.object({
   payable: z.number().int().min(0).max(100_000_000),
   note: z.string().trim().min(1).max(200).optional(),
 });
 export type UpdateSalaryBodyDto = z.infer<typeof updateSalaryBodySchema>;
+
+/* ── monthly sales targets (rupees) ───────────────────────────────────────── */
+
+export const setTargetBodySchema = z.object({
+  /** Whole rupees. 0 clears the target for that month. */
+  amount: z.number().int().min(0).max(1_000_000_000),
+});
+export type SetTargetBodyDto = z.infer<typeof setTargetBodySchema>;
+
+export const targetRowSchema = z.object({
+  userId: z.string(),
+  amount: z.number().int(),
+  /** The earlier month this amount was carried from; null when set for this month itself. */
+  carriedFrom: monthStringSchema.nullable(),
+});
+export type TargetRowDto = z.infer<typeof targetRowSchema>;
+
+export const targetsSheetSchema = z.object({
+  month: monthStringSchema,
+  rows: z.array(targetRowSchema),
+});
+export type TargetsSheetDto = z.infer<typeof targetsSheetSchema>;

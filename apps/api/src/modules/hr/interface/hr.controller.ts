@@ -14,6 +14,10 @@ import type {
   Viewer,
 } from '../application/usecases/attendance.usecases.js';
 import type {
+  GetTargetsUseCase,
+  SetTargetUseCase,
+} from '../application/usecases/targets.usecases.js';
+import type {
   EditSalaryRowUseCase,
   ExportSalaryCsvUseCase,
   FinalizeSalarySheetUseCase,
@@ -111,4 +115,19 @@ export const makeExportCsv = (uc: ExportSalaryCsvUseCase): RequestHandler =>
     res.setHeader('Content-Disposition', `attachment; filename="salary-${month}.csv"`);
     res.setHeader('Cache-Control', 'no-store');
     res.status(200).send(csv);
+  });
+
+export const makeGetTargets = (uc: GetTargetsUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    sendSuccess(req, res, await uc.execute(p(req, 'month')));
+  });
+
+export const makeSetTarget = (uc: SetTargetUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    sendSuccess(
+      req,
+      res,
+      await uc.execute(actorOf(req).id, p(req, 'month'), p(req, 'userId'), req.body),
+      'Target saved.',
+    );
   });

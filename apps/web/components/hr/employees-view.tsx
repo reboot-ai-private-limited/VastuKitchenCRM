@@ -1,7 +1,7 @@
 'use client';
 
 import { STAFF_ROLES, type StaffRole, type UserDto } from '@vastu/contracts';
-import { KeyRound, MoreHorizontal, Plus, Search, Tags, Users } from 'lucide-react';
+import { Plus, Search, Tags, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,12 +10,6 @@ import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { PageBody, PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -35,26 +29,28 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ApiError } from '@/lib/api/client';
-import { EMPLOYEE_PAGE_SIZE, useEmployees, useUpdateEmployee } from '@/lib/api/hr';
+import { EMPLOYEE_PAGE_SIZE, useEmployees, useTargets, useUpdateEmployee } from '@/lib/api/hr';
 import { useAuth } from '@/lib/auth';
-import { formatINR } from '@/lib/format';
+import { formatINR, formatINRShort } from '@/lib/format';
 import {
   ATTENDANCE_LABEL,
   DEFAULT_EMPLOYEE_FILTERS,
   ROLE_LABEL,
   canManageUser,
+  currentMonth,
   employeeFiltersToSearch,
   parseEmployeeFilters,
   type EmployeeFilters,
 } from '@/lib/hr';
 import { formatPhone } from '@/lib/leads';
 import { cn } from '@/lib/utils';
-import { DeactivateDialog, PasswordDialog } from './employee-dialogs';
+import { DeactivateDialog, PasswordDialog, TargetDialog } from './employee-dialogs';
 import { EmployeeSheet } from './employee-sheet';
 
 const ALL = '__all__';
 
-type Dialog = { kind: 'edit' | 'password' | 'deactivate'; user: UserDto } | { kind: 'add' } | null;
+type Dialog =
+  { kind: 'edit' | 'password' | 'deactivate' | 'target'; user: UserDto } | { kind: 'add' } | null;
 
 export function EmployeesView() {
   const router = useRouter();
@@ -81,6 +77,9 @@ export function EmployeesView() {
     return () => clearTimeout(t);
   }, [draft, filters.search, setFilters]);
 
+  const month = currentMonth();
+  const targets = useTargets(month);
+  const targetOf = (id: string) => targets.data?.rows.find((r) => r.userId === id);
   const q = useEmployees(filters);
   const data = q.data;
   const filtered =
@@ -198,6 +197,7 @@ export function EmployeesView() {
                   <TableHead className="hidden md:table-cell">Designation</TableHead>
                   <TableHead className="hidden lg:table-cell">Attendance</TableHead>
                   <TableHead className="hidden sm:table-cell text-right">Salary</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Target</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead className="w-10">
                     <span className="sr-only">Actions</span>
@@ -211,6 +211,8 @@ export function EmployeesView() {
                     u={u}
                     isMe={u.id === me?.id}
                     canManage={canManageUser(me?.role, u.role)}
+                    target={targetOf(u.id)?.amount ?? null}
+                    onTarget={() => setDialog({ kind: 'target', user: u })}
                     onAction={(kind) => setDialog({ kind, user: u })}
                   />
                 ))}
@@ -258,6 +260,9 @@ export function EmployeesView() {
           onOpenChange={(o) => !o && setDialog(null)}
         />
       )}
+      {dialog?.kind === 'target' && (
+        <TargetDialog user={dialog.user} initialMonth={month} onClose={() => setDialog(null)} />
+      )}
       {dialog?.kind === 'password' && (
         <PasswordDialog user={dialog.user} onClose={() => setDialog(null)} />
       )}
@@ -272,11 +277,16 @@ function EmployeeRow({
   u,
   isMe,
   canManage,
+  target,
+  onTarget,
   onAction,
 }: {
   u: UserDto;
   isMe: boolean;
   canManage: boolean;
+  /** This month's target in rupees; null when none has been set. */
+  target: number | null;
+  onTarget: () => void;
   onAction: (kind: 'edit' | 'password' | 'deactivate') => void;
 }) {
   const update = useUpdateEmployee(u.id);
@@ -304,6 +314,20 @@ function EmployeeRow({
       <TableCell className="tabular hidden text-right sm:table-cell">
         {u.fixedSalary !== undefined ? formatINR(u.fixedSalary) : '—'}
       </TableCell>
+      <TableCell className="tabular hidden text-right sm:table-cell">
+        {u.attendanceType === null ? (
+          '—'
+        ) : (
+          <button
+            type="button"
+            onClick={onTarget}
+            title="Set monthly target"
+            className="hover:bg-muted focus-visible:ring-ring -mx-1.5 rounded px-1.5 py-0.5 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            {target ? formatINRShort(target) : <span className="text-muted-foreground">Set</span>}
+          </button>
+        )}
+      </TableCell>
       <TableCell>
         <Switch
           aria-label={`${u.name} is active`}
@@ -323,21 +347,23 @@ function EmployeeRow({
         />
       </TableCell>
       <TableCell>
-        {canManage && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={`Actions for ${u.name}`}>
-                <MoreHorizontal />
+        <div className="flex flex-wrap items-center justify-end gap-x-1">
+          {canManage && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => onAction('edit')}>
+                Edit
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => onAction('edit')}>Edit…</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onAction('password')}>
-                <KeyRound /> {u.canLogin ? 'Reset password…' : 'Create login…'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+              <Button variant="ghost" size="sm" onClick={() => onAction('password')}>
+                {u.canLogin ? 'Password' : 'Create login'}
+              </Button>
+            </>
+          )}
+          {u.attendanceType !== null && (
+            <Button variant="ghost" size="sm" onClick={onTarget}>
+              Target
+            </Button>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );

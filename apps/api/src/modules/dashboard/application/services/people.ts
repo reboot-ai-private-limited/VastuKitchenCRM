@@ -4,6 +4,14 @@ import type { HrUserAttendance } from '@/modules/hr/hr.public.js';
 import type { LeadUserActivity } from '@/modules/leads/leads.public.js';
 import type { ProjectUserFeedActivity } from '@/modules/projects/projects.public.js';
 
+export interface PeopleTargets {
+  /** `YYYY-MM` the targets and achievements are for. */
+  month: string;
+  targets: Array<{ userId: string; amount: number; carriedFrom: string | null }>;
+  /** Rupees won so far this month, per person. */
+  achieved: Map<string, number>;
+}
+
 export interface PeopleInputs {
   staff: StaffMember[];
   attendance: HrUserAttendance[];
@@ -20,6 +28,8 @@ export interface PeopleInputs {
     }>;
     feed: ProjectUserFeedActivity[];
   } | null;
+  /** Null for HR, and when the targets could not be loaded. */
+  targets?: PeopleTargets | null;
 }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
@@ -38,6 +48,8 @@ export function buildPeople(input: PeopleInputs): DashboardPersonDto[] {
   const calls = byId(a?.calls ?? []);
   const proposals = byId(a?.proposals ?? []);
   const feed = byId(a?.feed ?? []);
+  const tg = input.targets ?? null;
+  const targets = byId(tg?.targets ?? []);
 
   const did = (id: string) => leads.has(id) || calls.has(id) || proposals.has(id) || feed.has(id);
 
@@ -86,6 +98,15 @@ export function buildPeople(input: PeopleInputs): DashboardPersonDto[] {
             ? { daysPresent: 0, inAt: null, outAt: null }
             : null,
         activity,
+        target:
+          tg && activity
+            ? {
+                month: tg.month,
+                amount: targets.get(s.id)?.amount ?? 0,
+                achieved: tg.achieved.get(s.id) ?? 0,
+                carriedFrom: targets.get(s.id)?.carriedFrom ?? null,
+              }
+            : null,
       };
     })
     .sort((x, y) => x.name.localeCompare(y.name));

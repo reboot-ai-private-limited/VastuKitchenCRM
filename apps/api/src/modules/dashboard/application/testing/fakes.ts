@@ -57,6 +57,8 @@ export function world(nowIso = NOW) {
     calls: [] as Array<{ userId: string; calls: number; answered: number; talkSeconds: number }>,
     openLeadIds: [] as string[],
     wonLeadIds: [] as string[],
+    wonLeads: [] as Array<{ leadId: string; assignedToId: string | null }>,
+    targets: [] as Array<{ userId: string; amount: number; carriedFrom: string | null }>,
     leadStates: [] as Array<{
       id: string;
       name: string;
@@ -169,6 +171,10 @@ export function world(nowIso = NOW) {
         seen('wonLeadIds', from, to, limit);
         return data.wonLeadIds.slice(0, limit);
       },
+      async wonLeads(from, to, limit) {
+        seen('wonLeads', from, to, limit);
+        return data.wonLeads.slice(0, limit);
+      },
       async getLeadStates(ids) {
         return data.leadStates.filter((l) => ids.includes(l.id));
       },
@@ -233,6 +239,11 @@ export function world(nowIso = NOW) {
       async attendanceSummary(from, to) {
         seen('attendance', from, to);
         return data.attendance;
+      },
+      async targetsForMonth(month) {
+        seen('targets', month);
+        guard('targets');
+        return data.targets;
       },
     },
     directory: {

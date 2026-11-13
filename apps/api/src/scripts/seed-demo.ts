@@ -2,6 +2,7 @@
 import mongoose from 'mongoose';
 import { env } from '@/config/env.js';
 import { buildIdentityContainer } from '@/modules/identity/identity.container.js';
+import { DEMO_TARGETS, targetMonths } from './demo-targets.js';
 
 /**
  * DEMO DATA for the client demo — never for production. Fills an EMPTY database with a believable
@@ -397,6 +398,16 @@ async function main() {
       },
     });
   await call('POST', `/salary/${new Date().toISOString().slice(0, 7)}/generate`, tok['Hema']);
+
+  // ── monthly sales targets (this month and last, so carry-forward and progress both show) ──
+  console.warn('Setting sales targets…');
+  const months = targetMonths();
+  for (const [first, phone] of staffDefs.map((d) => [d[0].split(' ')[0]!, d[1]] as const)) {
+    const amounts = DEMO_TARGETS[phone];
+    if (!amounts) continue;
+    for (const [i, month] of months.entries())
+      await call('PUT', `/targets/${month}/users/${id[first]}`, admin, { amount: amounts[i] });
+  }
 
   // ── back-date a few records so the alerts are true ───────────────────────
   console.warn('Back-dating records for the alerts…');

@@ -346,6 +346,7 @@ describe('HR sees attendance only', () => {
           outAt: '2026-11-11T12:30:00.000Z',
         },
         activity: null,
+        target: null,
       },
     ]);
     expect(w.calls['leadActivity']).toBeUndefined(); // never even asked
@@ -378,5 +379,57 @@ describe('one source failing does not blank the page', () => {
     expect([...d.errors].sort()).toEqual(['counters', 'people', 'recent']);
     expect(d.staff).not.toBeNull();
     expect(d.attention).not.toBeNull();
+  });
+});
+
+describe('monthly sales targets', () => {
+  it('shows each person’s rupee target and what they have won this month, priced by the latest sent proposal', async () => {
+    const w = world();
+    w.data.staff = [
+      staff({ id: 'u1', name: 'Ravi' }),
+      staff({ id: 'u2', name: 'Rita' }),
+      staff({ id: 'u3', name: 'Anil' }),
+    ];
+    w.data.targets = [
+      { userId: 'u1', amount: 600_000, carriedFrom: null },
+      { userId: 'u2', amount: 400_000, carriedFrom: '2026-10' },
+    ];
+    w.data.wonLeads = [
+      { leadId: 'l1', assignedToId: 'u1' },
+      { leadId: 'l2', assignedToId: 'u1' },
+      { leadId: 'l3', assignedToId: null }, // nobody's: counts for no one
+    ];
+    w.data.totals = [
+      { leadId: 'l1', total: 250_000 },
+      { leadId: 'l2', total: 100_000 },
+      { leadId: 'l3', total: 900_000 },
+    ];
+    const d = await w.run.execute(ADMIN, { from: '2026-11-05', to: '2026-11-11' });
+    const by = Object.fromEntries(d.people!.map((p) => [p.name, p.target]));
+    expect(by['Ravi']).toEqual({
+      month: '2026-11',
+      amount: 600_000,
+      achieved: 350_000,
+      carriedFrom: null,
+    });
+    expect(by['Rita']).toEqual({
+      month: '2026-11',
+      amount: 400_000,
+      achieved: 0,
+      carriedFrom: '2026-10',
+    });
+    expect(by['Anil']).toEqual({ month: '2026-11', amount: 0, achieved: 0, carriedFrom: null });
+    // The window is the whole month so far, not just the chosen range.
+    const [from] = w.calls['wonLeads']![0] as [Date];
+    expect(from.toISOString()).toBe('2026-10-31T18:30:00.000Z');
+  });
+
+  it('a failing targets source drops only the target column', async () => {
+    const w = world();
+    w.data.staff = [staff({ id: 'u1', name: 'Ravi' })];
+    w.fail('targets');
+    const d = await w.run.execute(ADMIN, {});
+    expect(d.errors).toEqual([]);
+    expect(d.people![0]!.target).toBeNull();
   });
 });

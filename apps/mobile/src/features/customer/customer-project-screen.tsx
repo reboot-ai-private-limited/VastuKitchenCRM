@@ -1,13 +1,12 @@
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { type ComponentRef, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { useKeyboardAvoid } from '@/hooks/use-keyboard-avoid';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -214,6 +213,7 @@ function ReplyBox({ projectId, postId, authorName }: { projectId: string; postId
 export function CustomerProjectScreen() {
   const params = useLocalSearchParams<{ projectId?: string; post?: string }>();
   const insets = useSafeAreaInsets();
+  const kb = useKeyboardAvoid();
   const qc = useQueryClient();
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
@@ -322,11 +322,7 @@ export function CustomerProjectScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
+    <View ref={kb.ref} collapsable={false} style={[styles.root, { paddingBottom: kb.pad }]}>
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -571,7 +567,7 @@ export function CustomerProjectScreen() {
           ) : null}
         </View>
       </BottomSheet>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

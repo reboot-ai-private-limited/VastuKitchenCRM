@@ -9,8 +9,8 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { useKeyboardAvoid } from '@/hooks/use-keyboard-avoid';
 import { Feather } from '@expo/vector-icons';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -120,6 +120,7 @@ export function ChatSegment({
 }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const kb = useKeyboardAvoid();
   const feed = useChatFeed(project.id, mode, active);
   const complaintsQ = useProjectComplaints(project.id, active);
   const sender = usePostSender(project.id);
@@ -287,8 +288,9 @@ export function ChatSegment({
 
   const showComposer = mode === 'ALL' && isStaff;
 
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+    <View ref={kb.ref} collapsable={false} style={{ flex: 1, paddingBottom: kb.pad }}>
       {mode === 'CLIENT' ? (
         <View style={styles.banner}>
           <Feather name="eye" size={14} color={tone.success.fg} />
@@ -385,7 +387,7 @@ export function ChatSegment({
         onClose={() => setThreadPostId(null)}
         onOpenPhotos={onOpenPhotos}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

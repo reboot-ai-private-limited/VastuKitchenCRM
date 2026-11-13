@@ -193,6 +193,8 @@ export const recordVisitBodySchema = z.object({
   longitude: z.number().min(-180).max(180),
   note: z.string().trim().min(1).max(1000).optional(),
   photoUrl: z.string().url().optional(),
+  /** A photo uploaded with the ticket from `POST /api/leads/:id/visits/photo-upload/sign`. Wins over `photoUrl`. */
+  photoPublicId: z.string().min(1).max(300).optional(),
 });
 export type RecordVisitBodyDto = z.infer<typeof recordVisitBodySchema>;
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import type { NotificationRefDto } from '@vastu/contracts';
 import { routeFor } from '@/features/alerts/route-for';
@@ -17,7 +18,10 @@ import {
   unregisterPush,
 } from './push';
 
-configurePushHandling();
+/** Remote push does not exist in Expo Go (removed in SDK 53); everything else keeps working there. */
+export const pushSupported = Constants.executionEnvironment !== 'storeClient';
+
+if (pushSupported) configurePushHandling();
 
 // Logout lives in two screens outside this feature; wrap session.clear once so the phone is
 // unregistered (while the access token still works) before the session is wiped.
@@ -34,7 +38,18 @@ function wrapLogout() {
   };
 }
 
-/** Mounted once in the signed-in layout. */
+/** Renders nothing; mount once in the signed-in layout. Skipped in Expo Go. */
+export function PushBoot() {
+  if (!pushSupported) return null;
+  return <PushRunner />;
+}
+
+function PushRunner() {
+  usePush();
+  return null;
+}
+
+/** Hook form; only call where push is supported. */
 export function usePush() {
   const { user } = useSession();
   const qc = useQueryClient();

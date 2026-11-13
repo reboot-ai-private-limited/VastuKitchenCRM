@@ -33,7 +33,12 @@ import {
   RecordProposalSentUseCase,
 } from './application/usecases/proposalHooks.usecase.js';
 import { UpdateLeadUseCase } from './application/usecases/updateLead.usecase.js';
-import { ListVisitsUseCase, RecordVisitUseCase } from './application/usecases/visits.usecase.js';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
+import {
+  ListVisitsUseCase,
+  RecordVisitUseCase,
+  SignVisitPhotoUseCase,
+} from './application/usecases/visits.usecase.js';
 import { AppEventsLeadEvents } from './infrastructure/appEventsLeadEvents.adapter.js';
 import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
 import { MongoLeadInsights } from './infrastructure/mongoInsights.adapter.js';
@@ -53,6 +58,7 @@ import {
   makeListVisitsController,
   makeRecordCallController,
   makeRecordVisitController,
+  makeSignVisitPhotoController,
   makeTimelineController,
   makeUpdateLeadController,
 } from './interface/leads.controller.js';
@@ -70,9 +76,11 @@ export interface LeadsDeps {
   /** Where the "stuck after N days" value lives (Admin-editable). */
   settings: SettingsPublicContract;
   events: EventBus;
+  /** Where visit photos are uploaded. */
+  storage: StoragePort;
 }
 
-export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): LeadsContainer {
+export function buildLeadsContainer({ identity, settings, events, storage }: LeadsDeps): LeadsContainer {
   // 1. Adapters
   const leads = new MongoLeadRepository();
   const calls = new MongoCallRepository();
@@ -103,7 +111,8 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
   const listCalls = new ListCallsUseCase(access, calls, directory);
   const callStats = new GetCallStatsUseCase(calls, directory);
   const insights = new MongoLeadInsights();
-  const recordVisit = new RecordVisitUseCase(access, visits, activities, directory);
+  const recordVisit = new RecordVisitUseCase(access, visits, activities, directory, storage);
+  const signVisitPhoto = new SignVisitPhotoUseCase(access, storage);
   const listVisits = new ListVisitsUseCase(access, visits, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
   const reminderQueries = new ReminderQueriesUseCase(leads);
@@ -154,6 +163,7 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
         listCalls: makeListCallsController(listCalls),
         recordVisit: makeRecordVisitController(recordVisit),
         listVisits: makeListVisitsController(listVisits),
+        signVisitPhoto: makeSignVisitPhotoController(signVisitPhoto),
       }),
   };
 }

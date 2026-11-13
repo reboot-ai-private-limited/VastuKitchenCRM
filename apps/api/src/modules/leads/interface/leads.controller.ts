@@ -20,6 +20,7 @@ import type { UpdateLeadUseCase } from '../application/usecases/updateLead.useca
 import type {
   ListVisitsUseCase,
   RecordVisitUseCase,
+  SignVisitPhotoUseCase,
 } from '../application/usecases/visits.usecase.js';
 import { toActivityDto, toCallDto, toCallStatDto, toLeadDto, toVisitDto } from './lead.mapper.js';
 import type { ListLeadsQueryDto, CallStatsQueryDto } from '@vastu/contracts';
@@ -132,6 +133,14 @@ export function makeRecordVisitController(useCase: RecordVisitUseCase): RequestH
       'Visit recorded.',
       201,
     );
+  });
+}
+
+export function makeSignVisitPhotoController(useCase: SignVisitPhotoUseCase): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    // A signed ticket: never cached.
+    res.setHeader('Cache-Control', 'no-store');
+    sendSuccess(req, res, await useCase.execute(actorOf(req), idOf(req)), 'Upload ticket ready.');
   });
 }
 

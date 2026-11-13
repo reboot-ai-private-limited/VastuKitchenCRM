@@ -46,7 +46,10 @@ export function PostComposer({
   allowFinalDelivery,
   finalDeliveryRequest,
 }: Props) {
-  const photos = usePhotoAttachments(projectId, kind === 'post' ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT);
+  const photos = usePhotoAttachments(
+    projectId,
+    kind === 'post' ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT,
+  );
   const [text, setText] = useState('');
   const [pickedVisibility, setVisibility] = useState<PostVisibility>('TEAM');
   const [final, setFinal] = useState(false);
@@ -60,7 +63,9 @@ export function PostComposer({
     setFinal(true);
   }
 
-  const hasContent = final ? photos.images.length > 0 : text.trim().length > 0 || photos.images.length > 0;
+  const hasContent = final
+    ? photos.images.length > 0
+    : text.trim().length > 0 || photos.images.length > 0;
   const canSend = hasContent && photos.uploadsDone && !photos.busy && !sending;
 
   const send = async () => {
@@ -93,7 +98,11 @@ export function PostComposer({
   return (
     <View style={[styles.wrap, tinted && styles.clientTint]}>
       {photos.items.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space[2] }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: space[2] }}
+        >
           {photos.items.map((a) => (
             <View key={a.key} style={styles.thumbBox}>
               <Image source={{ uri: a.image.uri }} style={styles.thumb} contentFit="cover" />
@@ -106,7 +115,11 @@ export function PostComposer({
                 </View>
               ) : null}
               {a.status === 'error' ? (
-                <PressableScale onPress={() => photos.retry(a.key)} style={styles.overlay} accessibilityLabel="Retry upload">
+                <PressableScale
+                  onPress={() => photos.retry(a.key)}
+                  style={styles.overlay}
+                  accessibilityLabel="Retry upload"
+                >
                   <Feather name="refresh-cw" size={18} color={colors.primaryForeground} />
                   <Text variant="caption" color={colors.primaryForeground}>
                     Retry
@@ -128,9 +141,6 @@ export function PostComposer({
 
       {kind === 'post' ? (
         <View style={styles.visibilityRow}>
-          <Text variant="caption" muted>
-            Audience
-          </Text>
           {(['TEAM', 'CLIENT'] as const).map((v) => {
             const active = visibility === v;
             const t = tone[AUDIENCE_TONE[v]];
@@ -143,11 +153,22 @@ export function PostComposer({
                 accessibilityState={{ selected: active }}
                 style={[
                   styles.chip,
-                  { backgroundColor: active ? t.bg : colors.muted, borderColor: active ? t.fg : 'transparent' },
+                  {
+                    backgroundColor: active ? t.bg : colors.muted,
+                    borderColor: active ? t.fg : 'transparent',
+                  },
                 ]}
               >
-                <Feather name={v === 'TEAM' ? 'lock' : 'eye'} size={13} color={active ? t.fg : colors.mutedForeground} />
-                <Text variant="caption" numberOfLines={1} color={active ? t.fg : colors.mutedForeground}>
+                <Feather
+                  name={v === 'TEAM' ? 'lock' : 'eye'}
+                  size={13}
+                  color={active ? t.fg : colors.mutedForeground}
+                />
+                <Text
+                  variant="caption"
+                  numberOfLines={1}
+                  color={active ? t.fg : colors.mutedForeground}
+                >
                   {AUDIENCE_LABEL[v]}
                 </Text>
               </PressableScale>
@@ -166,18 +187,21 @@ export function PostComposer({
                 },
               ]}
             >
-              <Feather name="check-circle" size={13} color={final ? tone.success.fg : colors.mutedForeground} />
-              <Text variant="caption" numberOfLines={1} color={final ? tone.success.fg : colors.mutedForeground}>
+              <Feather
+                name="check-circle"
+                size={13}
+                color={final ? tone.success.fg : colors.mutedForeground}
+              />
+              <Text
+                variant="caption"
+                numberOfLines={1}
+                color={final ? tone.success.fg : colors.mutedForeground}
+              >
                 Final delivery
               </Text>
             </PressableScale>
           ) : null}
         </View>
-      ) : null}
-      {final ? (
-        <Text variant="caption" muted>
-          Final delivery is visible to the customer and needs at least one photo.
-        </Text>
       ) : null}
 
       {shownError ? (
@@ -197,7 +221,11 @@ export function PostComposer({
             style={[styles.input, { flex: 0, minHeight: 72, textAlignVertical: 'top' }]}
           />
           <View style={styles.replyActions}>
-            <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
+            <PressableScale
+              onPress={() => void photos.takePhoto()}
+              accessibilityLabel="Take a photo"
+              style={styles.icon}
+            >
               <Feather name="camera" size={20} color={colors.mutedForeground} />
             </PressableScale>
             <PressableScale
@@ -208,8 +236,16 @@ export function PostComposer({
               <Feather name="image" size={20} color={colors.mutedForeground} />
             </PressableScale>
             <View style={{ flex: 1 }} />
-            {onCancel ? <Button title="Cancel" variant="ghost" size="sm" onPress={onCancel} /> : null}
-            <Button title="Reply" size="sm" onPress={() => void send()} loading={sending} disabled={!canSend} />
+            {onCancel ? (
+              <Button title="Cancel" variant="ghost" size="sm" onPress={onCancel} />
+            ) : null}
+            <Button
+              title="Reply"
+              size="sm"
+              onPress={() => void send()}
+              loading={sending}
+              disabled={!canSend}
+            />
           </View>
         </>
       ) : (
@@ -217,22 +253,30 @@ export function PostComposer({
           <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
             <Feather name="camera" size={22} color={colors.mutedForeground} />
           </PressableScale>
-          <PressableScale
-            onPress={() => void photos.pickFromGallery()}
-            accessibilityLabel="Attach photos"
-            style={styles.icon}
-          >
+          <PressableScale onPress={() => void photos.pickFromGallery()} accessibilityLabel="Attach photos" style={styles.icon}>
             <Feather name="image" size={22} color={colors.mutedForeground} />
           </PressableScale>
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder={tinted ? 'Message the customer and team' : placeholder}
+            placeholder={
+              final
+                ? 'Final delivery: add at least one photo'
+                : tinted
+                  ? 'Message the customer'
+                  : placeholder
+            }
             placeholderTextColor={colors.placeholder}
             multiline
             style={styles.input}
           />
-          <Button title={final ? 'Post' : 'Send'} onPress={() => void send()} loading={sending} disabled={!canSend} />
+          <Button
+            title={final ? 'Post' : 'Send'}
+            size="sm"
+            onPress={() => void send()}
+            loading={sending}
+            disabled={!canSend}
+          />
         </View>
       )}
     </View>
@@ -281,16 +325,16 @@ const styles = StyleSheet.create({
   visibilityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: space[2],
+    gap: space[1],
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     minHeight: 34,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
+    flexShrink: 1,
     paddingVertical: 6,
     borderRadius: radius.full,
     borderWidth: 1,

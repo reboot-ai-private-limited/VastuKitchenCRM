@@ -1,7 +1,7 @@
 /**
  * Offline outbox (docs/mobile/05-offline-and-sync.md, section 3).
  *
- * A durable, per-user queue of small write commands in expo-sqlite. Callers
+ * A durable, per-user queue of small write commands in AsyncStorage. Callers
  * enqueue instead of calling the API; the drain loop sends rows in order and
  * retries until the server answers.
  *
@@ -29,7 +29,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { queryClient } from '@/lib/query/client';
 import { session } from '@/lib/auth/session';
-import { db, newId } from './db';
+import { db, newId, type Row } from './db';
 
 export type OutboxItem = {
   id: string;
@@ -71,20 +71,6 @@ export function registerOutboxHandler<P>(type: string, handler: OutboxHandler<P>
   handlers.set(type, handler as OutboxHandler<never>);
 }
 
-type Row = {
-  id: string;
-  user_id: string;
-  type: string;
-  entity_key: string;
-  payload: string;
-  status: string;
-  attempts: number;
-  next_attempt_at: number;
-  last_error: string | null;
-  captured_at: number;
-  created_seq: number;
-};
-
 const toItem = (r: Row, payload: unknown): OutboxItem => ({
   id: r.id,
   userId: r.user_id,
@@ -99,6 +85,9 @@ const toItem = (r: Row, payload: unknown): OutboxItem => ({
   createdSeq: r.created_seq,
 });
 
+const sortedFor = (rows: Row[], userId: string): Row[] =>
+  rows.filter((r) => r.user_id === userId).sort((a, b) => a.created_seq - b.created_seq);
+
 // ---- observable snapshot (the pending rows of the signed-in user) ----------------------------
 const EMPTY: readonly OutboxItem[] = [];
 let snapshot: readonly OutboxItem[] = EMPTY;
@@ -112,11 +101,7 @@ const subscribe = (l: () => void) => {
 
 export async function refreshOutboxSnapshot(): Promise<void> {
   const userId = session.getState().user?.id;
-  const rows = userId
-    ? await db((d) =>
-        d.getAllAsync<Row>('SELECT * FROM outbox WHERE user_id = ? ORDER BY created_seq', userId),
-      )
-    : [];
+  const rows = userId ? await db((d) => sortedFor(d.rows, userId)) : [];
   const items: OutboxItem[] = [];
   for (const r of rows) {
     try {
@@ -169,33 +154,33 @@ export async function enqueueOutbox<P>(input: {
   if (!userId) throw new Error('Not signed in');
   const now = Date.now();
   const id = newId();
-  const row = await db(async (d) => {
-    await d.withTransactionAsync(async () => {
-      const m = await d.getFirstAsync<{ value: string }>("SELECT value FROM meta WHERE key = 'seq'");
-      const seq = Number(m?.value ?? 0) + 1;
-      await d.runAsync("INSERT OR REPLACE INTO meta (key, value) VALUES ('seq', ?)", String(seq));
-      await d.runAsync(
-        `INSERT INTO outbox (id, user_id, type, entity_key, payload, status, attempts, next_attempt_at,
-           captured_at, created_seq, created_at) VALUES (?, ?, ?, ?, ?, 'queued', 0, 0, ?, ?, ?)`,
-        id,
-        userId,
-        input.type,
-        input.entityKey,
-        JSON.stringify(input.payload),
-        input.capturedAt ?? now,
-        seq,
-        now,
-      );
-    });
-    return d.getFirstAsync<Row>('SELECT * FROM outbox WHERE id = ?', id);
+  const row = await db((d) => {
+    d.seq += 1;
+    const created: Row = {
+      id,
+      user_id: userId,
+      type: input.type,
+      entity_key: input.entityKey,
+      payload: JSON.stringify(input.payload),
+      status: 'queued',
+      attempts: 0,
+      next_attempt_at: 0,
+      last_error: null,
+      captured_at: input.capturedAt ?? now,
+      created_seq: d.seq,
+    };
+    d.rows.push(created);
+    return created;
   });
   await refreshOutboxSnapshot();
   void drainOutbox();
-  return toItem(row!, input.payload);
+  return toItem(row, input.payload);
 }
 
 export async function discardOutboxItem(id: string): Promise<void> {
-  await db((d) => d.runAsync('DELETE FROM outbox WHERE id = ?', id));
+  await db((d) => {
+      d.rows = d.rows.filter((x) => x.id !== id);
+    });
   await refreshOutboxSnapshot();
 }
 
@@ -224,17 +209,21 @@ const backoff = (attempts: number, e?: unknown) => {
 
 /** Reset backoff so everything is tried now (call on reconnect / foreground). */
 export async function retryOutboxNow(): Promise<void> {
-  await db((d) => d.runAsync("UPDATE outbox SET next_attempt_at = 0 WHERE status = 'queued'"));
+  await db((d) => {
+    for (const x of d.rows) if (x.status === 'queued') x.next_attempt_at = 0;
+  });
   void drainOutbox();
 }
 
 /** Return rows left in 'sending' by a killed app to the queue. Call once at boot. */
 export async function recoverOutbox(): Promise<void> {
-  const stuck = await db((d) => d.getAllAsync<Row>("SELECT * FROM outbox WHERE status = 'sending'"));
+  const stuck = await db((d) => d.rows.filter((x) => x.status === 'sending'));
   for (const r of stuck) {
     if (handlers.get(r.type)?.idempotent !== false) continue;
     // Killed mid-send: unknown whether the server got it. Never replay a non-idempotent write.
-    await db((d) => d.runAsync('DELETE FROM outbox WHERE id = ?', r.id));
+    await db((d) => {
+      d.rows = d.rows.filter((x) => x.id !== r.id);
+    });
     try {
       const item = toItem(r, JSON.parse(r.payload) as unknown);
       dropListeners.forEach((l) => l(item, { message: 'The app closed while sending.', ambiguous: true }));
@@ -242,7 +231,9 @@ export async function recoverOutbox(): Promise<void> {
       // corrupt payload, nothing to report
     }
   }
-  await db((d) => d.runAsync("UPDATE outbox SET status = 'queued' WHERE status = 'sending'"));
+  await db((d) => {
+    for (const x of d.rows) if (x.status === 'sending') x.status = 'queued';
+  });
   await refreshOutboxSnapshot();
 }
 
@@ -281,9 +272,7 @@ async function drainPass(): Promise<void> {
 
   const blocked = new Set<string>(); // entity keys with an earlier row that is still waiting
   const touched = new Set<string>();
-  const rows = await db((d) =>
-    d.getAllAsync<Row>('SELECT * FROM outbox WHERE user_id = ? ORDER BY created_seq', userId),
-  );
+  const rows = await db((d) => sortedFor(d.rows, userId));
   let earliest = Infinity;
 
   for (const r of rows) {
@@ -298,7 +287,9 @@ async function drainPass(): Promise<void> {
       payload = JSON.parse(r.payload) as unknown;
     } catch {
       // Corrupt row: drop it so it cannot stall the queue.
-      await db((d) => d.runAsync('DELETE FROM outbox WHERE id = ?', r.id));
+      await db((d) => {
+      d.rows = d.rows.filter((x) => x.id !== r.id);
+    });
       dropListeners.forEach((l) =>
         l(toItem(r, null), { message: 'A saved change was damaged and could not be sent.' }),
       );
@@ -319,10 +310,15 @@ async function drainPass(): Promise<void> {
       earliest = Math.min(earliest, Date.now() + 30_000);
       continue;
     }
-    await db((d) => d.runAsync("UPDATE outbox SET status = 'sending' WHERE id = ?", r.id));
+    await db((d) => {
+      const x = d.rows.find((y) => y.id === r.id);
+      if (x) x.status = 'sending';
+    });
     try {
       await h.send(item.payload as never, { id: r.id, capturedAt: r.captured_at, attempts: r.attempts });
-      await db((d) => d.runAsync('DELETE FROM outbox WHERE id = ?', r.id));
+      await db((d) => {
+      d.rows = d.rows.filter((x) => x.id !== r.id);
+    });
       h.invalidate?.forEach((k) => touched.add(JSON.stringify(k)));
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed';
@@ -331,22 +327,24 @@ async function drainPass(): Promise<void> {
       const ambiguous =
         h.idempotent === false && (e instanceof NetworkError || (e instanceof ApiError && e.status >= 500));
       if (!isRetryable(e) || expired || ambiguous) {
-        await db((d) => d.runAsync('DELETE FROM outbox WHERE id = ?', r.id));
+        await db((d) => {
+      d.rows = d.rows.filter((x) => x.id !== r.id);
+    });
         h.invalidate?.forEach((k) => touched.add(JSON.stringify(k)));
         const status = e instanceof ApiError ? e.status : undefined;
         const data = e instanceof ApiError ? e.data : undefined;
         dropListeners.forEach((l) => l(item, { status, message, data, ambiguous }));
       } else {
         const next = Date.now() + backoff(attempts, e);
-        await db((d) =>
-          d.runAsync(
-            "UPDATE outbox SET status = 'queued', attempts = ?, next_attempt_at = ?, last_error = ? WHERE id = ?",
-            attempts,
-            next,
-            message,
-            r.id,
-          ),
-        );
+        await db((d) => {
+          const x = d.rows.find((y) => y.id === r.id);
+          if (x) {
+            x.status = 'queued';
+            x.attempts = attempts;
+            x.next_attempt_at = next;
+            x.last_error = message;
+          }
+        });
         blocked.add(r.entity_key);
         earliest = Math.min(earliest, next);
       }

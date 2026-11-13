@@ -1,4 +1,4 @@
-import type { DocFileDto } from '@vastu/contracts';
+import type { DocFileDto, RegisterFileBodyDto, UploadTicketDto } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
 export type ProjectFilesQuery = {
@@ -25,3 +25,11 @@ export const listProjectFiles = (projectId: string, q: ProjectFilesQuery = {}, s
     undefined,
     { signal },
   );
+
+/** A one-time signed ticket for uploading a document (any allowed file type) to a project. */
+export const signFileUpload = (projectId: string) =>
+  request<UploadTicketDto>('POST', `/projects/${encodeURIComponent(projectId)}/files/uploads/sign`, {});
+
+/** Registers a file the phone has just uploaded, so it shows up in Docs. */
+export const registerProjectFile = (projectId: string, body: RegisterFileBodyDto) =>
+  request<DocFileDto>('POST', `/projects/${encodeURIComponent(projectId)}/files`, body);

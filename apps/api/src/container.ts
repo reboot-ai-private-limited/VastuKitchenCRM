@@ -43,10 +43,12 @@ export function buildContainers(): AppContainers {
   const settings = buildSettingsContainer();
   const identity = buildIdentityContainer({ events });
   const notifications = buildNotificationsContainer();
+  const storage = createStorage();
   const leads = buildLeadsContainer({
     identity: identity.contract,
     settings: settings.contract,
     events,
+    storage,
   });
   const proposals = buildProposalsContainer({
     leads: leads.contract,
@@ -54,7 +56,6 @@ export function buildContainers(): AppContainers {
     settings: settings.contract,
     events,
   });
-  const storage = createStorage();
   const projects = buildProjectsContainer({
     leads: leads.contract,
     proposals: proposals.contract,

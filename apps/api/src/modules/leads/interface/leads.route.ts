@@ -17,6 +17,7 @@ import {
   recordCallBodySchema,
   recordVisitBodySchema,
   updateLeadBodySchema,
+  uploadTicketSchema,
   visitSchema,
 } from '@vastu/contracts';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
@@ -165,6 +166,15 @@ openApiRegistry.registerPath({
   responses: { 201: okResponse('Recorded', visitSchema), 404: notFound },
 });
 openApiRegistry.registerPath({
+  method: 'post',
+  path: '/api/leads/{id}/visits/photo-upload/sign',
+  tags: TAG,
+  security,
+  summary: 'Upload ticket for a visit photo (Admin, Sales). Send the uploaded public id as `photoPublicId` when recording the visit',
+  request: params,
+  responses: { 200: okResponse('Ticket', uploadTicketSchema), 404: notFound },
+});
+openApiRegistry.registerPath({
   method: 'get',
   path: '/api/leads/{id}/visits',
   tags: TAG,
@@ -188,6 +198,7 @@ export interface LeadsControllers {
   listCalls: RequestHandler;
   recordVisit: RequestHandler;
   listVisits: RequestHandler;
+  signVisitPhoto: RequestHandler;
 }
 
 export function buildLeadsRouter(c: LeadsControllers): Router {
@@ -254,6 +265,7 @@ export function buildLeadsRouter(c: LeadsControllers): Router {
     validate({ params: leadIdParamsSchema, body: recordVisitBodySchema }),
     c.recordVisit,
   );
+  router.post('/:id/visits/photo-upload/sign', requireRole('ADMIN', 'SALES'), id, c.signVisitPhoto);
   router.get('/:id/visits', requireRole('ADMIN', 'SALES'), id, c.listVisits);
   return router;
 }

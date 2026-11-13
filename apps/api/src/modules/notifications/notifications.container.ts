@@ -1,5 +1,5 @@
 import type { Router } from 'express';
-import { env } from '@/config/env.js';
+// import { env } from '@/config/env.js'; // used only by the push sender (disabled)
 import {
   CountUnreadUseCase,
   ListNotificationsUseCase,
@@ -10,7 +10,8 @@ import {
   RemoveUserDevicesUseCase,
   NotifyUseCase,
 } from './application/usecases/notifications.usecases.js';
-import { ExpoPushSender } from './infrastructure/expoPushSender.adapter.js';
+// Push disabled for now (not required). Re-enable together with the sender wiring below.
+// import { ExpoPushSender } from './infrastructure/expoPushSender.adapter.js';
 import { MongoDeviceRepository } from './infrastructure/mongoDevice.adapter.js';
 import { MongoNotificationRepository } from './infrastructure/mongoNotification.adapter.js';
 import {
@@ -33,11 +34,13 @@ export function buildNotificationsContainer(): NotificationsContainer {
   const notifications = new MongoNotificationRepository();
 
   const devices = new MongoDeviceRepository();
-  // Expo Push Service today; any other sender can replace it behind PushSenderPort.
-  const notify = new NotifyUseCase(notifications, {
-    devices,
-    sender: new ExpoPushSender(env.EXPO_ACCESS_TOKEN),
-  });
+  // Push is switched off: in-app notifications only. To re-enable, restore the ExpoPushSender
+  // import and pass the second argument below.
+  // const notify = new NotifyUseCase(notifications, {
+  //   devices,
+  //   sender: new ExpoPushSender(env.EXPO_ACCESS_TOKEN),
+  // });
+  const notify = new NotifyUseCase(notifications);
   const list = new ListNotificationsUseCase(notifications);
   const countUnread = new CountUnreadUseCase(notifications);
   const markRead = new MarkReadUseCase(notifications);

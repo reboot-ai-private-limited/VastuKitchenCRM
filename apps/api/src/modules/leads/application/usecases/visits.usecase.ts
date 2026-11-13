@@ -1,4 +1,8 @@
 import type { RecordVisitBodyDto } from '@vastu/contracts';
+import type { UploadTicketDto } from '@vastu/contracts';
+import { AppError } from '@/shared/errors/AppError.js';
+import { isInFolder, leadVisitFolder } from '@/shared/storage/folders.js';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type { Visit } from '../../domain/visit.entity.js';
 import type { LeadActivityRepositoryPort } from '../../domain/leadActivity.repository.port.js';
 import type { UserDirectoryPort } from '../../domain/userDirectory.port.js';
@@ -18,11 +22,20 @@ export class RecordVisitUseCase {
     private readonly visits: VisitRepositoryPort,
     private readonly activities: LeadActivityRepositoryPort,
     private readonly directory: UserDirectoryPort,
+    private readonly storage: StoragePort,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(actor: Actor, leadId: string, input: RecordVisitBodyDto): Promise<VisitView> {
     await this.access.load(leadId, actor);
+    let photoUrl = input.photoUrl ?? null;
+    if (input.photoPublicId) {
+      // Only a photo uploaded into THIS lead's visit folder may be attached.
+      if (!isInFolder(input.photoPublicId, leadVisitFolder(this.storage.rootFolder, leadId))) {
+        throw AppError.badRequest('That photo does not belong to this lead.');
+      }
+      photoUrl = this.storage.imageUrls(input.photoPublicId).url;
+    }
     const at = input.at ?? this.now();
     const visit = await this.visits.create({
       leadId,
@@ -31,7 +44,7 @@ export class RecordVisitUseCase {
       latitude: input.latitude,
       longitude: input.longitude,
       note: input.note ?? null,
-      photoUrl: input.photoUrl ?? null,
+      photoUrl,
     });
     await this.activities.add({
       leadId,
@@ -42,6 +55,19 @@ export class RecordVisitUseCase {
     });
     const names = await nameMap(this.directory, [actor.id]);
     return { visit, userName: names.get(actor.id) ?? '' };
+  }
+}
+
+/** A one-time ticket to upload a visit photo for a lead the actor may access. */
+export class SignVisitPhotoUseCase {
+  constructor(
+    private readonly access: LeadAccess,
+    private readonly storage: StoragePort,
+  ) {}
+
+  async execute(actor: Actor, leadId: string): Promise<UploadTicketDto> {
+    await this.access.load(leadId, actor);
+    return this.storage.signImageUpload(leadVisitFolder(this.storage.rootFolder, leadId));
   }
 }
 

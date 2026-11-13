@@ -19,6 +19,7 @@ import { colors, radius, space, tone } from '@/constants/theme';
 import { NetworkError } from '@/lib/api/client';
 import { listProjectFiles } from '@/lib/api/endpoints/docs';
 import { formatBytes, formatDate } from '@/lib/format';
+import { DocUploadBar } from '@/features/projects/doc-upload-bar';
 import { CustomerHeader, useActiveCustomerProject } from './customer-shell-shared';
 
 function SharedFileCard({ file, index, highlighted }: { file: DocFileDto; index: number; highlighted?: boolean }) {
@@ -143,6 +144,7 @@ export function CustomerDocsScreen() {
             projects={projects}
             onSelectProject={setProjectId}
           />
+          {project && project.stage !== 'CLOSED' ? <DocUploadBar projectId={project.id} isCustomer /> : null}
           <Text variant="caption" muted style={{ letterSpacing: 0.6 }}>
             SHARED DOCUMENTS ({(filesQ.data ?? []).length})
           </Text>

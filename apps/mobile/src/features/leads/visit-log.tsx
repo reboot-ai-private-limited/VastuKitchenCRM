@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Linking, StyleSheet, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,10 @@ import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
 import { timeAgo } from '@/lib/format';
+import { PhotoAttachBar } from '@/components/ui/photo-attach-bar';
+import { signVisitPhoto } from '@/lib/api/endpoints/leads';
 import { PendingSyncBadge } from '@/offline';
+import { useSignedAttachments } from '@/features/complaints/use-signed-attachments';
 import { useLeadVisits, usePendingForLead, useRecordVisit } from './use-leads';
 
 type Fix = { latitude: number; longitude: number; accuracy: number | null };
@@ -32,6 +36,8 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
   const [lng, setLng] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const sign = useCallback(() => signVisitPhoto(leadId), [leadId]);
+  const photo = useSignedAttachments(sign, 1);
 
   const locate = useCallback(async () => {
     setFix({ s: 'locating' });
@@ -61,6 +67,7 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
     setError(null);
     setManual(false);
     setFix({ s: 'idle' });
+    photo.clear();
     record.reset();
     setOpen(true);
     void locate();
@@ -86,10 +93,14 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
     } else {
       return setError('Wait for the location, or enter it manually.');
     }
+    if (photo.busy || !photo.uploadsDone) {
+      return setError('Wait for the photo to finish uploading, or remove it.');
+    }
+    const photoPublicId = photo.images[0]?.publicId;
     setError(null);
     // Queued with the time of the tap (`at`); never auto-retried if the outcome is unknown.
     record.mutate(
-      { at: new Date(), latitude, longitude, ...(note.trim() ? { note: note.trim() } : {}) },
+      { at: new Date(), latitude, longitude, ...(note.trim() ? { note: note.trim() } : {}), ...(photoPublicId ? { photoPublicId } : {}) },
       { onSuccess: () => setOpen(false), onError: (e) => setError(e instanceof Error ? e.message : 'Could not save the visit') },
     );
   };
@@ -153,6 +164,14 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
                 {v.user.name} · {timeAgo(v.at)}
               </Text>
               {v.note ? <Text>{v.note}</Text> : null}
+              {v.photoUrl ? (
+                <Image
+                  source={{ uri: v.photoUrl }}
+                  style={{ width: 120, height: 120, borderRadius: radius.md }}
+                  contentFit="cover"
+                  accessibilityLabel="Visit photo"
+                />
+              ) : null}
               <Text
                 variant="caption"
                 color={colors.primary}
@@ -212,6 +231,15 @@ export function VisitLog({ leadId, canAdd }: { leadId: string; canAdd: boolean }
             multiline
             maxLength={1000}
             style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
+          />
+          <PhotoAttachBar
+            items={photo.items}
+            problem={photo.problem}
+            onCamera={() => void photo.takePhoto()}
+            onGallery={() => void photo.pickFromGallery()}
+            onRemove={photo.remove}
+            onRetry={photo.retry}
+            disabled={photo.items.length >= 1}
           />
           {error ? (
             <Text variant="caption" color={colors.destructive}>

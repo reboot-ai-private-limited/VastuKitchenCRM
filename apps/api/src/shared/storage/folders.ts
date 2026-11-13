@@ -15,6 +15,11 @@ export function projectFilesFolder(root: string, projectId: string): string {
   return `${root}/projects/${projectId}/files`;
 }
 
+/** Where a lead's visit photos are uploaded. */
+export function leadVisitFolder(root: string, leadId: string): string {
+  return `${root}/leads/${leadId}/visits`;
+}
+
 /** True only for an id directly inside `folder` (no climbing out with `..`, no nested tricks). */
 export function isInFolder(publicId: string, folder: string): boolean {
   if (!publicId.startsWith(`${folder}/`)) return false;

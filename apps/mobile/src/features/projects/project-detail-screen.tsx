@@ -21,7 +21,12 @@ import { useProjectDetail, useScreenActive, type FeedMode } from './use-projects
 type Tab = 'chat' | 'todos' | 'complaints' | 'docs';
 
 export function ProjectDetailScreen() {
-  const { id, post, file, tab: tabParam } = useLocalSearchParams<{
+  const {
+    id,
+    post,
+    file,
+    tab: tabParam,
+  } = useLocalSearchParams<{
     id: string;
     post?: string;
     file?: string;
@@ -31,19 +36,31 @@ export function ProjectDetailScreen() {
   const { user } = useSession();
   const screenActive = useScreenActive();
 
-  const initialTab: Tab = file ? 'docs' : tabParam === 'todos' || tabParam === 'complaints' || tabParam === 'docs' ? tabParam : 'chat';
+  const initialTab: Tab = file
+    ? 'docs'
+    : tabParam === 'todos' || tabParam === 'complaints' || tabParam === 'docs'
+      ? tabParam
+      : 'chat';
   const [tab, setTab] = useState<Tab>(initialTab);
   const [mode, setMode] = useState<FeedMode>('ALL');
   const [infoOpen, setInfoOpen] = useState(false);
   const [finalRequest, setFinalRequest] = useState(0);
   const [viewer, setViewer] = useState<{ photos: ViewerPhoto[]; index: number } | null>(null);
 
-  const openPhotos = useCallback((photos: ViewerPhoto[], index: number) => setViewer({ photos, index }), []);
+  const openPhotos = useCallback(
+    (photos: ViewerPhoto[], index: number) => setViewer({ photos, index }),
+    [],
+  );
   const p = q.data;
 
   const header = (
     <Stack.Screen
-      options={{ headerShown: true, title: p?.name ?? '', headerShadowVisible: false, headerTintColor: colors.primary }}
+      options={{
+        headerShown: true,
+        title: p?.name ?? '',
+        headerShadowVisible: false,
+        headerTintColor: colors.primary,
+      }}
     />
   );
 
@@ -60,13 +77,18 @@ export function ProjectDetailScreen() {
     );
   }
   if (q.isError || !p) {
-    const notFound = q.error instanceof ApiError && (q.error.status === 404 || q.error.status === 403);
+    const notFound =
+      q.error instanceof ApiError && (q.error.status === 404 || q.error.status === 403);
     return (
       <View style={styles.root}>
         {header}
         <View style={{ gap: space[3], alignItems: 'center', paddingVertical: space[8] }}>
-          <Text muted>{notFound ? "This project isn't available." : "Couldn't load this project."}</Text>
-          {!notFound ? <Button title="Try again" variant="outline" onPress={() => void q.refetch()} /> : null}
+          <Text muted>
+            {notFound ? "This project isn't available." : "Couldn't load this project."}
+          </Text>
+          {!notFound ? (
+            <Button title="Try again" variant="outline" onPress={() => void q.refetch()} />
+          ) : null}
         </View>
       </View>
     );
@@ -90,26 +112,58 @@ export function ProjectDetailScreen() {
           </Text>
           <View style={{ flexDirection: 'row', gap: space[1], flexWrap: 'wrap' }}>
             <Badge label={STAGE_LABEL[p.stage]} t={STAGE_TONE[p.stage]} />
-            {p.stage === 'DESIGN' ? <Badge label={DESIGN_LABEL[p.designStage]} t={DESIGN_TONE[p.designStage]} /> : null}
+            {p.stage === 'DESIGN' ? (
+              <Badge label={DESIGN_LABEL[p.designStage]} t={DESIGN_TONE[p.designStage]} />
+            ) : null}
           </View>
         </View>
-        <PressableScale onPress={() => setInfoOpen(true)} accessibilityLabel="Project info" style={styles.infoBtn}>
+        {tab === 'chat' && perms.isStaff ? (
+          <PressableScale
+            onPress={() => {
+              setMode(mode === 'CLIENT' ? 'ALL' : 'CLIENT');
+              setFinalRequest(0);
+            }}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: mode === 'CLIENT' }}
+            accessibilityLabel="Client view"
+            hitSlop={8}
+            style={[
+              styles.clientToggle,
+              { backgroundColor: mode === 'CLIENT' ? colors.primary : colors.muted },
+            ]}
+          >
+            <Feather
+              name="eye"
+              size={14}
+              color={mode === 'CLIENT' ? colors.primaryForeground : colors.mutedForeground}
+            />
+            <Text
+              variant="caption"
+              color={mode === 'CLIENT' ? colors.primaryForeground : colors.mutedForeground}
+            >
+              Client view
+            </Text>
+          </PressableScale>
+        ) : null}
+        <PressableScale
+          onPress={() => setInfoOpen(true)}
+          accessibilityLabel="Project info"
+          style={styles.infoBtn}
+        >
           <Feather name="info" size={22} color={colors.primary} />
         </PressableScale>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs} contentContainerStyle={{ paddingHorizontal: space[3], gap: space[1] }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabs}
+        contentContainerStyle={{ paddingHorizontal: space[3], gap: space[1] }}
+      >
         {tabs.map((t) => (
           <Chip key={t.key} label={t.label} active={tab === t.key} onPress={() => setTab(t.key)} />
         ))}
       </ScrollView>
-
-      {tab === 'chat' && perms.isStaff ? (
-        <View style={styles.filter}>
-          <Chip label="Everything" active={mode === 'ALL'} onPress={() => { setMode('ALL'); setFinalRequest(0); }} />
-          <Chip label="Client view" active={mode === 'CLIENT'} onPress={() => { setMode('CLIENT'); setFinalRequest(0); }} />
-        </View>
-      ) : null}
 
       <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>
         <ChatSegment
@@ -128,7 +182,11 @@ export function ProjectDetailScreen() {
       {tab === 'todos' && perms.isStaff ? <TodosSegment project={p} /> : null}
       {tab === 'complaints' ? <ComplaintsSegment project={p} active={screenActive} /> : null}
       {tab === 'docs' ? (
-        <DocsSegment project={p} {...(file ? { targetFileId: file } : {})} onOpenPhotos={openPhotos} />
+        <DocsSegment
+          project={p}
+          {...(file ? { targetFileId: file } : {})}
+          onOpenPhotos={openPhotos}
+        />
       ) : null}
 
       <InfoSheet
@@ -142,7 +200,13 @@ export function ProjectDetailScreen() {
           setFinalRequest((n) => n + 1);
         }}
       />
-      {viewer ? <PhotoViewer photos={viewer.photos} startIndex={viewer.index} onClose={() => setViewer(null)} /> : null}
+      {viewer ? (
+        <PhotoViewer
+          photos={viewer.photos}
+          startIndex={viewer.index}
+          onClose={() => setViewer(null)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -152,5 +216,12 @@ const styles = StyleSheet.create({
   sub: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], gap: space[2] },
   infoBtn: { width: hit, height: hit, alignItems: 'center', justifyContent: 'center' },
   tabs: { flexGrow: 0 },
-  filter: { flexDirection: 'row', paddingHorizontal: space[3], gap: space[1] },
+  clientToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+  },
 });

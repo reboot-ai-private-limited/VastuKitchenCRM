@@ -61,8 +61,6 @@
         }
       ],
       "expo-font",
-      "expo-notifications",
-      "expo-sqlite",
       [
         "expo-splash-screen",
         {

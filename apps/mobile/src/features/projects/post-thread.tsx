@@ -1,6 +1,6 @@
 import { Alert, Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useKeyboardAvoid } from '@/hooks/use-keyboard-avoid';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PostDto } from '@vastu/contracts';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -23,15 +23,17 @@ type Props = {
 /** "Reply": the post, its whole thread (oldest first) and a reply composer (hidden on a closed project). */
 export function PostThread({ projectId, post, mine, closed, onClose, onOpenPhotos }: Props) {
   const insets = useSafeAreaInsets();
+  const kb = useKeyboardAvoid();
   const comments = usePostComments(projectId, post?.id ?? null);
   const reply = useCreateComment(projectId, post?.id ?? '');
   const del = useDeleteComment(projectId, post?.id ?? '');
 
   return (
     <Modal visible={!!post} animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}
+      <View
+        ref={kb.ref}
+        collapsable={false}
+        style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: kb.pad }}
       >
         <View style={styles.header}>
           <Text variant="section" style={{ flex: 1 }}>
@@ -104,7 +106,7 @@ export function PostThread({ projectId, post, mine, closed, onClose, onOpenPhoto
             </Text>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

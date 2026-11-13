@@ -26,6 +26,29 @@ export function uploadToTicket(
   img: PickedImage,
   onProgress: (fraction: number) => void,
 ): Promise<ImageInputDto> {
+  return postToTicket(ticket, img, onProgress).then((r) => ({
+    publicId: r.public_id,
+    ...(r.width ? { width: r.width } : {}),
+    ...(r.height ? { height: r.height } : {}),
+    ...(r.bytes ? { bytes: r.bytes } : {}),
+  }));
+}
+
+export type TicketResponse = {
+  public_id: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+  resource_type?: string;
+};
+
+/** Sends any file to the storage provider and returns the provider's raw response. */
+export function postToTicket(
+  ticket: UploadTicketDto,
+  img: PickedImage,
+  onProgress: (fraction: number) => void,
+): Promise<TicketResponse> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
     for (const [k, v] of Object.entries(ticket.fields)) form.append(k, v);
@@ -47,18 +70,7 @@ export function uploadToTicket(
         return reject(new Error(reason));
       }
       try {
-        const r = JSON.parse(xhr.responseText) as {
-          public_id: string;
-          width?: number;
-          height?: number;
-          bytes?: number;
-        };
-        resolve({
-          publicId: r.public_id,
-          ...(r.width ? { width: r.width } : {}),
-          ...(r.height ? { height: r.height } : {}),
-          ...(r.bytes ? { bytes: r.bytes } : {}),
-        });
+        resolve(JSON.parse(xhr.responseText) as TicketResponse);
       } catch {
         reject(new Error('The photo could not be uploaded. Try again.'));
       }

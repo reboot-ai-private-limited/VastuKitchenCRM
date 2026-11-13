@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, radius, space, tone } from '@/constants/theme';
 import { formatBytes, formatDate } from '@/lib/format';
+import { DocUploadBar } from './doc-upload-bar';
 import type { ViewerPhoto } from './photo-viewer';
 import { COMPLAINT_STATUS_LABEL, COMPLAINT_STATUS_TONE } from './project-meta';
 import { useProjectComplaints, useProjectFiles, useProjectTodos } from './use-projects';
@@ -175,6 +176,13 @@ export function DocsSegment({
       data={q.data ?? []}
       keyExtractor={(f) => f.id}
       contentContainerStyle={pad}
+      ListHeaderComponent={
+        project.stage === 'CLOSED' ? undefined : (
+          <View style={{ marginBottom: space[3] }}>
+            <DocUploadBar projectId={project.id} />
+          </View>
+        )
+      }
       refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} tintColor={colors.primary} />}
       ListEmptyComponent={
         q.isPending ? <Loading /> : q.isError ? (

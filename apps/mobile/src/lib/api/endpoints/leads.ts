@@ -10,6 +10,7 @@ import type {
   PaginatedDto,
   RecordCallBodyDto,
   RecordVisitBodyDto,
+  UploadTicketDto,
   VisitDto,
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
@@ -76,3 +77,7 @@ export const updateLead = (id: string, body: UpdateLeadBodyDto) =>
 
 export const assignLead = (id: string, body: AssignLeadBodyDto) =>
   request<LeadDto>('POST', `/leads/${encodeURIComponent(id)}/assign`, body);
+
+/** One-time ticket to upload a visit photo for this lead. */
+export const signVisitPhoto = (id: string) =>
+  request<UploadTicketDto>('POST', `/leads/${encodeURIComponent(id)}/visits/photo-upload/sign`, {});

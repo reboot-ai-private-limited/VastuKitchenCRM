@@ -5,7 +5,7 @@ import {
   type SalaryRowDto,
   type StaffRole,
 } from '@vastu/contracts';
-import { addDays, businessDate } from '@/lib/format';
+import { addDays, businessDate, formatDay } from '@/lib/format';
 
 /* ── months and dates (business calendar, never the browser's zone) ─────────── */
 
@@ -247,12 +247,67 @@ export function describeWeeklyOff(rule: string | null): string {
   return parts.every((p) => p !== null) ? parts.join(' + ') : rule;
 }
 
-/** `/attendance` URLs. The page reads: `date` (board day), `userId` + `month` (one person's month). */
-export function attendanceHref(p: { date?: string; userId?: string; month?: string }): string {
+/** The longest range the API answers for. */
+export const MAX_RANGE_DAYS = 92;
+
+/**
+ * `/attendance` URLs. The page reads: `date` (board day), `from` + `to` (everyone over a range),
+ * `userId` + `month` (one person's month).
+ */
+export function attendanceHref(p: {
+  date?: string;
+  userId?: string;
+  month?: string;
+  from?: string;
+  to?: string;
+}): string {
   const q = new URLSearchParams();
   if (p.userId) q.set('userId', p.userId);
   if (p.month) q.set('month', p.month);
-  if (!p.userId && p.date) q.set('date', p.date);
+  if (!p.userId && p.from && p.to) {
+    q.set('from', p.from);
+    q.set('to', p.to);
+  } else if (!p.userId && p.date) q.set('date', p.date);
   const s = q.toString();
   return s ? `/attendance?${s}` : '/attendance';
 }
+
+/** A valid, not-in-the-future range of at most MAX_RANGE_DAYS days, or null. `to` is clamped to today. */
+export function parseRange(
+  from: string | null,
+  to: string | null,
+  today: string = businessDate(),
+): { from: string; to: string } | null {
+  if (!isDateString(from) || !isDateString(to)) return null;
+  const end = clampToToday(to, today);
+  if (from > end) return null;
+  const days = (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
+  return days < MAX_RANGE_DAYS ? { from, to: end } : null;
+}
+
+/** The whole month as a range (a month that is still running ends today). */
+export const monthRange = (month: string, today: string = businessDate()) => ({
+  from: `${month}-01`,
+  to: clampToToday(lastDayOf(month), today),
+});
+
+/** One-tap ranges for the picker. */
+export function rangePresets(today: string = businessDate()) {
+  const month = monthOf(today);
+  return [
+    { label: 'Last 7 days', from: addDays(today, -6), to: today },
+    { label: 'This month', ...monthRange(month, today) },
+    { label: 'Last month', ...monthRange(shiftMonth(month, -1), today) },
+  ];
+}
+
+/** `4 Nov – 10 Nov 2026` (the year shows once, on the end). */
+export function rangeLabel(from: string, to: string): string {
+  const f = formatDay(from).split(' ');
+  const t = formatDay(to).split(' ');
+  return `${f[0]} ${f[1]}${f[2] === t[2] ? '' : ' ' + f[2]} – ${t.join(' ')}`;
+}
+
+/** `9h 30m`; nothing worked reads `0h`. */
+export const formatWorked = (minutes: number): string =>
+  `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`;

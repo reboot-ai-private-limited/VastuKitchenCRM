@@ -149,6 +149,32 @@ describe("everyone's day (the board)", () => {
   });
 });
 
+describe('attendance over a date range', () => {
+  it('counts present, absent, off, missing-out and worked hours per person', async () => {
+    const w = world(); // "today" is Wed 11 Nov 2026
+    // Mon 9: 9h worked. Tue 10: in with no out. Sunday 8 is the weekly off.
+    await w.setDay.execute(ADMIN, ID.bio, '2026-11-09', {
+      inAt: '2026-11-09T03:30:00Z',
+      outAt: '2026-11-09T12:30:00Z',
+    });
+    await w.setDay.execute(ADMIN, ID.bio, '2026-11-10', { inAt: '2026-11-10T03:30:00Z' });
+
+    const r = await w.range.execute('2026-11-08', '2026-11-11');
+    expect(r.workingDays).toBe(3); // Mon, Tue, Wed; the Sunday is off
+    const ravi = r.items.find((i) => i.userId === ID.bio)!;
+    expect(ravi).toMatchObject({ present: 2, absent: 1, off: 1, missingOut: 1, workedMinutes: 540 });
+    const anil = r.items.find((i) => i.userId === ID.gps)!;
+    expect(anil).toMatchObject({ present: 0, absent: 3, off: 1, workedMinutes: 0 });
+  });
+
+  it('does not count days that have not happened yet', async () => {
+    const w = world();
+    const r = await w.range.execute('2026-11-11', '2026-11-15');
+    expect(r.workingDays).toBe(1);
+    expect(r.items.every((i) => i.absent <= 1)).toBe(true);
+  });
+});
+
 describe('Admin/HR recording and correcting a day', () => {
   it('creates a day (biometric → simulated punch, GPS person → manual) and marks later changes corrected', async () => {
     const w = world();

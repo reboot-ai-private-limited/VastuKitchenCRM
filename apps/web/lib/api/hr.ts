@@ -6,6 +6,7 @@ import type {
   BoardDto,
   CreateDesignationBodyDto,
   CreateUserBodyDto,
+  RangeDto,
   DesignationDto,
   PaginatedDto,
   SalarySheetDto,
@@ -32,6 +33,14 @@ export const useBoard = (date: string) =>
     queryFn: ({ signal }) => api<BoardDto>('/attendance/board', { query: { date }, signal }),
     placeholderData: keepPreviousData,
     refetchInterval: 60_000,
+  });
+
+/** Admin/HR: everyone over a date range (`YYYY-MM-DD`, inclusive). */
+export const useRange = (from: string, to: string) =>
+  useQuery({
+    queryKey: ['hr', 'range', from, to],
+    queryFn: ({ signal }) => api<RangeDto>('/attendance/range', { query: { from, to }, signal }),
+    placeholderData: keepPreviousData,
   });
 
 /** Admin/HR: one person's month. */

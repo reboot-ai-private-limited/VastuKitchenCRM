@@ -7,6 +7,8 @@ import {
   attendanceUserDateParamsSchema,
   attendanceUserParamsSchema,
   boardSchema,
+  rangeQuerySchema,
+  rangeSchema,
   checkInBodySchema,
   dateQuerySchema,
   monthQuerySchema,
@@ -99,6 +101,19 @@ doc(
     200: okResponse('Present / absent per person', boardSchema),
     403: hrOnly,
   },
+);
+doc(
+  A,
+  'get',
+  '/api/attendance/range',
+  "Everyone's attendance over a date range, one row per person (Admin/HR)",
+  { query: rangeQuerySchema },
+  {
+    200: okResponse('Present / absent / hours per person', rangeSchema),
+    400: errorResponse('A bad or too long range'),
+    403: hrOnly,
+  },
+  'Both dates are inclusive. At most 92 days.',
 );
 doc(
   A,
@@ -211,6 +226,7 @@ export interface AttendanceControllers {
   checkOut: RequestHandler;
   myMonth: RequestHandler;
   board: RequestHandler;
+  range: RequestHandler;
   userMonth: RequestHandler;
   setDay: RequestHandler;
   deleteDay: RequestHandler;
@@ -226,6 +242,7 @@ export function buildAttendanceRouter(c: AttendanceControllers): Router {
   router.post('/check-out', validate({ body: checkInBodySchema }), c.checkOut);
   router.get('/me', validate({ query: monthQuerySchema }), c.myMonth);
   router.get('/board', hr, validate({ query: dateQuerySchema }), c.board);
+  router.get('/range', hr, validate({ query: rangeQuerySchema }), c.range);
   router.post('/simulate', hr, validate({ body: simulateBodySchema }), c.simulate);
   router.get(
     '/users/:userId',

@@ -8,6 +8,7 @@ import type {
   CheckOutUseCase,
   DeleteDayUseCase,
   MyMonthUseCase,
+  RangeUseCase,
   SetDayUseCase,
   SimulateAttendanceUseCase,
   UserMonthUseCase,
@@ -58,6 +59,11 @@ export const makeUserMonth = (uc: UserMonthUseCase): RequestHandler =>
 export const makeBoard = (uc: BoardUseCase): RequestHandler =>
   asyncHandler(async (req, res) => {
     sendSuccess(req, res, await uc.execute(q(req, 'date')), 'OK');
+  });
+
+export const makeRange = (uc: RangeUseCase): RequestHandler =>
+  asyncHandler(async (req, res) => {
+    sendSuccess(req, res, await uc.execute(String(q(req, 'from')), String(q(req, 'to'))), 'OK');
   });
 
 export const makeSetDay = (uc: SetDayUseCase): RequestHandler =>

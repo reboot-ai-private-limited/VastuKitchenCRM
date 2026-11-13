@@ -3,6 +3,7 @@ import type {
   AttendanceMonthDto,
   BoardDto,
   CheckInBodyDto,
+  RangeDto,
   SetDayBodyDto,
 } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
@@ -187,6 +188,58 @@ export class BoardUseCase {
         absent: items.filter((i) => i.day.status === 'ABSENT').length,
         missingOut: items.filter((i) => i.day.missingOut).length,
       },
+      items,
+    };
+  }
+}
+
+/** Everyone's attendance over a span of days, one row per person (Admin/HR). */
+export class RangeUseCase {
+  constructor(
+    private readonly staff: StaffDirectoryPort,
+    private readonly attendance: AttendanceRepositoryPort,
+    private readonly settings: HrSettingsPort,
+    private readonly clock: BusinessClock,
+  ) {}
+
+  async execute(from: string, to: string): Promise<RangeDto> {
+    const today = this.clock.dateOf(this.clock.now());
+    const calendar = await loadCalendar(this.settings);
+    const dates: string[] = [];
+    for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
+    const byUser = new Map<string, Map<string, AttendanceRecord>>();
+    for (const r of await this.attendance.forRange(from, to)) {
+      const m = byUser.get(r.userId) ?? new Map<string, AttendanceRecord>();
+      m.set(r.date, r);
+      byUser.set(r.userId, m);
+    }
+    const people = (await this.staff.all()).filter((s) => s.active && s.attendanceType !== null);
+    const items = people.map((p) => {
+      const mine = byUser.get(p.id);
+      const days = dates.map((d) => dayView(d, mine?.get(d), calendar, today));
+      const workedMinutes = days.reduce(
+        (sum, d) =>
+          d.inAt && d.outAt
+            ? sum + Math.max(0, Math.round((Date.parse(d.outAt) - Date.parse(d.inAt)) / 60_000))
+            : sum,
+        0,
+      );
+      return {
+        userId: p.id,
+        name: p.name,
+        designation: p.designation,
+        attendanceType: p.attendanceType!,
+        present: days.filter((d) => d.status === 'PRESENT').length,
+        absent: days.filter((d) => d.status === 'ABSENT').length,
+        off: days.filter((d) => d.status === 'OFF').length,
+        missingOut: days.filter((d) => d.missingOut).length,
+        workedMinutes,
+      };
+    });
+    return {
+      from,
+      to,
+      workingDays: dates.filter((d) => d <= today && !isWeeklyOff(d, calendar.rules)).length,
       items,
     };
   }

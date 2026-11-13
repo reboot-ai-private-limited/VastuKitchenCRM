@@ -37,7 +37,8 @@ import {
 import { ApiError } from '@/lib/api/client';
 import { useBoard, useSimulateAttendance } from '@/lib/api/hr';
 import { addDays, businessDate, formatDay, formatTime } from '@/lib/format';
-import { ATTENDANCE_LABEL, attendanceHref } from '@/lib/hr';
+import { ATTENDANCE_LABEL, attendanceHref, rangePresets } from '@/lib/hr';
+import { DayRangeSwitch } from './day-range-switch';
 import { cn } from '@/lib/utils';
 import { CorrectDayDialog, RemoveDayDialog } from './correct-day-dialog';
 
@@ -93,6 +94,11 @@ export function AttendanceBoard({ date }: { date: string }) {
       />
 
       <div className="flex flex-wrap items-center gap-2">
+        <DayRangeSwitch
+          mode="day"
+          rangeHref={attendanceHref({ from: rangePresets(today)[0]!.from, to: today })}
+          dayHref={attendanceHref({})}
+        />
         <div className="bg-card shadow-card inline-flex items-center rounded-lg border p-0.5">
           <Button
             variant="ghost"

@@ -17,6 +17,10 @@ import {
   lastDayOf,
   monthLabel,
   monthOf,
+  monthRange,
+  parseRange,
+  rangeLabel,
+  formatWorked,
   parseEmployeeFilters,
   parseRupees,
   presentOverWorking,
@@ -146,5 +150,28 @@ describe('attendanceHref', () => {
     expect(attendanceHref({ userId: 'u1', month: '2026-11' })).toBe(
       '/attendance?userId=u1&month=2026-11',
     );
+  });
+});
+
+describe('date ranges', () => {
+  const today = '2026-11-11';
+  it('accepts a valid range and clamps the end to today', () => {
+    expect(parseRange('2026-11-04', '2026-11-10', today)).toEqual({ from: '2026-11-04', to: '2026-11-10' });
+    expect(parseRange('2026-11-04', '2026-12-30', today)).toEqual({ from: '2026-11-04', to: today });
+  });
+  it('rejects bad, backwards, future-only and over-long ranges', () => {
+    expect(parseRange(null, '2026-11-10', today)).toBeNull();
+    expect(parseRange('2026-11-10', '2026-11-04', today)).toBeNull();
+    expect(parseRange('2026-12-01', '2026-12-05', today)).toBeNull();
+    expect(parseRange('2026-01-01', '2026-11-10', today)).toBeNull();
+  });
+  it('turns a month into a range, ending today while it is still running', () => {
+    expect(monthRange('2026-10', today)).toEqual({ from: '2026-10-01', to: '2026-10-31' });
+    expect(monthRange('2026-11', today)).toEqual({ from: '2026-11-01', to: today });
+  });
+  it('labels a range and the hours worked', () => {
+    expect(rangeLabel('2026-11-04', '2026-11-10')).toBe('4 Nov – 10 Nov 2026');
+    expect(formatWorked(0)).toBe('0h');
+    expect(formatWorked(570)).toBe('9h 30m');
   });
 });

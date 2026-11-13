@@ -4,13 +4,21 @@ import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { useAuth } from '@/lib/auth';
 import { businessDate } from '@/lib/format';
-import { clampToToday, currentMonth, isDateString, isFutureMonth, isMonth } from '@/lib/hr';
+import {
+  clampToToday,
+  currentMonth,
+  isDateString,
+  isFutureMonth,
+  isMonth,
+  parseRange,
+} from '@/lib/hr';
 import { AttendanceBoard } from './attendance-board';
+import { AttendanceRange } from './attendance-range';
 import { AttendanceMonth } from './attendance-month';
 
 /**
  * `/attendance` is three screens in one route, decided by role and the URL:
- * - Admin/HR, no `userId`: the day board (`?date=YYYY-MM-DD`)
+ * - Admin/HR, no `userId`: the day board (`?date=YYYY-MM-DD`), or everyone over a range (`?from=&to=`)
  * - Admin/HR with `?userId=…&month=YYYY-MM`: that person's month, with corrections
  * - everyone else on attendance: their own month, read-only (`?month=`)
  */
@@ -26,6 +34,7 @@ export function AttendanceView() {
       month,
       date: isDateString(d) ? clampToToday(d) : businessDate(),
       userId: params.get('userId'),
+      range: parseRange(params.get('from'), params.get('to')),
     };
   }, [params]);
 
@@ -41,5 +50,6 @@ export function AttendanceView() {
     );
   if (view.userId)
     return <AttendanceMonth userId={view.userId} month={view.month} canEdit showAppHint={false} />;
+  if (view.range) return <AttendanceRange from={view.range.from} to={view.range.to} />;
   return <AttendanceBoard date={view.date} />;
 }

@@ -103,6 +103,40 @@ export const boardSchema = z.object({
 });
 export type BoardDto = z.infer<typeof boardSchema>;
 
+/** The longest span the range summary answers for (about a quarter). */
+export const MAX_RANGE_DAYS = 92;
+
+/** `?from=YYYY-MM-DD&to=YYYY-MM-DD`, inclusive, from <= to, at most MAX_RANGE_DAYS days. */
+export const rangeQuerySchema = z
+  .object({ from: dateStringSchema, to: dateStringSchema })
+  .refine((v) => v.from <= v.to, { message: 'The start date must not be after the end date', path: ['from'] })
+  .refine(
+    (v) => (Date.parse(`${v.to}T00:00:00Z`) - Date.parse(`${v.from}T00:00:00Z`)) / 86_400_000 < MAX_RANGE_DAYS,
+    { message: `Pick at most ${MAX_RANGE_DAYS} days`, path: ['to'] },
+  );
+
+export const rangeItemSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  designation: z.string().nullable(),
+  attendanceType: attendanceTypeSchema,
+  present: z.number().int(),
+  absent: z.number().int(),
+  /** Weekly-off days nobody worked. */
+  off: z.number().int(),
+  missingOut: z.number().int(),
+  /** Minutes between in and out, summed over the days that have both. */
+  workedMinutes: z.number().int(),
+});
+export const rangeSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  /** Days in the range that are not the weekly off and not in the future. */
+  workingDays: z.number().int(),
+  items: z.array(rangeItemSchema),
+});
+export type RangeDto = z.infer<typeof rangeSchema>;
+
 export const simulateBodySchema = z.object({ days: z.number().int().min(1).max(60).default(14) });
 export type SimulateBodyDto = z.infer<typeof simulateBodySchema>;
 export const simulateResultSchema = z.object({

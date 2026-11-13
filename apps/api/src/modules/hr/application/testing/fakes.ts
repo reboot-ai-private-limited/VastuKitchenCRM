@@ -16,6 +16,7 @@ import type {
 import type { BusinessClock } from '../services/clock.js';
 import {
   BoardUseCase,
+  RangeUseCase,
   CheckInUseCase,
   CheckOutUseCase,
   DeleteDayUseCase,
@@ -272,6 +273,7 @@ export function world(start = '2026-11-11T04:30:00Z') {
     myMonth: new MyMonthUseCase(directory, attendance, settings, clock),
     userMonth: new UserMonthUseCase(directory, attendance, settings, clock),
     board: new BoardUseCase(directory, attendance, settings, clock),
+    range: new RangeUseCase(directory, attendance, settings, clock),
     setDay: new SetDayUseCase(directory, attendance, settings, clock),
     deleteDay: new DeleteDayUseCase(attendance),
     simulate: new SimulateAttendanceUseCase(directory, attendance, settings, clock),

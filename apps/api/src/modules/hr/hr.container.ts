@@ -5,6 +5,7 @@ import type { SettingsPublicContract } from '@/modules/settings/settings.public.
 import { createBusinessClock } from '@/shared/time/businessClock.js';
 import {
   BoardUseCase,
+  RangeUseCase,
   CheckInUseCase,
   CheckOutUseCase,
   DeleteDayUseCase,
@@ -101,6 +102,7 @@ export function buildHrContainer(deps: HrDeps): HrContainer {
         checkOut: c.makeCheckOut(new CheckOutUseCase(staff, attendance, settings, clock)),
         myMonth: c.makeMyMonth(new MyMonthUseCase(staff, attendance, settings, clock)),
         board: c.makeBoard(board),
+        range: c.makeRange(new RangeUseCase(staff, attendance, settings, clock)),
         userMonth: c.makeUserMonth(new UserMonthUseCase(staff, attendance, settings, clock)),
         setDay: c.makeSetDay(new SetDayUseCase(staff, attendance, settings, clock)),
         deleteDay: c.makeDeleteDay(new DeleteDayUseCase(attendance)),

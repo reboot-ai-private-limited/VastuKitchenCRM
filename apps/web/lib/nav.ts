@@ -4,6 +4,7 @@ import {
   FileText,
   FolderKanban,
   LayoutDashboard,
+  Boxes,
   Contact,
   LifeBuoy,
   ListChecks,
@@ -63,6 +64,7 @@ export const NAV: readonly NavItem[] = [
     roles: ['ADMIN', 'SALES', 'DESIGNER', 'TECHNICIAN', 'OFFICE', 'CUSTOMER'],
     group: 'Work',
   },
+  { href: '/stocks', label: 'Stocks', icon: Boxes, roles: ['ADMIN', 'OFFICE'], group: 'Work' },
   {
     href: '/attendance',
     label: 'Attendance',

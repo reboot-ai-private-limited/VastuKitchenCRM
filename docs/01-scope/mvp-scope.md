@@ -13,10 +13,13 @@
 | Dashboard | Org-wide counters, staff first/last activity, calls/leads/proposals per person, pending complaints, present staff |
 | Apps | Web admin (Next.js on Vercel); Android APK (sales, technician, customer views) |
 
+## Added after the MVP brief
+- **Stocks** — a lean stock ledger (items, stock in/out/recount, low-stock flag) for Admin and Office. See [stocks](../02-product/stocks.md). Vendors, purchase orders, costs and per-project usage are still out.
+
 ## Out of scope (MVP)
 - Real biometric integration (Hikvision SDK) — live phase after pricing is final
 - Leave management, payroll deductions/tax/complex calculation
-- Warranty engine, inventory, manufacturing, accounting/payments
+- Warranty engine, manufacturing, accounting/payments
 - WhatsApp Cloud API automation (use `wa.me` link instead)
 - Play Store release, iOS app
 - TODO/docs/announcements/scheduling beyond a basic note (optional, only if time remains)

@@ -85,7 +85,7 @@ export function KpiRow({ counters, staff }: { counters: DashboardCountersDto; st
 
 const ROW_H = 60;
 const HEAD_H = 40;
-const NAME_W = 124;
+const NAME_W = 132;
 const COLS: { key: string; label: string; w: number; right?: boolean }[] = [
   { key: 'in', label: 'In', w: 82 },
   { key: 'out', label: 'Out', w: 82 },
@@ -101,7 +101,7 @@ const TABLE_W = COLS.reduce((n, c) => n + c.w, 0);
 function TargetCell({ target }: { target: DashboardPersonDto['target'] }) {
   if (!target || target.amount === 0) {
     return (
-      <Text variant="caption" muted numberOfLines={1}>
+      <Text variant="caption" muted numberOfLines={1} style={{ fontSize: 11 }}>
         {target ? `${formatINRShort(target.achieved)} won · ` : ''}No target
       </Text>
     );
@@ -109,7 +109,7 @@ function TargetCell({ target }: { target: DashboardPersonDto['target'] }) {
   const pct = Math.round((target.achieved / target.amount) * 100);
   return (
     <View style={{ gap: 4 }}>
-      <Text variant="caption" style={{ fontVariant: ['tabular-nums'] }} numberOfLines={1}>
+      <Text variant="caption" style={{ fontVariant: ['tabular-nums'], fontSize: 11 }} numberOfLines={1}>
         {formatINRShort(target.achieved)} / {formatINRShort(target.amount)}
       </Text>
       <View style={styles.track}>
@@ -162,7 +162,7 @@ export function TeamCard({
     return [
       <Text key="in" style={styles.num}>{clock(a?.inAt)}</Text>,
       <Text key="out" style={styles.num}>{clock(a?.outAt)}</Text>,
-      <Text key="att" variant="label" color={present ? tone.success.fg : colors.mutedForeground}>{status}</Text>,
+      <Text key="att" variant="label" style={{ fontSize: 12 }} color={present ? tone.success.fg : colors.mutedForeground}>{status}</Text>,
       <Text key="calls" style={styles.num}>
         {act ? `${act.calls}${act.calls > 0 ? ` (${act.answeredCalls})` : ''}` : '—'}
       </Text>,
@@ -178,15 +178,22 @@ export function TeamCard({
       {/* Fixed column: employee */}
       <View style={{ width: NAME_W, flexShrink: 0 }}>
         <View style={[styles.headCell, { height: HEAD_H, width: NAME_W }]}>
-          <Text variant="caption" muted>
+          <Text variant="caption" muted style={{ fontSize: 11 }}>
             Employee
           </Text>
         </View>
         {rows.map((p) => (
           <View key={p.userId} style={[styles.rowLine, { height: ROW_H, width: NAME_W, gap: space[2] }]}>
-            <Text variant="label" numberOfLines={1} style={{ flex: 1 }}>
-              {p.name}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text variant="label" numberOfLines={1} style={{ fontSize: 13 }}>
+                {p.name}
+              </Text>
+              {p.designation ? (
+                <Text variant="caption" muted numberOfLines={1} style={{ fontSize: 11 }}>
+                  {p.designation}
+                </Text>
+              ) : null}
+            </View>
           </View>
         ))}
       </View>
@@ -197,7 +204,7 @@ export function TeamCard({
           <View style={[styles.headRow, { height: HEAD_H }]}>
             {COLS.map((c) => (
               <View key={c.key} style={[styles.headCell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
-                <Text variant="caption" muted>
+                <Text variant="caption" muted style={{ fontSize: 11 }}>
                   {c.label}
                 </Text>
               </View>
@@ -296,7 +303,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   cell: { justifyContent: 'center', paddingHorizontal: space[1] },
-  num: { fontVariant: ['tabular-nums'] },
+  num: { fontVariant: ['tabular-nums'], fontSize: 12 },
   track: { height: 6, borderRadius: radius.full, backgroundColor: colors.muted, overflow: 'hidden' },
   fill: { height: 6, borderRadius: radius.full },
   cRow: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

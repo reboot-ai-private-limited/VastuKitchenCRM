@@ -34,7 +34,7 @@ export const ROLE_LABEL: Record<RoleName, string> = {
 
 /** Home tab label per staff role (01-personas-and-navigation.md §1). */
 export const HOME_TAB_META: Record<StaffRole, { title: string; icon: keyof typeof Feather.glyphMap }> = {
-  ADMIN: { title: 'Glance', icon: 'pie-chart' },
+  ADMIN: { title: 'Home', icon: 'home' },
   HR: { title: 'Board', icon: 'calendar' },
   SALES: { title: 'Today', icon: 'sun' },
   DESIGNER: { title: 'Today', icon: 'sun' },

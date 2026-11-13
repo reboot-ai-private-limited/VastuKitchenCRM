@@ -4,8 +4,6 @@ import { z } from 'zod';
 import {
   CLIENT_KINDS,
   changePasswordBodySchema,
-  deleteRequestBodySchema,
-  deleteRequestResponseSchema,
   loginBodySchema,
   loginResponseSchema,
   logoutBodySchema,
@@ -90,20 +88,6 @@ openApiRegistry.registerPath({
   responses: {
     200: okResponse('Changed', z.object({})),
     400: errorResponse('Current password is wrong'),
-  },
-});
-openApiRegistry.registerPath({
-  method: 'post',
-  path: '/api/identity/auth/delete-request',
-  tags: TAG,
-  summary: 'Ask for your own account to be deleted',
-  description:
-    'Records the request, notifies the Admins, deactivates the account and signs it out everywhere. An Admin completes the erasure. The only active Admin gets 409.',
-  security: bearer,
-  request: { body: { content: { 'application/json': { schema: deleteRequestBodySchema } } } },
-  responses: {
-    200: okResponse('Recorded', deleteRequestResponseSchema),
-    409: errorResponse('You are the only active Admin'),
   },
 });
 openApiRegistry.registerPath({
@@ -196,7 +180,6 @@ export interface AuthControllers {
   logout: RequestHandler;
   me: RequestHandler;
   changePassword: RequestHandler;
-  deleteRequest: RequestHandler;
   redeemInvite: RequestHandler;
   requestOtp: RequestHandler;
   verifyOtp: RequestHandler;
@@ -226,12 +209,6 @@ export function buildAuthRouter(c: AuthControllers): Router {
     authenticate,
     validate({ body: changePasswordBodySchema }),
     c.changePassword,
-  );
-  router.post(
-    '/delete-request',
-    authenticate,
-    validate({ body: deleteRequestBodySchema }),
-    c.deleteRequest,
   );
   router.post(
     '/invite/redeem',

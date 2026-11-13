@@ -21,7 +21,6 @@ import {
   ResolveComplaintUseCase,
   SignRaiseUploadUseCase,
   SignResolveUploadUseCase,
-  SignCommentUploadUseCase,
 } from './application/usecases/complaints.usecases.js';
 import {
   IdentityUserDirectory,
@@ -88,7 +87,6 @@ export function buildComplaintsContainer(deps: ComplaintsDeps): ComplaintsContai
       buildComplaintsRouter({
         signRaise: c.makeSignRaise(new SignRaiseUploadUseCase(rules, deps.storage)),
         signResolve: c.makeSignResolve(new SignResolveUploadUseCase(access, deps.storage)),
-        signComment: c.makeSignComment(new SignCommentUploadUseCase(access, deps.storage)),
         raise: c.makeRaise(
           new RaiseComplaintUseCase(
             rules,

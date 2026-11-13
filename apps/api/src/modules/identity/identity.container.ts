@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import type { RoleName } from '@vastu/contracts';
 import { env } from '@/config/env.js';
-import { createEventBus, type EventBus } from '@/shared/events/appEvents.js';
 import { logger } from '@/shared/logging/logger.js';
 import { WaAgentClient } from '@/shared/whatsapp/waAgentClient.js';
 import { SessionIssuer } from './application/services/sessionIssuer.js';
@@ -28,8 +27,6 @@ import {
   VerifyOtpUseCase,
   DEV_OTP_CODE,
 } from './application/usecases/otp.usecase.js';
-import { RequestAccountDeletionUseCase } from './application/usecases/requestAccountDeletion.usecase.js';
-import { MongoDeletionRequestRepository } from './infrastructure/mongoDeletionRequest.adapter.js';
 import { LoginUseCase } from './application/usecases/login.usecase.js';
 import { LogoutUseCase } from './application/usecases/logout.usecase.js';
 import { RefreshSessionUseCase } from './application/usecases/refreshSession.usecase.js';
@@ -46,7 +43,6 @@ import { MongoSessionRepository } from './infrastructure/mongoSession.adapter.js
 import { MongoUserRepository } from './infrastructure/mongoUser.adapter.js';
 import {
   makeChangePasswordController,
-  makeDeleteRequestController,
   makeLoginController,
   makeLogoutController,
   makeMeController,
@@ -87,13 +83,7 @@ export interface IdentityContainer {
   };
 }
 
-export interface IdentityDeps {
-  events: EventBus;
-}
-
-export function buildIdentityContainer(
-  { events }: IdentityDeps = { events: createEventBus() },
-): IdentityContainer {
+export function buildIdentityContainer(): IdentityContainer {
   // 1. Adapters
   const users = new MongoUserRepository();
   const designations = new MongoDesignationRepository();
@@ -150,15 +140,9 @@ export function buildIdentityContainer(
   );
   const logout = new LogoutUseCase(sessions, tokens);
   const getUser = new GetUserUseCase(users);
-  const requestDeletion = new RequestAccountDeletionUseCase(
-    users,
-    sessions,
-    new MongoDeletionRequestRepository(),
-    events,
-  );
   const changePassword = new ChangePasswordUseCase(users, hasher, sessions);
   const createUser = new CreateUserUseCase(users, designations, hasher);
-  const updateUser = new UpdateUserUseCase(users, designations, sessions, events);
+  const updateUser = new UpdateUserUseCase(users, designations, sessions);
   const setUserPassword = new SetUserPasswordUseCase(users, hasher, sessions);
   const listUsers = new ListUsersUseCase(users);
   const listDesignations = new ListDesignationsUseCase(designations);
@@ -221,7 +205,6 @@ export function buildIdentityContainer(
           logout: makeLogoutController(logout),
           me: makeMeController(getUser),
           changePassword: makeChangePasswordController(changePassword),
-          deleteRequest: makeDeleteRequestController(requestDeletion),
           redeemInvite: makeRedeemInviteController(redeemInvite),
           requestOtp: makeRequestOtpController(requestOtp),
           verifyOtp: makeVerifyOtpController(verifyOtp),

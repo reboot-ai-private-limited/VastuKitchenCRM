@@ -16,7 +16,8 @@ import { UserMenu } from './user-menu';
 export function AppShell({ user, children }: { user: UserDto; children: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   // A project is a workspace: it fills the screen and scrolls inside its own panes, like a chat app.
-  const workspace = /^\/projects\/[^/]+\/?$/.test(usePathname());
+  const pathname = usePathname();
+  const workspace = /^\/projects\/[^/]+\/?$/.test(pathname) || pathname === '/whatsapp';
   return (
     <div className="min-h-dvh">
       <a

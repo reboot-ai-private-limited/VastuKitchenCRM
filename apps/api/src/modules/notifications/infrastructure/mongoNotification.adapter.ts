@@ -8,7 +8,7 @@ import type {
 import type { NotificationRepositoryPort } from '../domain/notification.repository.port.js';
 import { NotificationModel, type NotificationDoc } from './notification.schema.js';
 
-export const toEntity = (doc: HydratedDocument<NotificationDoc>): Notification => ({
+const toEntity = (doc: HydratedDocument<NotificationDoc>): Notification => ({
   id: doc.id as string,
   userId: doc.userId.toString(),
   type: doc.type,
@@ -20,7 +20,6 @@ export const toEntity = (doc: HydratedDocument<NotificationDoc>): Notification =
         id: doc.ref.id,
         ...(doc.ref.postId ? { postId: doc.ref.postId } : {}),
         ...(doc.ref.projectId ? { projectId: doc.ref.projectId } : {}),
-        ...(doc.ref.fileId ? { fileId: doc.ref.fileId } : {}),
       }
     : null,
   dedupeKey: doc.dedupeKey,

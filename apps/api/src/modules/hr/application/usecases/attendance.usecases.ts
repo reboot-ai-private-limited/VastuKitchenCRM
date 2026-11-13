@@ -58,34 +58,7 @@ function resolveMonth(month: string | undefined, clock: BusinessClock): string {
   return month ?? clock.dateOf(clock.now()).slice(0, 7);
 }
 
-/** A queued punch may be this much ahead of the server clock (device clock skew) and this far back. */
-export const CAPTURED_AT_SKEW_MS = 5 * 60_000;
-export const CAPTURED_AT_MAX_AGE_MS = 36 * 3_600_000;
-
-/**
- * The time a punch is recorded at. Live punches use the server clock. A punch queued offline may
- * carry `capturedAt`: accepted when not in the future and no older than 36 hours, else 400.
- */
-export function punchTime(now: Date, capturedAt: string | undefined): Date {
-  if (capturedAt === undefined) return now;
-  const at = new Date(capturedAt);
-  const age = now.getTime() - at.getTime();
-  if (Number.isNaN(age) || age < -CAPTURED_AT_SKEW_MS)
-    throw AppError.badRequest('That time has not happened yet.', [
-      { path: ['capturedAt'], message: 'Must not be in the future' },
-    ]);
-  if (age > CAPTURED_AT_MAX_AGE_MS)
-    throw AppError.badRequest('That punch is too old to record. Ask HR to correct the day.', [
-      { path: ['capturedAt'], message: 'Must be within the last 36 hours' },
-    ]);
-  // A hair ahead of the server (allowed skew) is recorded as "now", never as a future time.
-  return age < 0 ? now : at;
-}
-
-/**
- * GPS check-in from the app. The server's clock decides the time unless the app sends `capturedAt`
- * for a punch queued offline (bounded, see `punchTime`). One record per person per business day.
- */
+/** GPS check-in from the app: the server's clock decides the time, never the client's. */
 export class CheckInUseCase {
   constructor(
     private readonly staff: StaffDirectoryPort,
@@ -97,12 +70,11 @@ export class CheckInUseCase {
   async execute(actor: Viewer, input: CheckInBodyDto): Promise<AttendanceDayDto> {
     const me = await mustBeGpsStaff(this.staff, actor.id);
     const now = this.clock.now();
-    const at = punchTime(now, input.capturedAt);
-    const date = this.clock.dateOf(at);
+    const date = this.clock.dateOf(now);
     const { record } = await this.attendance.checkIn({
       userId: me.id,
       date,
-      inAt: at,
+      inAt: now,
       outAt: null,
       method: 'GPS',
       inLocation: input.location ?? null,
@@ -123,22 +95,10 @@ export class CheckOutUseCase {
   async execute(actor: Viewer, input: CheckInBodyDto): Promise<AttendanceDayDto> {
     const me = await mustBeGpsStaff(this.staff, actor.id);
     const now = this.clock.now();
-    const at = punchTime(now, input.capturedAt);
-    const date = this.clock.dateOf(at);
-    const today = this.clock.dateOf(now);
-    const existing = await this.attendance.find(me.id, date);
-    if (!existing) throw AppError.conflict('Check in first.');
-    if (input.capturedAt !== undefined && existing.outAt !== null) {
-      // A replayed queued punch must not move an out-time that is already recorded.
-      return dayView(date, existing, await loadCalendar(this.settings), today);
-    }
-    if (at < existing.inAt)
-      throw AppError.badRequest('Check-out cannot be before check-in.', [
-        { path: ['capturedAt'], message: 'Must be after the check-in time' },
-      ]);
-    const record = await this.attendance.checkOut(me.id, date, at, input.location ?? null);
+    const date = this.clock.dateOf(now);
+    const record = await this.attendance.checkOut(me.id, date, now, input.location ?? null);
     if (!record) throw AppError.conflict('Check in first.');
-    return dayView(date, record, await loadCalendar(this.settings), today);
+    return dayView(date, record, await loadCalendar(this.settings), date);
   }
 }
 

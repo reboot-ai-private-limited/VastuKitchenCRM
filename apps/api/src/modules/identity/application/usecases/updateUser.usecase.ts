@@ -1,6 +1,5 @@
 import type { RoleName, UpdateUserBodyDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
-import type { EventBus } from '@/shared/events/appEvents.js';
 import type { DesignationRepositoryPort } from '../../domain/designation.repository.port.js';
 import type { SessionRepositoryPort } from '../../domain/session.repository.port.js';
 import type { User } from '../../domain/user.entity.js';
@@ -12,7 +11,6 @@ export class UpdateUserUseCase {
     private readonly users: UserRepositoryPort,
     private readonly designations: DesignationRepositoryPort,
     private readonly sessions: SessionRepositoryPort,
-    private readonly events?: EventBus,
   ) {}
 
   async execute(
@@ -57,8 +55,6 @@ export class UpdateUserUseCase {
     // until it expires (<= JWT_ACCESS_TTL_SECONDS).
     if (input.active === false || input.role !== undefined)
       await this.sessions.revokeAllForUser(targetId);
-    // Other modules clean up after a deactivated account (e.g. its push devices).
-    if (input.active === false) this.events?.emit('user.deactivated', { userId: targetId });
     return updated;
   }
 }

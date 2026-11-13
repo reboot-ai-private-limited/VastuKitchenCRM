@@ -6,7 +6,6 @@ import { buildUploadRelayRouter } from './shared/storage/uploadRelay.route.js';
 export function buildApiRouter(containers: AppContainers): Router {
   const router = Router();
   router.use('/health', containers.health.buildRouter());
-  router.use('/app', containers.app.buildRouter());
   router.use('/uploads', buildUploadRelayRouter());
   router.use('/settings', containers.settings.buildRouter());
   router.use('/identity', containers.identity.buildRouter());

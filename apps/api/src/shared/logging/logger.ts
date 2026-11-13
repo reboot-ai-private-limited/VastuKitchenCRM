@@ -1,6 +1,6 @@
 import pino from 'pino';
 import { env, isProduction } from '@/config/env.js';
-import { getLogContext } from '@/shared/http/request-context.js';
+import { getRequestId } from '@/shared/http/request-context.js';
 
 /**
  * Structured logs to stdout. NOTE THE ARGUMENT ORDER: `logger.info({ data }, 'message')`.
@@ -30,7 +30,8 @@ export const logger = pino({
   redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
   // Stamps every line with the current request ID from async context.
   mixin() {
-    return getLogContext();
+    const requestId = getRequestId();
+    return requestId === undefined ? {} : { requestId };
   },
   formatters: { level: (label) => ({ level: label }) },
   timestamp: pino.stdTimeFunctions.isoTime,

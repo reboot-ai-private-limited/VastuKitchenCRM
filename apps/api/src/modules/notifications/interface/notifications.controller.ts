@@ -1,11 +1,5 @@
 import type { Request, RequestHandler } from 'express';
-import type {
-  DeviceDto,
-  ListNotificationsQueryDto,
-  NotificationDto,
-  PaginatedDto,
-  RegisterDeviceDto,
-} from '@vastu/contracts';
+import type { ListNotificationsQueryDto, NotificationDto, PaginatedDto } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import { asyncHandler } from '@/shared/http/asyncHandler.js';
 import { sendSuccess } from '@/shared/http/response.util.js';
@@ -14,8 +8,6 @@ import type {
   ListNotificationsUseCase,
   MarkAllReadUseCase,
   MarkReadUseCase,
-  RegisterDeviceUseCase,
-  RemoveDeviceUseCase,
 } from '../application/usecases/notifications.usecases.js';
 import { toNotificationDto } from './notification.mapper.js';
 
@@ -56,27 +48,5 @@ export function makeMarkReadController(useCase: MarkReadUseCase): RequestHandler
 export function makeMarkAllReadController(useCase: MarkAllReadUseCase): RequestHandler {
   return asyncHandler(async (req, res) => {
     sendSuccess(req, res, { marked: await useCase.execute(meOf(req)) }, 'All marked as read.');
-  });
-}
-
-export function makeRegisterDeviceController(useCase: RegisterDeviceUseCase): RequestHandler {
-  return asyncHandler(async (req, res) => {
-    const d = await useCase.execute(meOf(req), req.body as RegisterDeviceDto);
-    const data: DeviceDto = {
-      id: d.id,
-      platform: d.platform,
-      appVersion: d.appVersion,
-      deviceName: d.deviceName,
-      lastSeenAt: d.lastSeenAt.toISOString(),
-      createdAt: d.createdAt.toISOString(),
-    };
-    sendSuccess(req, res, data, 'Device registered.');
-  });
-}
-
-export function makeRemoveDeviceController(useCase: RemoveDeviceUseCase): RequestHandler {
-  return asyncHandler(async (req, res) => {
-    await useCase.execute(meOf(req), String(req.params['id']));
-    sendSuccess(req, res, {}, 'Device removed.');
   });
 }

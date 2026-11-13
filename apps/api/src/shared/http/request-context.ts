@@ -6,10 +6,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
  */
 export interface RequestContext {
   requestId: string;
-  /** Mobile client identity, from the X-App-Version / X-Platform / X-App-Build headers (when sent). */
-  appVersion?: string;
-  appPlatform?: string;
-  appBuild?: string;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -21,24 +17,4 @@ export function runWithContext<T>(context: RequestContext, fn: () => T): T {
 /** Undefined outside a request (startup, shutdown) — callers must not assume a string. */
 export function getRequestId(): string | undefined {
   return storage.getStore()?.requestId;
-}
-
-/** Adds the mobile client's identity to the current request, so every log line carries it. */
-export function setClientInfo(
-  info: Pick<RequestContext, 'appVersion' | 'appPlatform' | 'appBuild'>,
-): void {
-  const store = storage.getStore();
-  if (store) Object.assign(store, info);
-}
-
-/** The fields to stamp on log lines; empty outside a request. */
-export function getLogContext(): Partial<RequestContext> {
-  const s = storage.getStore();
-  if (!s) return {};
-  return {
-    requestId: s.requestId,
-    ...(s.appVersion ? { appVersion: s.appVersion } : {}),
-    ...(s.appPlatform ? { appPlatform: s.appPlatform } : {}),
-    ...(s.appBuild ? { appBuild: s.appBuild } : {}),
-  };
 }

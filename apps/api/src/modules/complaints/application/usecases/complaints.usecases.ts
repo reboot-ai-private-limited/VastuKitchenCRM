@@ -74,21 +74,6 @@ export class SignResolveUploadUseCase {
   }
 }
 
-/** Photo ticket for a comment: anyone who can see the complaint (not only project members), until it is closed. */
-export class SignCommentUploadUseCase {
-  constructor(
-    private readonly access: ComplaintAccess,
-    private readonly storage: StoragePort,
-  ) {}
-
-  async execute(actor: Viewer, complaintId: string): Promise<UploadTicketDto> {
-    const c = await this.access.load(complaintId, actor);
-    if (c.status === 'CLOSED')
-      throw AppError.conflict('This complaint is closed, so it takes no new messages.');
-    return this.storage.signImageUpload(projectFolder(this.storage.rootFolder, c.projectId));
-  }
-}
-
 export class RaiseComplaintUseCase {
   constructor(
     private readonly rules: RaiseRules,

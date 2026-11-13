@@ -11,7 +11,6 @@ export interface NotificationDoc {
     id: string;
     postId?: string;
     projectId?: string;
-    fileId?: string;
   } | null;
   dedupeKey: string | null;
   readAt: Date | null;
@@ -31,7 +30,6 @@ const schema = new Schema<NotificationDoc>(
           id: { type: String, required: true },
           postId: { type: String },
           projectId: { type: String },
-          fileId: { type: String },
         },
         { _id: false },
       ),

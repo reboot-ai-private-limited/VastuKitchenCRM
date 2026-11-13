@@ -5,7 +5,6 @@ import { asyncHandler } from '@/shared/http/asyncHandler.js';
 import { requireClientKind } from '@/shared/http/client.util.js';
 import { sendSuccess } from '@/shared/http/response.util.js';
 import type { ChangePasswordUseCase } from '../application/usecases/changePassword.usecase.js';
-import type { RequestAccountDeletionUseCase } from '../application/usecases/requestAccountDeletion.usecase.js';
 import type { RequestOtpUseCase, VerifyOtpUseCase } from '../application/usecases/otp.usecase.js';
 import type { RedeemInviteUseCase } from '../application/usecases/customers.usecase.js';
 import type { GetUserUseCase } from '../application/usecases/getUser.usecase.js';
@@ -67,16 +66,6 @@ export function makeChangePasswordController(useCase: ChangePasswordUseCase): Re
     // Every session was revoked, this browser's included: drop the cookie too.
     if (req.headers['x-client'] === 'web') clearRefreshCookie(res);
     sendSuccess(req, res, {}, 'Password changed. Please sign in again.');
-  });
-}
-
-export function makeDeleteRequestController(useCase: RequestAccountDeletionUseCase): RequestHandler {
-  return asyncHandler(async (req, res) => {
-    if (!req.user) throw AppError.unauthenticated();
-    await useCase.execute(req.user.sub, (req.body as { reason?: string }).reason);
-    // The account is deactivated and every session revoked, this browser's included.
-    if (req.headers['x-client'] === 'web') clearRefreshCookie(res);
-    sendSuccess(req, res, { requested: true }, 'Your account deletion request has been recorded.');
   });
 }
 

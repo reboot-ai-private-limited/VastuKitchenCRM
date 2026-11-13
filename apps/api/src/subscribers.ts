@@ -6,12 +6,7 @@ import type { AppContainers } from './container.js';
  *
  * Handlers must be IDEMPOTENT: a handler that throws is only logged (the event bus), never retried.
  */
-export function registerSubscribers({
-  events,
-  notifications,
-  projects,
-  identity,
-}: AppContainers): void {
+export function registerSubscribers({ events, notifications, projects }: AppContainers): void {
   // A lead was won → create its project. Idempotent (one per won lead), so a replay is harmless.
   events.on('lead.won', async (e) => {
     await projects.contract.createFromWonLead({
@@ -47,23 +42,5 @@ export function registerSubscribers({
       body: `${e.leadName} (${e.leadPhone})`,
       ref: { kind: 'LEAD', id: e.leadId },
     });
-  });
-
-  // An account was deactivated → stop pushing to its phones. Idempotent (deleting nothing is fine).
-  events.on('user.deactivated', async (e) => {
-    await notifications.contract.removeDevicesFor(e.userId);
-  });
-
-  // Someone asked for their account to be deleted → tell every active Admin, once each.
-  events.on('account.deletion-requested', async (e) => {
-    for (const adminId of await identity.contract.getActiveAdminIds()) {
-      await notifications.contract.notify({
-        userId: adminId,
-        type: 'ACCOUNT_DELETION_REQUESTED',
-        title: 'Account deletion requested',
-        body: `${e.name} (${e.role}) asked for their account to be deleted. It is deactivated; anonymise it when ready.`,
-        dedupeKey: `account-deletion:${e.requestId}`,
-      });
-    }
   });
 }

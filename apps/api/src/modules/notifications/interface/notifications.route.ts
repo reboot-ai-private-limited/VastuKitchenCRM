@@ -1,13 +1,10 @@
 import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 import {
-  deviceIdParamsSchema,
-  deviceSchema,
   listNotificationsQuerySchema,
   notificationIdParamsSchema,
   notificationPageSchema,
   readAllResultSchema,
-  registerDeviceSchema,
   unreadCountSchema,
 } from '@vastu/contracts';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
@@ -55,35 +52,11 @@ openApiRegistry.registerPath({
   },
 });
 
-openApiRegistry.registerPath({
-  method: 'post',
-  path: '/api/notifications/devices',
-  tags: TAG,
-  security,
-  summary: 'Register this phone for push (upsert by token; at most 5 per person, oldest dropped)',
-  request: { body: { content: { 'application/json': { schema: registerDeviceSchema } } } },
-  responses: { 200: okResponse('The device', deviceSchema) },
-});
-openApiRegistry.registerPath({
-  method: 'delete',
-  path: '/api/notifications/devices/{id}',
-  tags: TAG,
-  security,
-  summary: 'Forget one of my devices (call on logout)',
-  request: { params: deviceIdParamsSchema },
-  responses: {
-    200: okResponse('Removed', z.object({})),
-    404: errorResponse('Not found (or not yours)'),
-  },
-});
-
 export interface NotificationsControllers {
   list: RequestHandler;
   unreadCount: RequestHandler;
   markRead: RequestHandler;
   markAllRead: RequestHandler;
-  registerDevice: RequestHandler;
-  removeDevice: RequestHandler;
 }
 
 export function buildNotificationsRouter(c: NotificationsControllers): Router {
@@ -95,7 +68,5 @@ export function buildNotificationsRouter(c: NotificationsControllers): Router {
   // Fixed path before `/:id/read`, so "read-all" is never read as an id.
   router.post('/read-all', c.markAllRead);
   router.post('/:id/read', validate({ params: notificationIdParamsSchema }), c.markRead);
-  router.post('/devices', validate({ body: registerDeviceSchema }), c.registerDevice);
-  router.delete('/devices/:id', validate({ params: deviceIdParamsSchema }), c.removeDevice);
   return router;
 }

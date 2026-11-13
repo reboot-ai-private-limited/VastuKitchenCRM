@@ -293,23 +293,6 @@ describe('resolving', () => {
   });
 });
 
-describe('comment photo ticket', () => {
-  it('is for anyone who can see the complaint, not only the resolver, until it is closed', async () => {
-    const { w, id } = await inState('ASSIGNED');
-    for (const who of [A.tech, A.customer, A.office]) {
-      expect((await w.signComment.execute(who, id)).fields['folder']).toBe(
-        `vastu-test/projects/${ID.project}`,
-      );
-    }
-    await expect(w.signComment.execute(A.customer2, id)).rejects.toMatchObject({ statusCode: 404 });
-    const done = await inState('RESOLVED');
-    await done.w.close.execute(A.admin, done.id, {});
-    await expect(done.w.signComment.execute(A.customer, done.id)).rejects.toMatchObject({
-      statusCode: 409,
-    });
-  });
-});
-
 describe('reopening', () => {
   it('the customer sends it back to the same technician; the resolution is cleared and counted', async () => {
     const { w, id } = await inState('RESOLVED');

@@ -1,4 +1,3 @@
-import { buildAppContainer } from '@/modules/app/app.container.js';
 import { buildHealthContainer } from '@/modules/health/health.container.js';
 import { buildIdentityContainer } from '@/modules/identity/identity.container.js';
 import { buildLeadsContainer } from '@/modules/leads/leads.container.js';
@@ -20,7 +19,6 @@ import { createStorage } from '@/shared/storage/createStorage.js';
 /** Top-level composition root. Add each new module's container here and in `AppContainers`. */
 export interface AppContainers {
   health: ReturnType<typeof buildHealthContainer>;
-  app: ReturnType<typeof buildAppContainer>;
   identity: ReturnType<typeof buildIdentityContainer>;
   settings: ReturnType<typeof buildSettingsContainer>;
   notifications: ReturnType<typeof buildNotificationsContainer>;
@@ -43,14 +41,12 @@ export function buildContainers(): AppContainers {
   const events = createEventBus();
   // Built bottom-up, by tier: a module may only be given contracts of modules below it.
   const settings = buildSettingsContainer();
-  const identity = buildIdentityContainer({ events });
+  const identity = buildIdentityContainer();
   const notifications = buildNotificationsContainer();
-  const storage = createStorage();
   const leads = buildLeadsContainer({
     identity: identity.contract,
     settings: settings.contract,
     events,
-    storage,
   });
   const proposals = buildProposalsContainer({
     leads: leads.contract,
@@ -58,6 +54,7 @@ export function buildContainers(): AppContainers {
     settings: settings.contract,
     events,
   });
+  const storage = createStorage();
   const projects = buildProjectsContainer({
     leads: leads.contract,
     proposals: proposals.contract,
@@ -115,7 +112,6 @@ export function buildContainers(): AppContainers {
 
   return {
     health: buildHealthContainer(),
-    app: buildAppContainer({ settings: settings.contract }),
     settings,
     identity,
     notifications,

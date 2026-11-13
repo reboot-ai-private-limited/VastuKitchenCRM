@@ -33,7 +33,6 @@ import {
   ResolveComplaintUseCase,
   SignRaiseUploadUseCase,
   SignResolveUploadUseCase,
-  SignCommentUploadUseCase,
 } from '../usecases/complaints.usecases.js';
 
 /** In-memory ports for use-case tests. They honour the same contracts as the Mongo adapters. */
@@ -338,6 +337,5 @@ export function world(now = new Date('2026-11-11T10:00:00Z')) {
     close: new CloseComplaintUseCase(access, complaints, projects, directory, views, alerts, tick),
     signRaise: new SignRaiseUploadUseCase(rules, storage),
     signResolve: new SignResolveUploadUseCase(access, storage),
-    signComment: new SignCommentUploadUseCase(access, storage),
   };
 }

@@ -7,25 +7,20 @@ import { registerSubscribers } from './subscribers.js';
 function setup() {
   const events = createEventBus();
   const sent: NotifyInput[] = [];
-  const removed: string[] = [];
   const containers = {
     events,
-    identity: { contract: { getActiveAdminIds: async () => ['admin1', 'admin2'] } },
     notifications: {
       contract: {
         notify: async (input: NotifyInput) => {
           sent.push(input);
           return { created: true };
         },
-        removeDevicesFor: async (userId: string) => {
-          removed.push(userId);
-        },
       },
     },
   } as unknown as AppContainers;
   registerSubscribers(containers);
   const settle = () => new Promise((r) => setTimeout(r, 5)); // handlers run on a microtask
-  return { events, sent, removed, settle };
+  return { events, sent, settle };
 }
 
 describe('event subscribers', () => {
@@ -63,29 +58,6 @@ describe('event subscribers', () => {
       userId: 'sales1',
       type: 'LEAD_ASSIGNED',
       body: 'Mrs Rao (9876500001)',
-    });
-  });
-
-  it('forgets the phones of a deactivated account', async () => {
-    const { events, removed, settle } = setup();
-    events.emit('user.deactivated', { userId: 'u9' });
-    await settle();
-    expect(removed).toEqual(['u9']);
-  });
-
-  it('tells every active Admin about a deletion request (keyed per request)', async () => {
-    const { events, sent, settle } = setup();
-    events.emit('account.deletion-requested', {
-      requestId: 'r1',
-      userId: 'u9',
-      name: 'Asha',
-      role: 'SALES',
-    });
-    await settle();
-    expect(sent.map((s) => s.userId)).toEqual(['admin1', 'admin2']);
-    expect(sent[0]).toMatchObject({
-      type: 'ACCOUNT_DELETION_REQUESTED',
-      dedupeKey: 'account-deletion:r1',
     });
   });
 });

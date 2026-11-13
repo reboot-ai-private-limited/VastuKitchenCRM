@@ -62,8 +62,6 @@ const schema = z.object({
   WA_AGENT_PROPOSAL_TEMPLATE: blankAsUnset(z.string().min(1).optional()),
   WA_AGENT_PROPOSAL_LANGUAGE: z.string().min(1).default('en'),
   WA_AGENT_BASE_URL: z.string().url().default('https://api.waagent.in/v1'),
-  /** Expo Push Service access token. Optional: pushes work without it unless enhanced security is on in Expo. */
-  EXPO_ACCESS_TOKEN: blankAsUnset(z.string().min(1).optional()),
   /** Demo only: every code is 123456. Refused in production. */
   OTP_DEV_MODE: z
     .enum(['true', 'false'])
@@ -86,21 +84,6 @@ const schema = z.object({
         return false;
       }
     }, 'Not a valid timezone name'),
-
-  /**
-   * Mobile app update policy. The versions are only the DEFAULTS of the Admin-editable settings
-   * (Settings > App); the store/APK links are env-only. `0.0.0` means "no minimum".
-   */
-  APP_ANDROID_MIN_VERSION: z.string().default('0.0.0'),
-  APP_ANDROID_RECOMMENDED_VERSION: z.string().default('0.0.0'),
-  APP_IOS_MIN_VERSION: z.string().default('0.0.0'),
-  APP_IOS_RECOMMENDED_VERSION: z.string().default('0.0.0'),
-  APP_ANDROID_STORE_URL: blankAsUnset(z.string().url().optional()),
-  APP_ANDROID_APK_URL: blankAsUnset(z.string().url().optional()),
-  APP_IOS_STORE_URL: blankAsUnset(z.string().url().optional()),
-  /** How often the app polls for unread alerts / an open chat, in seconds. */
-  APP_POLL_UNREAD_SEC: z.coerce.number().int().min(10).max(3600).default(60),
-  APP_POLL_CHAT_SEC: z.coerce.number().int().min(5).max(600).default(15),
 
   /** Where customer invite links point (the web app). */
   WEB_BASE_URL: z.string().url().default('http://localhost:3001'),

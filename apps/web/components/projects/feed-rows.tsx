@@ -30,11 +30,13 @@ export function RowTime({ iso, edited }: { iso: string; edited?: boolean }) {
 /** A system event ("Ravi changed the due date"): one muted line in the same column grid. */
 export function ActivityRow({ iso, children }: { iso: string; children: ReactNode }) {
   return (
-    <li className="flex justify-center py-1.5">
-      <p
-        title={`${formatDate(iso)}, ${formatTime(iso)}`}
-        className="bg-card text-muted-foreground max-w-[90%] rounded-full border px-3 py-1 text-center text-xs shadow-sm"
-      >
+    <li className="flex gap-3 border-b py-3 last:border-b-0">
+      <RowTime iso={iso} />
+      <p className="text-muted-foreground min-w-0 flex-1 pl-0 text-sm sm:pl-12">
+        <span
+          aria-hidden
+          className="bg-muted-foreground/40 mr-2 inline-block size-1.5 rounded-full align-middle"
+        />
         {children}
       </p>
     </li>

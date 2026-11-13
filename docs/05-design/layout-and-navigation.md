@@ -13,13 +13,13 @@ Adapted from the reference `AdminShell` (sticky top bar + left sidebar; drawer b
 │ Projects │  PageBody (p-6, space-y-5)                         │
 │ Complaint│                                                    │
 │ ──────── │                                                    │
-│ People   │                                                    │
+│ HR       │                                                    │
 │ Settings │                                                    │
 └──────────┴───────────────────────────────────────────────────┘
  224px sidebar, bg-sidebar, border-r, sticky
 ```
 - **Top bar:** logo chip + wordmark (teal "V" mark), global search/command palette, notification bell (unread count), theme toggle (phase 2), user menu (name, role, designation, Log out). Remove "View site" from the reference.
-- **Sidebar:** icon + label, 14px; active = `primary-soft` background + teal text + 2px left indicator; counts as small pills (open complaints, unseen proposals). Group labels (small caps, muted) separate Work / People / Admin. Collapsible to icon rail (≥`xl`), state remembered.
+- **Sidebar:** icon + label, 14px; active = `primary-soft` background + teal text + 2px left indicator; counts as small pills (open complaints, unseen proposals). Group labels (small caps, muted) separate Overview / Sales / Operations / HR / Admin. Collapsible to icon rail (≥`xl`), state remembered.
 - **Breadcrumbs** on detail pages (Leads / Rahul Sharma).
 - **Main:** fluid; content width rules from [design-system](design-system.md).
 

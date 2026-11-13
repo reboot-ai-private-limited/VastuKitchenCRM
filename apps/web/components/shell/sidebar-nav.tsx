@@ -3,24 +3,24 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { RoleName } from '@vastu/contracts';
-import { NAV, isActive, navFor, type NavItem } from '@/lib/nav';
+import { NAV, NAV_GROUPS, isActive, navFor } from '@/lib/nav';
 import { cn } from '@/lib/utils';
-
-const GROUPS: NavItem['group'][] = ['Work', 'People', 'Admin'];
 
 export function SidebarNav({ role, onNavigate }: { role: RoleName; onNavigate?: () => void }) {
   const pathname = usePathname();
   const items = navFor(role);
   return (
     <nav aria-label="Main" className="space-y-5 p-3">
-      {GROUPS.map((group) => {
+      {NAV_GROUPS.map((group) => {
         const inGroup = items.filter((i) => i.group === group);
         if (inGroup.length === 0) return null;
         return (
           <div key={group} className="space-y-1">
-            <p className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">
-              {group}
-            </p>
+            {group !== 'Overview' && (
+              <p className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">
+                {group}
+              </p>
+            )}
             {inGroup.map((item) => {
               const active = isActive(item.href, pathname);
               return (

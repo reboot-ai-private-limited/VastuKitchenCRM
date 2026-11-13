@@ -16,78 +16,82 @@ import {
 } from 'lucide-react';
 import type { RoleName } from '@vastu/contracts';
 
+/** Sidebar sections, in display order. 'Overview' has no heading. */
+export const NAV_GROUPS = ['Overview', 'Sales', 'Operations', 'HR', 'Admin'] as const;
+export type NavGroup = (typeof NAV_GROUPS)[number];
+
 export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
   roles: readonly RoleName[];
-  group: 'Work' | 'People' | 'Admin';
+  group: NavGroup;
 }
 
 const STAFF_EXCEPT_HR: readonly RoleName[] = ['ADMIN', 'SALES', 'DESIGNER', 'TECHNICIAN', 'OFFICE'];
 
 /** What each role sees in the sidebar (docs/05-design/layout-and-navigation.md). Cosmetic only: the API enforces access. */
 export const NAV: readonly NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'HR'], group: 'Work' },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'HR'], group: 'Overview' },
   {
     href: '/leads',
     label: 'Leads',
     icon: Users,
     roles: ['ADMIN', 'SALES', 'OFFICE'],
-    group: 'Work',
+    group: 'Sales',
   },
   {
     href: '/proposals',
     label: 'Proposals',
     icon: FileText,
     roles: ['ADMIN', 'SALES'],
-    group: 'Work',
+    group: 'Sales',
   },
   {
     href: '/customers',
     label: 'Customers',
     icon: Contact,
     roles: ['ADMIN', 'SALES', 'OFFICE'],
-    group: 'Work',
+    group: 'Sales',
   },
   {
     href: '/whatsapp',
     label: 'WhatsApp',
     icon: MessageCircle,
     roles: ['ADMIN', 'SALES', 'OFFICE'],
-    group: 'Work',
+    group: 'Sales',
   },
   {
     href: '/projects',
     label: 'Projects',
     icon: FolderKanban,
     roles: ['ADMIN', 'SALES', 'DESIGNER', 'TECHNICIAN', 'OFFICE', 'CUSTOMER'],
-    group: 'Work',
+    group: 'Operations',
   },
-  { href: '/todos', label: 'To-dos', icon: ListChecks, roles: STAFF_EXCEPT_HR, group: 'Work' },
+  { href: '/todos', label: 'To-dos', icon: ListChecks, roles: STAFF_EXCEPT_HR, group: 'Operations' },
   {
     href: '/complaints',
     label: 'Complaints',
     icon: LifeBuoy,
     roles: ['ADMIN', 'SALES', 'DESIGNER', 'TECHNICIAN', 'OFFICE', 'CUSTOMER'],
-    group: 'Work',
+    group: 'Operations',
   },
-  { href: '/stocks', label: 'Stocks', icon: Boxes, roles: ['ADMIN', 'OFFICE'], group: 'Work' },
+  { href: '/stocks', label: 'Stocks', icon: Boxes, roles: ['ADMIN', 'OFFICE'], group: 'Operations' },
   {
     href: '/attendance',
     label: 'Attendance',
     icon: CalendarCheck,
     roles: ['ADMIN', 'HR', 'SALES', 'DESIGNER', 'TECHNICIAN', 'OFFICE'],
-    group: 'People',
+    group: 'HR',
   },
   {
     href: '/employees',
     label: 'Employees',
     icon: BadgeCheck,
     roles: ['ADMIN', 'HR'],
-    group: 'People',
+    group: 'HR',
   },
-  { href: '/salary', label: 'Salary', icon: Wallet, roles: ['ADMIN', 'HR'], group: 'People' },
+  { href: '/salary', label: 'Salary', icon: Wallet, roles: ['ADMIN', 'HR'], group: 'HR' },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['ADMIN'], group: 'Admin' },
 ];
 

@@ -1,0 +1,30 @@
+# Credits
+
+- site-compact-modular-kitchen.jpg | https://vaastukitchen.com/assets/projects/compact-modular-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-contemporary-island-kitchen.jpg | https://vaastukitchen.com/assets/projects/contemporary-island-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-island-modular-kitchen.jpg | https://vaastukitchen.com/assets/projects/island-modular-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-l-shaped-modular-kitchen.jpg | https://vaastukitchen.com/assets/projects/l-shaped-modular-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-u-shaped-modular-kitchen.jpg | https://vaastukitchen.com/assets/projects/u-shaped-modular-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-modern-parallel-kitchen.jpg | https://vaastukitchen.com/assets/projects/modern-parallel-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-luxury-modular-kitchen-with-display-cabinet.jpg | https://vaastukitchen.com/assets/projects/luxury-modular-kitchen-with-display-cabinet.jpg | vaastukitchen.com own site, reused with owner approval
+- site-g-shaped.jpg | https://vaastukitchen.com/assets/services/modular-kitchen/g-shaped.jpg | vaastukitchen.com own site, reused with owner approval
+- site-parallel-kitchen.jpg | https://vaastukitchen.com/assets/services/modular-kitchen/parallel-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-u-shaped-kitchen.jpg | https://vaastukitchen.com/assets/services/modular-kitchen/u-shaped-kitchen.jpg | vaastukitchen.com own site, reused with owner approval
+- site-premium-tv-unit.jpg | https://vaastukitchen.com/assets/services/tvunits/premium%20tv%20unit%20design.jpg | vaastukitchen.com own site, reused with owner approval
+- site-modern-wardrobe.jpg | https://vaastukitchen.com/assets/services/wardrobe/modern%20wardrobe.jpg | vaastukitchen.com own site, reused with owner approval
+- site-vastu1.jpg | https://vaastukitchen.com/home-slider/vastu1.jpg | vaastukitchen.com own site, reused with owner approval
+- site-vastu2.jpg | https://vaastukitchen.com/home-slider/vastu2.jpg | vaastukitchen.com own site, reused with owner approval
+- site-vastu3.jpg | https://vaastukitchen.com/home-slider/vastu3.jpg | vaastukitchen.com own site, reused with owner approval
+- stock-cabinet-installation.jpg | https://commons.wikimedia.org/wiki/File:Kitchen_cabinet_installation.jpg | Wikimedia Commons, CC BY-SA 4.0 (author per file page)
+- stock-corner-cabinet-install.jpg | https://commons.wikimedia.org/wiki/File:Sektion_47_Inch_Corner_Cabinet_Installation_3.jpg | Wikimedia Commons, CC BY-SA 4.0 (author per file page)
+- stock-wall-measuring.jpg | https://commons.wikimedia.org/wiki/File:Marking_white_room_wall_with_pencil_and_measuring_tape_(16333093811).jpg | Wikimedia Commons, CC BY 2.0 (author per file page)
+- stock-switchboard.jpg | https://commons.wikimedia.org/wiki/File:STCP_-_Electrical_Switchboard.jpg | Wikimedia Commons, CC BY-SA 4.0 (author per file page)
+- stock-crooked-drawer.jpg | https://commons.wikimedia.org/wiki/File:Kitchen_renovation_9a_base_kitchen_cabinet_assembled_with_crooked_drawer.JPG | Wikimedia Commons, CC0 (author per file page)
+- stock-leaky-valve.jpg | https://commons.wikimedia.org/wiki/File:Kitchen_renovation_leaky_valve_beneath_kitchen_sink.JPG | Wikimedia Commons, CC0 (author per file page)
+- stock-leaking-pipe.jpg | https://commons.wikimedia.org/wiki/File:Leaking_PVC_Pipe_Under_Sink_-_P_Trap_(52842956605).jpg | Wikimedia Commons, CC BY 2.0 (author per file page)
+- stock-granite-countertop.jpg | https://commons.wikimedia.org/wiki/File:Granite_for_Countertops_05.jpg | Wikimedia Commons, CC BY-SA 4.0 (author per file page)
+- stock-cabinet-hinge.jpg | https://commons.wikimedia.org/wiki/File:Kitchen_cabinet_hinge,_Frog_hinge_01.JPG | Wikimedia Commons, CC BY-SA 3.0 (author per file page)
+- stock-drawer-slide.jpg | https://commons.wikimedia.org/wiki/File:P1000133_Teleskopschienenführung.JPG | Wikimedia Commons, CC BY-SA 3.0 (author per file page)
+- stock-finished-kitchen.jpg | https://commons.wikimedia.org/wiki/File:Modern_kitchen_and_dining_area_in_a_simple_home_setting_showing_light_colors_and_minimal_decor.jpg | Wikimedia Commons, CC BY 2.0 (author per file page)
+- stock-base-unit-assembly.jpg | https://commons.wikimedia.org/wiki/File:Kitchen_renovation_9a_assembling_kitchen_cabinet_base_unit_with_countertop_not_on_yet.JPG | Wikimedia Commons, CC0 (author per file page)
+- stock-renovation-finished.jpg | https://commons.wikimedia.org/wiki/File:Kitchen_renovation_project_cabinets_finished_microwave_installed_new_floor_painted_walls_and_ceiling.JPG | Wikimedia Commons, CC0 (author per file page)

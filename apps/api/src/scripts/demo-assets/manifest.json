@@ -1,0 +1,241 @@
+[
+  {
+    "file": "site-compact-modular-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "compact"
+    ],
+    "caption": "Compact modular kitchen"
+  },
+  {
+    "file": "site-contemporary-island-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "island"
+    ],
+    "caption": "Contemporary island kitchen"
+  },
+  {
+    "file": "site-island-modular-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "island"
+    ],
+    "caption": "Island modular kitchen"
+  },
+  {
+    "file": "site-l-shaped-modular-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "l-shaped"
+    ],
+    "caption": "L-shaped modular kitchen"
+  },
+  {
+    "file": "site-u-shaped-modular-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "u-shaped"
+    ],
+    "caption": "U-shaped modular kitchen"
+  },
+  {
+    "file": "site-modern-parallel-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "parallel"
+    ],
+    "caption": "Modern parallel kitchen"
+  },
+  {
+    "file": "site-luxury-modular-kitchen-with-display-cabinet.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen"
+    ],
+    "caption": "Luxury modular kitchen with display cabinet"
+  },
+  {
+    "file": "site-g-shaped.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "g-shaped"
+    ],
+    "caption": "G-shaped modular kitchen"
+  },
+  {
+    "file": "site-parallel-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "parallel"
+    ],
+    "caption": "Parallel modular kitchen"
+  },
+  {
+    "file": "site-u-shaped-kitchen.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen",
+      "u-shaped"
+    ],
+    "caption": "U-shaped kitchen layout"
+  },
+  {
+    "file": "site-premium-tv-unit.jpg",
+    "source": "site",
+    "tags": [
+      "tv-unit"
+    ],
+    "caption": "Premium TV unit design"
+  },
+  {
+    "file": "site-modern-wardrobe.jpg",
+    "source": "site",
+    "tags": [
+      "wardrobe"
+    ],
+    "caption": "Modern wardrobe"
+  },
+  {
+    "file": "site-vastu1.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen"
+    ],
+    "caption": "Vaastu Kitchen hero slide 1"
+  },
+  {
+    "file": "site-vastu2.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen"
+    ],
+    "caption": "Vaastu Kitchen hero slide 2"
+  },
+  {
+    "file": "site-vastu3.jpg",
+    "source": "site",
+    "tags": [
+      "finished-kitchen"
+    ],
+    "caption": "Vaastu Kitchen hero slide 3"
+  },
+  {
+    "file": "stock-cabinet-installation.jpg",
+    "source": "stock",
+    "tags": [
+      "installation",
+      "site-work"
+    ],
+    "caption": "Kitchen cabinets being installed"
+  },
+  {
+    "file": "stock-corner-cabinet-install.jpg",
+    "source": "stock",
+    "tags": [
+      "installation",
+      "site-work"
+    ],
+    "caption": "Corner cabinet fitted on site"
+  },
+  {
+    "file": "stock-wall-measuring.jpg",
+    "source": "stock",
+    "tags": [
+      "measurement",
+      "site-work"
+    ],
+    "caption": "Marking a wall with pencil and measuring tape"
+  },
+  {
+    "file": "stock-switchboard.jpg",
+    "source": "stock",
+    "tags": [
+      "electrical"
+    ],
+    "caption": "Electrical switchboard"
+  },
+  {
+    "file": "stock-crooked-drawer.jpg",
+    "source": "stock",
+    "tags": [
+      "damage"
+    ],
+    "caption": "Base cabinet with misaligned crooked drawer"
+  },
+  {
+    "file": "stock-leaky-valve.jpg",
+    "source": "stock",
+    "tags": [
+      "leak"
+    ],
+    "caption": "Leaking valve beneath kitchen sink"
+  },
+  {
+    "file": "stock-leaking-pipe.jpg",
+    "source": "stock",
+    "tags": [
+      "leak"
+    ],
+    "caption": "Leaking PVC pipe under sink"
+  },
+  {
+    "file": "stock-granite-countertop.jpg",
+    "source": "stock",
+    "tags": [
+      "countertop"
+    ],
+    "caption": "Granite slabs for countertops"
+  },
+  {
+    "file": "stock-cabinet-hinge.jpg",
+    "source": "stock",
+    "tags": [
+      "hinge",
+      "hardware"
+    ],
+    "caption": "Kitchen cabinet hinge close-up"
+  },
+  {
+    "file": "stock-drawer-slide.jpg",
+    "source": "stock",
+    "tags": [
+      "hardware"
+    ],
+    "caption": "Telescopic drawer slide hardware"
+  },
+  {
+    "file": "stock-finished-kitchen.jpg",
+    "source": "stock",
+    "tags": [
+      "finished-kitchen"
+    ],
+    "caption": "Finished modern kitchen"
+  },
+  {
+    "file": "stock-base-unit-assembly.jpg",
+    "source": "stock",
+    "tags": [
+      "site-work",
+      "installation"
+    ],
+    "caption": "Base cabinet unit assembled, countertop not yet fitted"
+  },
+  {
+    "file": "stock-renovation-finished.jpg",
+    "source": "stock",
+    "tags": [
+      "finished-kitchen",
+      "site-work"
+    ],
+    "caption": "Kitchen renovation with cabinets completed"
+  }
+]

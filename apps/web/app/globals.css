@@ -270,3 +270,11 @@
     width: 794px !important;
   }
 }
+
+/* DEMO WhatsApp chat wallpaper (tiled doodle pattern). The colour paints first, so there is no flash while the image loads. */
+.chat-wallpaper {
+  background-color: #efeae2;
+  background-image: url('/images/whatsapp/chat-bg.png');
+  background-repeat: repeat;
+  background-position: top left;
+}

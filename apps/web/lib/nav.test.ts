@@ -12,6 +12,7 @@ describe('navigation per role (docs/05-design/layout-and-navigation.md)', () => 
       'Leads',
       'Proposals',
       'Customers',
+      'WhatsApp',
       'Projects',
       'To-dos',
       'Complaints',
@@ -32,6 +33,7 @@ describe('navigation per role (docs/05-design/layout-and-navigation.md)', () => 
       'Leads',
       'Proposals',
       'Customers',
+      'WhatsApp',
       'Projects',
       'To-dos',
       'Complaints',
@@ -40,6 +42,7 @@ describe('navigation per role (docs/05-design/layout-and-navigation.md)', () => 
     expect(labels('OFFICE')).toEqual([
       'Leads',
       'Customers',
+      'WhatsApp',
       'Projects',
       'To-dos',
       'Complaints',

@@ -84,9 +84,9 @@ export class MongoProposalRepository implements ProposalRepositoryPort {
     return doc ? toEntity(doc) : null;
   }
 
-  async deleteDraft(id: string): Promise<boolean> {
+  async deleteById(id: string): Promise<boolean> {
     if (!isValidObjectId(id)) return false;
-    const res = await ProposalModel.deleteOne({ _id: id, status: 'DRAFT' });
+    const res = await ProposalModel.deleteOne({ _id: id });
     return res.deletedCount === 1;
   }
 

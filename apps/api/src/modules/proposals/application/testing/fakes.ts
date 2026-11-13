@@ -54,8 +54,8 @@ export class FakeProposals implements ProposalRepositoryPort {
     Object.assign(p, patch);
     return p;
   }
-  async deleteDraft(id: string) {
-    const i = this.rows.findIndex((x) => x.id === id && x.status === 'DRAFT');
+  async deleteById(id: string) {
+    const i = this.rows.findIndex((x) => x.id === id);
     if (i < 0) return false;
     this.rows.splice(i, 1);
     return true;

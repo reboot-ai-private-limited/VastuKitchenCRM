@@ -1,12 +1,12 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 /* Light first; dark mode is phase 2 (docs/05-design/design-system.md). */
 
 /* Tailwind utilities read these CSS variables. Never hardcode hex in components: use tokens. */
 @theme inline {
-  --font-sans: var(--font-jakarta), "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), ui-serif, Georgia, serif;
 
   --color-background: var(--background);
@@ -147,5 +147,126 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Proposal reading mode (phones). The A4 sheet is laid out at 794px, so shrinking it to a phone
+ * made 13px text about 6px. Under 640px the sheet becomes a normal column instead: sizes are
+ * raised to readable values and the fixed-width layouts stack. Print and desktop are untouched.
+ */
+.proposal-sheet[data-compact] {
+  width: 100%;
+  height: auto;
+  line-height: 1.5;
+}
+.proposal-sheet[data-compact] .text-\[10\.5px\],
+.proposal-sheet[data-compact] .text-\[11px\],
+.proposal-sheet[data-compact] .text-\[12px\] {
+  font-size: 13.5px;
+}
+.proposal-sheet[data-compact] .text-\[13px\] {
+  font-size: 15.5px;
+}
+.proposal-sheet[data-compact] .text-\[14px\],
+.proposal-sheet[data-compact] .text-\[15px\] {
+  font-size: 16.5px;
+}
+.proposal-sheet[data-compact] .text-\[16px\],
+.proposal-sheet[data-compact] .text-\[18px\],
+.proposal-sheet[data-compact] .text-\[19px\] {
+  font-size: 18px;
+}
+.proposal-sheet[data-compact] .text-\[20px\],
+.proposal-sheet[data-compact] .text-\[24px\] {
+  font-size: 22px;
+}
+.proposal-sheet[data-compact] .text-\[30px\],
+.proposal-sheet[data-compact] .text-\[32px\],
+.proposal-sheet[data-compact] .text-\[34px\] {
+  font-size: 26px;
+}
+.proposal-sheet[data-compact] .text-\[42px\],
+.proposal-sheet[data-compact] .text-\[54px\],
+.proposal-sheet[data-compact] .text-\[56px\] {
+  font-size: 34px;
+}
+/* Covers and closing pages: a tall panel, not a fixed A4 page. */
+.proposal-sheet[data-compact] .proposal-feature {
+  height: auto;
+  min-height: 560px;
+}
+.proposal-sheet[data-compact] .ps-pad {
+  padding: 28px 22px;
+  gap: 28px;
+}
+.proposal-sheet[data-compact] .ps-split {
+  flex-direction: column;
+}
+.proposal-sheet[data-compact] .ps-split .ps-pad {
+  width: 100%;
+}
+.proposal-sheet[data-compact] .ps-split-img {
+  width: 100%;
+  height: 240px;
+}
+/* Content, pricing and terms pages */
+.proposal-sheet[data-compact] .ps-interior {
+  height: auto;
+  padding: 22px 18px 18px;
+}
+.proposal-sheet[data-compact] .ps-body {
+  overflow: visible;
+}
+.proposal-sheet[data-compact] [class*='grid-cols-'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.proposal-sheet[data-compact] .ps-spec {
+  grid-template-columns: 1fr;
+  gap: 2px;
+}
+.proposal-sheet[data-compact] .ps-totals {
+  width: 100%;
+}
+/* The five-column price table becomes one card per item: name, then qty × rate and amount. */
+.proposal-sheet[data-compact] .ps-table thead {
+  display: none;
+}
+.proposal-sheet[data-compact] .ps-table,
+.proposal-sheet[data-compact] .ps-table tbody {
+  display: block;
+}
+.proposal-sheet[data-compact] .ps-table tr {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 10px 12px;
+}
+.proposal-sheet[data-compact] .ps-table td {
+  display: block;
+  padding: 0;
+}
+.proposal-sheet[data-compact] .ps-table td:nth-child(1) {
+  display: none;
+}
+.proposal-sheet[data-compact] .ps-table td:nth-child(2) {
+  grid-column: 1 / -1;
+}
+.proposal-sheet[data-compact] .ps-table td:nth-child(3)::before {
+  content: 'Qty ';
+  opacity: 0.6;
+}
+.proposal-sheet[data-compact] .ps-table td:nth-child(4)::before {
+  content: '× ';
+  opacity: 0.6;
+}
+.proposal-sheet[data-compact] .ps-table td:nth-child(5) {
+  justify-self: end;
+}
+/* Print always gets the real A4 sheet back. */
+@media print {
+  .proposal-sheet[data-compact] {
+    width: 794px !important;
   }
 }

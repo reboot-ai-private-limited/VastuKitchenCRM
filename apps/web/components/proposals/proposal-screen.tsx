@@ -1,10 +1,19 @@
 'use client';
 
 import type { ProposalDto } from '@vastu/contracts';
-import { ArrowLeft, Copy, ExternalLink, Eye, Files, MessageCircle, Snowflake } from 'lucide-react';
+import {
+  ArrowLeft,
+  Copy,
+  ExternalLink,
+  Eye,
+  Files,
+  MessageCircle,
+  Snowflake,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ErrorState } from '@/components/common/error-state';
 import { NotFoundView } from '@/components/common/not-found-view';
@@ -15,7 +24,9 @@ import { ApiError } from '@/lib/api/client';
 import { useLead } from '@/lib/api/leads';
 import { formatPhone } from '@/lib/leads';
 import { useDuplicateProposal, useProposal } from '@/lib/api/proposals';
+import { useAuth } from '@/lib/auth';
 import { formatDate, formatTime, relativeAge } from '@/lib/format';
+import { DeleteProposalDialog } from './delete-proposal-dialog';
 import { ProposalBuilder } from './proposal-builder';
 import { TemplateDocument } from './render/template-document';
 import { SendFlow, copyLink } from './send-flow';
@@ -44,7 +55,15 @@ export function NewProposalScreen({ leadId }: { leadId: string | null }) {
 /** `/proposals/[id]`: a draft opens the builder; a sent proposal opens the frozen view. */
 export function ProposalScreen({ id }: { id: string }) {
   const q = useProposal(id);
-  const [sending, setSending] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  // `?send=1` comes from "Save & send": open the confirmation once, then drop the flag so a
+  // refresh does not reopen it.
+  const [sending, setSending] = useState(() => params.get('send') === '1');
+  useEffect(() => {
+    if (params.get('send') === '1') router.replace(pathname, { scroll: false });
+  }, [params, pathname, router]);
   if (q.isPending) return <Loading />;
   if (q.isError)
     return q.error instanceof ApiError && q.error.isNotFound ? (
@@ -70,6 +89,8 @@ export function ProposalScreen({ id }: { id: string }) {
 function SentView({ proposal: p, onShare }: { proposal: ProposalDto; onShare: () => void }) {
   const router = useRouter();
   const duplicate = useDuplicateProposal();
+  const { user } = useAuth();
+  const [deleting, setDeleting] = useState(false);
   const lead = p.leadId;
   return (
     <PageBody>
@@ -121,6 +142,11 @@ function SentView({ proposal: p, onShare }: { proposal: ProposalDto; onShare: ()
             >
               <Files /> {duplicate.isPending ? 'Duplicating…' : 'Duplicate to edit'}
             </Button>
+            {user?.role === 'ADMIN' && (
+              <Button variant="ghost" className="text-danger" onClick={() => setDeleting(true)}>
+                <Trash2 /> Delete
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -190,6 +216,13 @@ function SentView({ proposal: p, onShare }: { proposal: ProposalDto; onShare: ()
           )}
         </aside>
       </div>
+      {deleting && (
+        <DeleteProposalDialog
+          proposal={p}
+          onClose={() => setDeleting(false)}
+          onDeleted={() => router.replace('/proposals')}
+        />
+      )}
     </PageBody>
   );
 }

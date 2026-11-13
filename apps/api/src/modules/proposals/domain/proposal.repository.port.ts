@@ -22,7 +22,8 @@ export interface ProposalRepositoryPort {
   /** Changes a DRAFT only. Null when the proposal is missing or already sent. */
   updateDraft(id: string, patch: ProposalPatch): Promise<Proposal | null>;
   /** Deletes a DRAFT only. False when missing or already sent. */
-  deleteDraft(id: string): Promise<boolean>;
+  /** Removes the proposal in any status; its public link stops working with it. */
+  deleteById(id: string): Promise<boolean>;
   /** DRAFT → SENT, atomically. Null when missing or already sent. */
   markSent(id: string, sentAt: Date, sentById: string): Promise<Proposal | null>;
   /** Appends a WhatsApp send record to a SENT proposal. Null when it does not exist. */

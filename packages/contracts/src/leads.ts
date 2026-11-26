@@ -33,7 +33,11 @@ export type LeadProductOfInterest = z.infer<typeof leadProductOfInterestSchema>;
 export const LEAD_STATUSES = [
   'NEW',
   'CONTACTED',
+  'INVALID_DATA',
+  'BROCHURE_SENT',
   'VISIT',
+  'MEASUREMENT_SCHEDULED',
+  'MEASUREMENT_DONE',
   'PROPOSAL_SENT',
   'FOLLOW_UP',
   'WON',
@@ -43,7 +47,7 @@ export const leadStatusSchema = z.enum(LEAD_STATUSES);
 export type LeadStatus = z.infer<typeof leadStatusSchema>;
 
 /** Statuses a lead is finished in; these are never "stuck". */
-export const CLOSED_LEAD_STATUSES: readonly LeadStatus[] = ['WON', 'LOST'];
+export const CLOSED_LEAD_STATUSES: readonly LeadStatus[] = ['WON', 'LOST', 'INVALID_DATA'];
 
 export const CALL_OUTCOMES = [
   'INTERESTED',

@@ -18,7 +18,11 @@ const TONE: Record<Tone, string> = {
 const LEAD: Record<LeadStatus, [string, Tone]> = {
   NEW: ['New', 'info'],
   CONTACTED: ['Contacted', 'info'],
+  INVALID_DATA: ['Invalid data', 'neutral'],
+  BROCHURE_SENT: ['Brochure sent', 'accent'],
   VISIT: ['Visit', 'violet'],
+  MEASUREMENT_SCHEDULED: ['Measurement scheduled', 'violet'],
+  MEASUREMENT_DONE: ['Measurement done', 'accent'],
   PROPOSAL_SENT: ['Proposal sent', 'warning'],
   FOLLOW_UP: ['Follow-up', 'orange'],
   WON: ['Won', 'success'],

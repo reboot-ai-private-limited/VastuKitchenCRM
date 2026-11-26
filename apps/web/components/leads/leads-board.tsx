@@ -30,13 +30,17 @@ import {
 import { cn } from '@/lib/utils';
 import { StatusDialog } from './lead-dialogs';
 
-/** Won and Lost are finished: collapsed by default so the working stages get the room. */
-const COLLAPSED_BY_DEFAULT: ReadonlySet<LeadStatus> = new Set(['WON', 'LOST']);
+/** Won, Lost and Invalid data are finished: collapsed by default so the working stages get the room. */
+const COLLAPSED_BY_DEFAULT: ReadonlySet<LeadStatus> = new Set(['WON', 'LOST', 'INVALID_DATA']);
 
 const DOT: Record<LeadStatus, string> = {
   NEW: 'bg-info',
   CONTACTED: 'bg-info/60',
+  INVALID_DATA: 'bg-neutral',
+  BROCHURE_SENT: 'bg-primary',
   VISIT: 'bg-violet',
+  MEASUREMENT_SCHEDULED: 'bg-violet/70',
+  MEASUREMENT_DONE: 'bg-primary/80',
   PROPOSAL_SENT: 'bg-warning',
   FOLLOW_UP: 'bg-orange',
   WON: 'bg-success',

@@ -36,7 +36,11 @@ export const SOURCE_LABEL: Record<LeadSource, string> = {
 export const STATUS_LABEL: Record<LeadStatus, string> = {
   NEW: 'New',
   CONTACTED: 'Contacted',
+  INVALID_DATA: 'Invalid data',
+  BROCHURE_SENT: 'Brochure sent',
   VISIT: 'Visit',
+  MEASUREMENT_SCHEDULED: 'Measurement scheduled',
+  MEASUREMENT_DONE: 'Measurement done',
   PROPOSAL_SENT: 'Proposal sent',
   FOLLOW_UP: 'Follow-up',
   WON: 'Won',

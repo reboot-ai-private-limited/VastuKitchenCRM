@@ -3,7 +3,11 @@ import type { LeadStatus } from '@vastu/contracts';
 const LEAD_LABELS: Record<LeadStatus, string> = {
   NEW: 'New',
   CONTACTED: 'Contacted',
+  INVALID_DATA: 'Invalid Data',
+  BROCHURE_SENT: 'Brochure Sent',
   VISIT: 'Visit',
+  MEASUREMENT_SCHEDULED: 'Measurement Scheduled',
+  MEASUREMENT_DONE: 'Measurement Done',
   PROPOSAL_SENT: 'Proposal Sent',
   FOLLOW_UP: 'Follow-up',
   WON: 'Won',

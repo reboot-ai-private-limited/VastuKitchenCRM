@@ -4,7 +4,11 @@ import type { Tone } from '@/constants/theme';
 export const STATUS_LABEL: Record<LeadStatus, string> = {
   NEW: 'New',
   CONTACTED: 'Contacted',
+  INVALID_DATA: 'Invalid data',
+  BROCHURE_SENT: 'Brochure sent',
   VISIT: 'Visit',
+  MEASUREMENT_SCHEDULED: 'Measurement scheduled',
+  MEASUREMENT_DONE: 'Measurement done',
   PROPOSAL_SENT: 'Proposal sent',
   FOLLOW_UP: 'Follow up',
   WON: 'Won',
@@ -14,7 +18,11 @@ export const STATUS_LABEL: Record<LeadStatus, string> = {
 export const STATUS_TONE: Record<LeadStatus, Tone> = {
   NEW: 'info',
   CONTACTED: 'neutral',
+  INVALID_DATA: 'neutral',
+  BROCHURE_SENT: 'accent',
   VISIT: 'violet',
+  MEASUREMENT_SCHEDULED: 'violet',
+  MEASUREMENT_DONE: 'accent',
   PROPOSAL_SENT: 'orange',
   FOLLOW_UP: 'warning',
   WON: 'success',

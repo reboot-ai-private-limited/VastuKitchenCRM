@@ -11,7 +11,11 @@ export const DAY = 86_400_000;
 const ZERO_STATUS: Record<LeadStatus, number> = {
   NEW: 0,
   CONTACTED: 0,
+  INVALID_DATA: 0,
+  BROCHURE_SENT: 0,
   VISIT: 0,
+  MEASUREMENT_SCHEDULED: 0,
+  MEASUREMENT_DONE: 0,
   PROPOSAL_SENT: 0,
   FOLLOW_UP: 0,
   WON: 0,

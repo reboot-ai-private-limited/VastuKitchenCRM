@@ -1,4 +1,4 @@
-import { LEAD_STATUSES, type LeadStatus } from '@vastu/contracts';
+import { CLOSED_LEAD_STATUSES, LEAD_STATUSES, type LeadStatus } from '@vastu/contracts';
 import type { LeadInsightsPort, UserLeadActivity } from '../domain/insights.port.js';
 import { LeadActivityModel } from './leadActivity.schema.js';
 import { LeadModel } from './lead.schema.js';
@@ -46,7 +46,7 @@ export class MongoLeadInsights implements LeadInsightsPort {
   }
 
   async openLeadIds(limit: number) {
-    const docs = await LeadModel.find({ status: { $nin: ['WON', 'LOST'] } })
+    const docs = await LeadModel.find({ status: { $nin: CLOSED_LEAD_STATUSES } })
       .sort({ createdAt: -1 })
       .limit(limit)
       .select('_id');

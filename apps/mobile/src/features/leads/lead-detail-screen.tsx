@@ -3,7 +3,7 @@ import { Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import type { LeadStatus } from '@vastu/contracts';
+import { toWaDigits, type LeadStatus } from '@vastu/contracts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -44,7 +44,7 @@ export function LeadDetailScreen() {
   const canChangeStatus = canWork && (lead?.status !== 'WON' || isAdmin);
 
   const open = (url: string) => void Linking.openURL(url);
-  const wa = (phone: string) => `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`;
+  const wa = (phone: string) => `https://wa.me/${toWaDigits(phone)}`;
 
   const refresh = async () => {
     setRefreshing(true);

@@ -1,3 +1,5 @@
+import { formatInternationalPhone } from '@vastu/contracts';
+
 /** All business dates and times are in Asia/Kolkata (UTC+05:30), never the device zone. */
 export const BUSINESS_TZ = 'Asia/Kolkata';
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
@@ -127,11 +129,9 @@ export function initials(name: string): string {
   return (first + last).toUpperCase() || '?';
 }
 
-/** `+91 98765 43210` from a 10-digit Indian phone. */
+/** `+91 98765 43210` / `+975 1712 3456` / `+977 98412 34567`. */
 export function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '').slice(-10);
-  if (digits.length !== 10) return phone;
-  return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  return formatInternationalPhone(phone);
 }
 
 /** Human file size from bytes (`240 KB`, `3.2 MB`). */

@@ -1,3 +1,4 @@
+import { toE164Phone } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import { logger } from '@/shared/logging/logger.js';
 
@@ -44,7 +45,7 @@ export class WaAgentClient {
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           phone_number_id: this.config.phoneNumberId,
-          to: `+91${input.to}`,
+          to: toE164Phone(input.to),
           type: 'template',
           template: { ...input.template, variables: input.variables },
         }),

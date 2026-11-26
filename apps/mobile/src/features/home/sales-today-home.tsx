@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import type { LeadDto } from '@vastu/contracts';
+import { toWaDigits, type LeadDto } from '@vastu/contracts';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -26,9 +26,8 @@ import { formatPhone, formatWeekdayDate, timeAgo } from '@/lib/format';
 
 function ActionLeadCard({ lead }: { lead: LeadDto }) {
   const router = useRouter();
-  const digits = lead.phone.replace(/\D/g, '').slice(-10);
   // Call goes through the call logger so the return-from-dialer sheet logs it (queued offline).
-  const callLogger = useCallLogger(lead.id, digits);
+  const callLogger = useCallLogger(lead.id, lead.phone);
 
   return (
     <PressableScale
@@ -60,7 +59,7 @@ function ActionLeadCard({ lead }: { lead: LeadDto }) {
         <IconButton
           icon="message-circle"
           label={`WhatsApp ${lead.name}`}
-          onPress={() => void Linking.openURL(`https://wa.me/91${digits}`)}
+          onPress={() => void Linking.openURL(`https://wa.me/${toWaDigits(lead.phone)}`)}
         />
       </Card>
       {callLogger.sheet}

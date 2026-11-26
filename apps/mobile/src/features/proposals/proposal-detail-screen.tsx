@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { RoleGate } from '@/components/ui/role-gate';
@@ -75,7 +76,7 @@ function ProposalDetail() {
             void Linking.openURL(res.whatsappUrl);
             return;
           }
-          setWaNote(`Sent on WhatsApp to +91 ${res.sentTo}`);
+          setWaNote(`Sent on WhatsApp to ${formatPhone(res.sentTo)}`);
         },
       },
     );
@@ -393,17 +394,10 @@ function ProposalDetail() {
           <Text variant="caption" muted>
             Send to (changes only this message, not the lead)
           </Text>
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            accessibilityLabel="WhatsApp number"
-            placeholderTextColor={colors.placeholder}
-            style={styles.phoneInput}
-          />
+          <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="WhatsApp number" />
           {!phoneOk ? (
             <Text variant="caption" color={colors.destructive}>
-              Enter a valid 10-digit mobile number
+              Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977)
             </Text>
           ) : null}
           {sendWa.isError ? (

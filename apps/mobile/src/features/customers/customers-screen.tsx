@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PhoneField } from '@/components/ui/phone-field';
 import { EmptyState } from '@/components/ui/empty-state';
 import { IconButton } from '@/components/ui/icon-button';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -240,17 +241,9 @@ function CustomersList() {
           </View>
           <View style={{ gap: space[1] }}>
             <Text variant="caption" muted>
-              Mobile number (+91)
+              Mobile number
             </Text>
-            <TextInput
-              value={phone}
-              onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
-              accessibilityLabel="Mobile number"
-              placeholder="10-digit mobile number"
-              placeholderTextColor={colors.placeholder}
-              keyboardType="number-pad"
-              style={styles.fieldInput}
-            />
+            <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="Mobile number" />
           </View>
           <View style={{ gap: space[1] }}>
             <Text variant="caption" muted>

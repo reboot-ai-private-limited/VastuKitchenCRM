@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Select,
   SelectContent,
@@ -151,11 +152,26 @@ export function AddLeadSheet({
               </p>
             )}
             {field('name', 'Name *', { autoComplete: 'off', maxLength: 120 })}
-            {field('phone', 'Phone *', {
-              inputMode: 'tel',
-              placeholder: '10-digit mobile',
-              autoComplete: 'off',
-            })}
+            <div className="space-y-1.5">
+              <Label htmlFor="lead-phone">Phone *</Label>
+              <PhoneInput
+                id="lead-phone"
+                value={form.phone}
+                onChange={(v) => set('phone', v)}
+                aria-invalid={!!errors.phone}
+                aria-describedby={errors.phone ? 'lead-phone-err' : undefined}
+              />
+              {errors.phone && (
+                <p id="lead-phone-err" className="text-danger text-xs">
+                  {errors.phone}{' '}
+                  {duplicateId && (
+                    <Link href={`/leads/${duplicateId}`} className="underline">
+                      Open lead
+                    </Link>
+                  )}
+                </p>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="lead-source">Source *</Label>
               <Select value={form.source} onValueChange={(v) => set('source', v as LeadSource)}>
@@ -172,7 +188,21 @@ export function AddLeadSheet({
               </Select>
               {errors.source && <p className="text-danger text-xs">{errors.source}</p>}
             </div>
-            {field('altPhone', 'Alternate phone', { inputMode: 'tel', autoComplete: 'off' })}
+            <div className="space-y-1.5">
+              <Label htmlFor="lead-altPhone">Alternate phone</Label>
+              <PhoneInput
+                id="lead-altPhone"
+                value={form.altPhone}
+                onChange={(v) => set('altPhone', v)}
+                aria-invalid={!!errors.altPhone}
+                aria-describedby={errors.altPhone ? 'lead-altPhone-err' : undefined}
+              />
+              {errors.altPhone && (
+                <p id="lead-altPhone-err" className="text-danger text-xs">
+                  {errors.altPhone}
+                </p>
+              )}
+            </div>
             {field('email', 'Email', { type: 'email', autoComplete: 'off' })}
             {field('city', 'City', { autoComplete: 'off', maxLength: 500 })}
             <div className="space-y-1.5">
@@ -208,7 +238,8 @@ export function AddLeadSheet({
 function friendly(field: string, message: string): string {
   if (field === 'name') return 'Enter a name.';
   if (field === 'source') return 'Choose a source.';
-  if (field === 'phone' || field === 'altPhone') return 'Enter a 10-digit mobile number.';
+  if (field === 'phone' || field === 'altPhone')
+    return 'Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977).';
   if (field === 'email') return 'Enter a valid email address.';
   return message;
 }

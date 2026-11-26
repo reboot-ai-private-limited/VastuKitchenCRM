@@ -1,20 +1,20 @@
 import { Linking } from 'react-native';
+import { phoneSchema, toE164Phone, toWaDigits } from '@vastu/contracts';
 
-/** The 10-digit Indian mobile from any input (+91, 91, leading 0, spaces); null if it is not one. Mirrors phoneSchema in contracts. */
+/** Validates and normalizes an India (+91), Bhutan (+975), or Nepal (+977) mobile number; null if invalid. */
 export function normalizePhone(input: string): string | null {
-  const digits = input.replace(/\D/g, '');
-  const ten = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits.replace(/^0/, '');
-  return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+  const parsed = phoneSchema.safeParse(input);
+  return parsed.success ? parsed.data : null;
 }
 
 export const telUrl = (phone: string): string | null => {
   const n = normalizePhone(phone);
-  return n ? `tel:+91${n}` : null;
+  return n ? `tel:${toE164Phone(n)}` : null;
 };
 
 export const whatsappUrlFor = (phone: string): string | null => {
   const n = normalizePhone(phone);
-  return n ? `https://wa.me/91${n}` : null;
+  return n ? `https://wa.me/${toWaDigits(n)}` : null;
 };
 
 /** Open a tel:/wa.me link; never throws (no dialer, bad number). Returns false when nothing opened. */

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  formatInternationalPhone,
   phoneSchema,
   type ProposalDto,
   type SendProposalResponseDto,
@@ -18,11 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { ApiError } from '@/lib/api/client';
 import { useSendProposal, useSendProposalWhatsapp } from '@/lib/api/proposals';
-import { formatPhone } from '@/lib/leads';
 import { SEND_MESSAGE_FROZEN, proposalMessagePreview } from '@/lib/proposals';
 
 export async function copyLink(url: string) {
@@ -78,7 +78,8 @@ export function SendFlow({
   }
 
   function sendTemplate() {
-    if (!parsed.success) return setError('Enter a valid 10-digit mobile number.');
+    if (!parsed.success)
+      return setError('Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977).');
     setError(null);
     sendWhatsapp.mutate(
       { phone: parsed.data, requestId: newRequestId() },
@@ -116,7 +117,7 @@ export function SendFlow({
               <DialogTitle className="flex items-center gap-2">
                 <Check className="text-success size-5" aria-hidden />
                 {result.kind === 'sent' && !notSetUp
-                  ? `Sent to +91 ${formatPhone(result.data.sentTo)}`
+                  ? `Sent to ${formatInternationalPhone(result.data.sentTo)}`
                   : `Proposal ${result.data.proposal.number} is ready to share`}
               </DialogTitle>
               <DialogDescription>
@@ -163,21 +164,12 @@ export function SendFlow({
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="wa-to">Send to</Label>
-              <div className="relative">
-                <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-sm">
-                  +91
-                </span>
-                <Input
-                  id="wa-to"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={14}
-                  value={phone}
-                  aria-invalid={!parsed.success}
-                  className="tabular pl-11"
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-              </div>
+              <PhoneInput
+                id="wa-to"
+                value={phone}
+                aria-invalid={!parsed.success}
+                onChange={setPhone}
+              />
               <p className="text-muted-foreground text-xs">
                 {changed
                   ? 'Different from the lead’s number. This only changes where this message goes: the lead keeps its own number.'

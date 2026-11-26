@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createLeadBodySchema, LEAD_SOURCES, type LeadSource } from '@vastu/contracts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
@@ -121,16 +122,9 @@ export function AddLeadScreen() {
 
           <View style={{ gap: space[1] }}>
             <Text variant="caption" muted>
-              Mobile number (+91) *
+              Mobile number *
             </Text>
-            <TextInput
-              value={phone}
-              onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
-              placeholder="10-digit mobile number"
-              placeholderTextColor={colors.placeholder}
-              keyboardType="number-pad"
-              style={styles.input}
-            />
+            <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="Mobile number" />
           </View>
 
           <View style={{ gap: space[2] }}>

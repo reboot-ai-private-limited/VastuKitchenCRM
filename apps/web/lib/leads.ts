@@ -1,6 +1,9 @@
 import {
   LEAD_SOURCES,
   LEAD_STATUSES,
+  formatDisplayPhone,
+  toE164Phone,
+  toWaDigits,
   type LeadSource,
   type LeadStatus,
   type RoleName,
@@ -94,15 +97,13 @@ export function filtersToSearch(f: LeadFilters): string {
   return s ? `?${s}` : '';
 }
 
-/** `https://wa.me/91XXXXXXXXXX`: the API stores 10-digit numbers. */
-export const whatsappUrl = (phone: string): string =>
-  `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`;
-export const telUrl = (phone: string): string => `tel:+91${phone.replace(/\D/g, '').slice(-10)}`;
+/** `https://wa.me/<country><local>`: supports India (+91), Bhutan (+975), Nepal (+977). */
+export const whatsappUrl = (phone: string): string => `https://wa.me/${toWaDigits(phone)}`;
+export const telUrl = (phone: string): string => `tel:${toE164Phone(phone)}`;
 
-/** `98765 43210` for reading; the stored value stays 10 plain digits. */
+/** `98765 43210` for India; `+975 1712 3456` / `+977 98412 34567` for Bhutan & Nepal. */
 export function formatPhone(phone: string): string {
-  const d = phone.replace(/\D/g, '').slice(-10);
-  return d.length === 10 ? `${d.slice(0, 5)} ${d.slice(5)}` : phone;
+  return formatDisplayPhone(phone);
 }
 
 /** The row's inline actions, in order: what this person may do to this lead. */

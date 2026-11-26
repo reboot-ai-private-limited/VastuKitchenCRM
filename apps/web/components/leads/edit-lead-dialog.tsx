@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Select,
   SelectContent,
@@ -65,8 +66,8 @@ export function diffLead(before: LeadDto, form: Form): UpdateLeadBodyDto {
 
 const FRIENDLY: Record<string, string> = {
   name: 'Enter a name.',
-  phone: 'Enter a 10-digit mobile number.',
-  altPhone: 'Enter a 10-digit mobile number.',
+  phone: 'Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977).',
+  altPhone: 'Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977).',
   email: 'Enter a valid email address.',
 };
 
@@ -140,7 +141,16 @@ export function EditLeadDialog({ lead, onClose }: { lead: LeadDto; onClose: () =
             </p>
           )}
           {field('name', 'Name', { maxLength: 120 })}
-          {field('phone', 'Phone', { inputMode: 'tel' })}
+          <div className="space-y-1.5">
+            <Label htmlFor="el-phone">Phone</Label>
+            <PhoneInput
+              id="el-phone"
+              value={form.phone}
+              aria-invalid={!!errors['phone']}
+              onChange={(v) => set('phone', v)}
+            />
+            {errors['phone'] && <p className="text-danger text-xs">{errors['phone']}</p>}
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="el-source">Source</Label>
             <Select value={form.source} onValueChange={(v) => set('source', v as LeadSource)}>
@@ -156,7 +166,16 @@ export function EditLeadDialog({ lead, onClose }: { lead: LeadDto; onClose: () =
               </SelectContent>
             </Select>
           </div>
-          {field('altPhone', 'Alternate phone', { inputMode: 'tel' })}
+          <div className="space-y-1.5">
+            <Label htmlFor="el-altPhone">Alternate phone</Label>
+            <PhoneInput
+              id="el-altPhone"
+              value={form.altPhone}
+              aria-invalid={!!errors['altPhone']}
+              onChange={(v) => set('altPhone', v)}
+            />
+            {errors['altPhone'] && <p className="text-danger text-xs">{errors['altPhone']}</p>}
+          </div>
           {field('email', 'Email', { type: 'email' })}
           {field('city', 'City', { maxLength: 500 })}
           <div className="space-y-1.5">

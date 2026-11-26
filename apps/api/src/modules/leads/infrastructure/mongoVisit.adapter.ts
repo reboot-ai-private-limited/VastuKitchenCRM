@@ -8,10 +8,18 @@ const toEntity = (doc: HydratedDocument<LeadVisitDoc>): Visit => ({
   leadId: doc.leadId.toString(),
   userId: doc.userId.toString(),
   at: doc.at,
-  latitude: doc.latitude,
-  longitude: doc.longitude,
+  latitude: doc.latitude ?? null,
+  longitude: doc.longitude ?? null,
   note: doc.note,
   photoUrl: doc.photoUrl,
+  media: (doc.media ?? []).map((m) => ({
+    kind: m.kind,
+    publicId: m.publicId,
+    width: m.width ?? null,
+    height: m.height ?? null,
+    bytes: m.bytes ?? null,
+    durationSec: m.durationSec ?? null,
+  })),
 });
 
 export class MongoVisitRepository implements VisitRepositoryPort {

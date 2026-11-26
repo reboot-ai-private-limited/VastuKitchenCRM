@@ -1,4 +1,5 @@
 import type { CallDto, CallStatDto, LeadActivityDto, LeadDto, VisitDto } from '@vastu/contracts';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type { CallView, CallStatView } from '../application/usecases/calls.usecase.js';
 import type { ActivityView } from '../application/usecases/timeline.usecase.js';
 import type { VisitView } from '../application/usecases/visits.usecase.js';
@@ -35,7 +36,7 @@ export const toCallDto = ({ call, userName }: CallView): CallDto => ({
   note: call.note,
 });
 
-export const toVisitDto = ({ visit, userName }: VisitView): VisitDto => ({
+export const toVisitDto = ({ visit, userName }: VisitView, storage: StoragePort): VisitDto => ({
   id: visit.id,
   leadId: visit.leadId,
   user: { id: visit.userId, name: userName },
@@ -44,6 +45,19 @@ export const toVisitDto = ({ visit, userName }: VisitView): VisitDto => ({
   longitude: visit.longitude,
   note: visit.note,
   photoUrl: visit.photoUrl,
+  media: visit.media.map((m) => {
+    const urls =
+      m.kind === 'VIDEO' ? storage.videoUrls(m.publicId) : storage.imageUrls(m.publicId);
+    return {
+      kind: m.kind,
+      publicId: m.publicId,
+      url: urls.url,
+      thumbUrl: urls.thumbUrl,
+      width: m.width,
+      height: m.height,
+      durationSec: m.durationSec,
+    };
+  }),
 });
 
 export const toActivityDto = ({ activity, byName }: ActivityView): LeadActivityDto => ({

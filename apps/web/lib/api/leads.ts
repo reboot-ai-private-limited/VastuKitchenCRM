@@ -18,7 +18,9 @@ import type {
   LeadActivityDto,
   LeadDto,
   PaginatedDto,
+  RecordVisitBodyDto,
   UpdateLeadBodyDto,
+  UploadTicketDto,
   VisitDto,
   UserDto,
 } from '@vastu/contracts';
@@ -133,6 +135,23 @@ export const useLeadVisits = (id: string, enabled: boolean) =>
     queryFn: ({ signal }) => api<VisitDto[]>(`/leads/${id}/visits`, { signal }),
     enabled,
   });
+
+export const signVisitMediaUpload = (leadId: string) =>
+  api<UploadTicketDto>(`/leads/${leadId}/visits/media-upload/sign`, { method: 'POST' });
+
+export function useRecordVisit(leadId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RecordVisitBodyDto) =>
+      api<VisitDto>(`/leads/${leadId}/visits`, { method: 'POST', body }),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ['leads', 'visits', leadId] }),
+        qc.invalidateQueries({ queryKey: ['leads', 'timeline', leadId] }),
+        qc.invalidateQueries({ queryKey: ['leads', 'detail', leadId] }),
+      ]),
+  });
+}
 
 export const BOARD_PAGE_SIZE = 50;
 

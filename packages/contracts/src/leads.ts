@@ -216,15 +216,44 @@ export type CallStatDto = z.infer<typeof callStatSchema>;
 
 /* ── visits ───────────────────────────────────────────────────────────────── */
 
+export const VISIT_MEDIA_KINDS = ['IMAGE', 'VIDEO'] as const;
+export const visitMediaKindSchema = z.enum(VISIT_MEDIA_KINDS);
+export type VisitMediaKind = z.infer<typeof visitMediaKindSchema>;
+
+export const MAX_MEDIA_PER_VISIT = 10;
+
+export const visitMediaInputSchema = z.object({
+  kind: visitMediaKindSchema,
+  publicId: z.string().min(1).max(300),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  bytes: z.number().int().positive().optional(),
+  durationSec: z.number().nonnegative().optional(),
+});
+export type VisitMediaInputDto = z.infer<typeof visitMediaInputSchema>;
+
+export const visitMediaSchema = z.object({
+  kind: visitMediaKindSchema,
+  publicId: z.string(),
+  url: z.string(),
+  thumbUrl: z.string(),
+  width: z.number().int().nullable(),
+  height: z.number().int().nullable(),
+  durationSec: z.number().nullable(),
+});
+export type VisitMediaDto = z.infer<typeof visitMediaSchema>;
+
 export const recordVisitBodySchema = z.object({
   /** Defaults to now. */
   at: z.coerce.date().optional(),
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
   note: z.string().trim().min(1).max(1000).optional(),
   photoUrl: z.string().url().optional(),
   /** A photo uploaded with the ticket from `POST /api/leads/:id/visits/photo-upload/sign`. Wins over `photoUrl`. */
   photoPublicId: z.string().min(1).max(300).optional(),
+  /** Photos and videos uploaded via `POST /api/leads/:id/visits/media-upload/sign`. */
+  media: z.array(visitMediaInputSchema).max(50).optional(),
 });
 export type RecordVisitBodyDto = z.infer<typeof recordVisitBodySchema>;
 
@@ -233,10 +262,11 @@ export const visitSchema = z.object({
   leadId: z.string(),
   user: z.object({ id: z.string(), name: z.string() }),
   at: z.string(),
-  latitude: z.number(),
-  longitude: z.number(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   note: z.string().nullable(),
   photoUrl: z.string().nullable(),
+  media: z.array(visitMediaSchema).default([]),
 });
 export type VisitDto = z.infer<typeof visitSchema>;
 

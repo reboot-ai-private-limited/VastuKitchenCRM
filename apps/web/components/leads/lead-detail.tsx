@@ -38,6 +38,7 @@ import {
 } from '@/lib/leads';
 import { EditLeadDialog } from './edit-lead-dialog';
 import { AssignDialog, StatusDialog } from './lead-dialogs';
+import { RecordVisitDialog } from './record-visit-dialog';
 
 export function LeadDetail({ id }: { id: string }) {
   const { user } = useAuth();
@@ -317,41 +318,117 @@ function Calls({ id, active }: { id: string; active: boolean }) {
 
 function Visits({ id, active }: { id: string; active: boolean }) {
   const q = useLeadVisits(id, active);
+  const [adding, setAdding] = useState(false);
+
   if (q.isPending) return <ListSkeleton />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
-  if (q.data.length === 0)
-    return (
-      <EmptyState
-        icon={MapPin}
-        title="No visits logged"
-        description="Visits are checked in from the phone app."
-      />
-    );
+
   return (
-    <ul className="divide-y">
-      {q.data.map((v) => (
-        <li key={v.id} className="flex gap-3 px-4 py-3">
-          <MapPin className="text-violet mt-0.5 size-4 shrink-0" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <p className="font-medium">{v.user.name}</p>
-            <p className="text-muted-foreground text-xs">
-              {v.note ?? 'No note'} ·{' '}
-              <a
-                className="underline"
-                target="_blank"
-                rel="noopener noreferrer"
-                href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
-              >
-                Map
-              </a>
-            </p>
+    <>
+      {q.data.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="No visits logged"
+          description="Log a measurement or site visit with photos and videos."
+          action={
+            <Button onClick={() => setAdding(true)}>
+              <Plus /> Log visit
+            </Button>
+          }
+        />
+      ) : (
+        <div>
+          <div className="flex items-center justify-between border-b px-4 py-2.5">
+            <span className="text-muted-foreground text-xs font-medium">
+              {q.data.length} {q.data.length === 1 ? 'visit' : 'visits'}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+              <Plus /> Log visit
+            </Button>
           </div>
-          <time dateTime={v.at} className="text-muted-foreground shrink-0 text-xs">
-            {formatDate(v.at)}, {formatTime(v.at)}
-          </time>
-        </li>
-      ))}
-    </ul>
+          <ul className="divide-y">
+            {q.data.map((v) => (
+              <li key={v.id} className="flex gap-3 px-4 py-3">
+                <MapPin className="text-violet mt-0.5 size-4 shrink-0" aria-hidden />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium">{v.user.name}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {v.note ?? 'No note'}
+                        {v.latitude != null && v.longitude != null && (
+                          <>
+                            {' · '}
+                            <a
+                              className="underline"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
+                            >
+                              Map
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <time dateTime={v.at} className="text-muted-foreground shrink-0 text-xs">
+                      {formatDate(v.at)}, {formatTime(v.at)}
+                    </time>
+                  </div>
+                  {(v.media.length > 0 || v.photoUrl) && (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {v.media.map((m) =>
+                        m.kind === 'VIDEO' ? (
+                          <video
+                            key={m.publicId}
+                            src={m.url}
+                            poster={m.thumbUrl}
+                            controls
+                            preload="metadata"
+                            className="bg-secondary aspect-video w-full rounded-lg border object-cover"
+                          />
+                        ) : (
+                          <a
+                            key={m.publicId}
+                            href={m.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-secondary block aspect-video overflow-hidden rounded-lg border"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={m.thumbUrl}
+                              alt="Visit photo"
+                              className="size-full object-cover transition-transform hover:scale-105"
+                            />
+                          </a>
+                        ),
+                      )}
+                      {v.photoUrl && (
+                        <a
+                          href={v.photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-secondary block aspect-video overflow-hidden rounded-lg border"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={v.photoUrl}
+                            alt="Visit photo"
+                            className="size-full object-cover transition-transform hover:scale-105"
+                          />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <RecordVisitDialog leadId={id} open={adding} onOpenChange={setAdding} />
+    </>
   );
 }
 

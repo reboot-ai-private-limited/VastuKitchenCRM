@@ -27,6 +27,8 @@ export interface StoragePort {
   signImageUpload(folder: string, now?: Date): UploadTicketDto;
   /** Display URLs for an uploaded image. */
   imageUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'>;
+  /** Playback URL and poster thumbnail for an uploaded video. */
+  videoUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'>;
   /** A ticket for uploading ANY file (documents, drawings, images) into `folder`. */
   signFileUpload(folder: string, now?: Date): UploadTicketDto;
   /** URLs for a stored file: where to view it, a preview (images only) and a forced download. */

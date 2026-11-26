@@ -5,12 +5,18 @@ import { AppError } from '@/shared/errors/AppError.js';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
 import { DocFileModel } from '@/modules/docs/infrastructure/doc.schemas.js';
 import { ComplaintModel } from '@/modules/complaints/infrastructure/complaint.schemas.js';
+import { LeadVisitModel } from '@/modules/leads/infrastructure/leadVisit.schema.js';
 import { ProjectCommentModel } from '@/modules/projects/infrastructure/projectComment.schema.js';
 import { ProjectPostModel } from '@/modules/projects/infrastructure/projectPost.schema.js';
 import { TodoCommentModel, TodoModel } from '@/modules/todos/infrastructure/todo.schemas.js';
 import { createStorage } from './createStorage.js';
 
-const MAX_RELAY_BYTES = 60 * 1024 * 1024;
+const MAX_RELAY_MB = Math.max(
+  env.UPLOAD_MAX_RELAY_MB,
+  env.UPLOAD_MAX_VIDEO_MB,
+  env.UPLOAD_MAX_IMAGE_MB,
+);
+const MAX_RELAY_BYTES = MAX_RELAY_MB * 1024 * 1024;
 
 /**
  * Server-side upload relay. The browser posts the signed multipart form here (same fields the
@@ -39,7 +45,7 @@ export function buildUploadRelayRouter(): Router {
       }
       const length = Number(req.headers['content-length'] ?? 0);
       if (length > MAX_RELAY_BYTES)
-        throw AppError.badRequest('That file is too large (60 MB max).');
+        throw AppError.badRequest(`That file is too large (${MAX_RELAY_MB} MB max).`);
 
       const upstream = await fetch(target, {
         method: 'POST',
@@ -68,7 +74,7 @@ export function buildUploadRelayRouter(): Router {
       const storage = createStorage();
       const publicId = typeof req.query.publicId === 'string' ? req.query.publicId : '';
       const shape = new RegExp(
-        `^${escapeRegExp(storage.rootFolder)}/projects/[a-f0-9]{24}/(files/)?[^/]+$`,
+        `^${escapeRegExp(storage.rootFolder)}/(projects/[a-f0-9]{24}/(files/)?|leads/[a-f0-9]{24}/visits/)[^/]+$`,
       );
       if (!shape.test(publicId) || publicId.includes('..')) {
         throw AppError.badRequest('Unknown file.');
@@ -95,6 +101,7 @@ async function isInUse(publicId: string): Promise<boolean> {
     TodoCommentModel.exists(inImages),
     ComplaintModel.exists({ $or: [inImages, { 'resolutionImages.publicId': publicId }] }),
     DocFileModel.exists({ publicId }),
+    LeadVisitModel.exists({ 'media.publicId': publicId }),
   ]);
   return hits.some(Boolean);
 }

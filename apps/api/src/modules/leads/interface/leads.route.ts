@@ -17,6 +17,7 @@ import {
   recordCallBodySchema,
   recordVisitBodySchema,
   updateLeadBodySchema,
+  uploadTicketSchema,
   visitSchema,
 } from '@vastu/contracts';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
@@ -157,6 +158,15 @@ openApiRegistry.registerPath({
 });
 openApiRegistry.registerPath({
   method: 'post',
+  path: '/api/leads/{id}/visits/media-upload/sign',
+  tags: TAG,
+  security,
+  summary: 'Signed upload ticket for visit photos and videos (Admin, Sales)',
+  request: params,
+  responses: { 200: okResponse('Signed upload ticket', uploadTicketSchema), 404: notFound },
+});
+openApiRegistry.registerPath({
+  method: 'post',
   path: '/api/leads/{id}/visits',
   tags: TAG,
   security,
@@ -186,6 +196,7 @@ export interface LeadsControllers {
   timeline: RequestHandler;
   recordCall: RequestHandler;
   listCalls: RequestHandler;
+  signVisitMedia: RequestHandler;
   recordVisit: RequestHandler;
   listVisits: RequestHandler;
 }
@@ -248,6 +259,12 @@ export function buildLeadsRouter(c: LeadsControllers): Router {
     c.recordCall,
   );
   router.get('/:id/calls', requireRole('ADMIN', 'SALES'), id, c.listCalls);
+  router.post(
+    '/:id/visits/media-upload/sign',
+    requireRole('ADMIN', 'SALES'),
+    id,
+    c.signVisitMedia,
+  );
   router.post(
     '/:id/visits',
     requireRole('ADMIN', 'SALES'),

@@ -46,6 +46,11 @@ const schema = z.object({
   CLOUDINARY_API_SECRET: blankAsUnset(z.string().min(1).optional()),
   /** Every asset lives under this folder; use a different one per environment (e.g. vastu-dev). */
   CLOUDINARY_FOLDER: z.string().min(1).default('vastu'),
+  /** Upload size and count limits (MB / count). */
+  UPLOAD_MAX_IMAGE_MB: z.coerce.number().positive().default(10),
+  UPLOAD_MAX_VIDEO_MB: z.coerce.number().positive().default(60),
+  UPLOAD_MAX_RELAY_MB: z.coerce.number().positive().default(60),
+  VISIT_MAX_MEDIA: z.coerce.number().int().min(1).max(50).default(10),
 
   /**
    * One-time codes for login, sent as a WhatsApp authentication template through WA AGENT. Optional

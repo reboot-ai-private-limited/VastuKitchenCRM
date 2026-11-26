@@ -1,7 +1,9 @@
 import type { Router } from 'express';
+import { env } from '@/config/env.js';
 import type { IdentityPublicContract } from '@/modules/identity/identity.public.js';
 import type { SettingsPublicContract } from '@/modules/settings/settings.public.js';
 import type { EventBus } from '@/shared/events/appEvents.js';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
 import { LeadAccess } from './application/services/leadAccess.js';
 import { LeadViewBuilder } from './application/services/leadViews.js';
 import { AssignLeadUseCase } from './application/usecases/assignLead.usecase.js';
@@ -33,7 +35,11 @@ import {
   RecordProposalSentUseCase,
 } from './application/usecases/proposalHooks.usecase.js';
 import { UpdateLeadUseCase } from './application/usecases/updateLead.usecase.js';
-import { ListVisitsUseCase, RecordVisitUseCase } from './application/usecases/visits.usecase.js';
+import {
+  ListVisitsUseCase,
+  RecordVisitUseCase,
+  SignVisitMediaUploadUseCase,
+} from './application/usecases/visits.usecase.js';
 import { AppEventsLeadEvents } from './infrastructure/appEventsLeadEvents.adapter.js';
 import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
 import { MongoLeadInsights } from './infrastructure/mongoInsights.adapter.js';
@@ -53,6 +59,7 @@ import {
   makeListVisitsController,
   makeRecordCallController,
   makeRecordVisitController,
+  makeSignVisitMediaUploadController,
   makeTimelineController,
   makeUpdateLeadController,
 } from './interface/leads.controller.js';
@@ -70,9 +77,15 @@ export interface LeadsDeps {
   /** Where the "stuck after N days" value lives (Admin-editable). */
   settings: SettingsPublicContract;
   events: EventBus;
+  storage: StoragePort;
 }
 
-export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): LeadsContainer {
+export function buildLeadsContainer({
+  identity,
+  settings,
+  events,
+  storage,
+}: LeadsDeps): LeadsContainer {
   // 1. Adapters
   const leads = new MongoLeadRepository();
   const calls = new MongoCallRepository();
@@ -103,7 +116,15 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
   const listCalls = new ListCallsUseCase(access, calls, directory);
   const callStats = new GetCallStatsUseCase(calls, directory);
   const insights = new MongoLeadInsights();
-  const recordVisit = new RecordVisitUseCase(access, visits, activities, directory);
+  const signVisitMedia = new SignVisitMediaUploadUseCase(access, storage);
+  const recordVisit = new RecordVisitUseCase(
+    access,
+    visits,
+    activities,
+    directory,
+    storage,
+    env.VISIT_MAX_MEDIA,
+  );
   const listVisits = new ListVisitsUseCase(access, visits, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
   const reminderQueries = new ReminderQueriesUseCase(leads);
@@ -153,8 +174,9 @@ export function buildLeadsContainer({ identity, settings, events }: LeadsDeps): 
         timeline: makeTimelineController(timeline),
         recordCall: makeRecordCallController(recordCall),
         listCalls: makeListCallsController(listCalls),
-        recordVisit: makeRecordVisitController(recordVisit),
-        listVisits: makeListVisitsController(listVisits),
+        signVisitMedia: makeSignVisitMediaUploadController(signVisitMedia),
+        recordVisit: makeRecordVisitController(recordVisit, storage),
+        listVisits: makeListVisitsController(listVisits, storage),
       }),
   };
 }

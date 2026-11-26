@@ -202,6 +202,9 @@ export class FakeStorage implements StoragePort {
   async deleteAsset(publicId: string): Promise<void> {
     this.deleted.push(publicId);
   }
+  videoUrls(publicId: string) {
+    return { url: `https://vid/${publicId}`, thumbUrl: `https://vid/t/${publicId}` };
+  }
   signImageUpload(folder: string) {
     return {
       url: 'img',

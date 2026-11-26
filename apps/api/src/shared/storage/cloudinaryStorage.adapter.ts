@@ -110,7 +110,7 @@ export class CloudinaryStorage implements StoragePort {
    * nothing is found as an image we try raw. Cloudinary answers `{ result: 'ok' | 'not found' }`.
    */
   async deleteAsset(publicId: string): Promise<void> {
-    for (const type of ['image', 'raw'] as const) {
+    for (const type of ['image', 'video', 'raw'] as const) {
       const timestamp = String(Math.floor(Date.now() / 1000));
       const signature = signParams({ public_id: publicId, timestamp }, this.config.apiSecret);
       const res = await fetch(
@@ -139,6 +139,14 @@ export class CloudinaryStorage implements StoragePort {
       thumbUrl: `${base}/c_limit,w_480,f_auto,q_auto/${publicId}`,
     };
   }
+
+  videoUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'> {
+    const base = `https://res.cloudinary.com/${this.config.cloudName}/video/upload`;
+    return {
+      url: `${base}/q_auto/${publicId}`,
+      thumbUrl: `${base}/so_0,c_limit,w_480,f_jpg,q_auto/${publicId}.jpg`,
+    };
+  }
 }
 
 /** Used when Cloudinary is not configured: everything else works, only uploads say why they cannot. */
@@ -152,6 +160,10 @@ export class UnconfiguredStorage implements StoragePort {
   }
 
   imageUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'> {
+    return { url: publicId, thumbUrl: publicId };
+  }
+
+  videoUrls(publicId: string): Pick<ImageDto, 'url' | 'thumbUrl'> {
     return { url: publicId, thumbUrl: publicId };
   }
 

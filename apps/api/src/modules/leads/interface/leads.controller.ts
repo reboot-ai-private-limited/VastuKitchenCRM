@@ -17,9 +17,11 @@ import type { ImportLeadsUseCase } from '../application/usecases/importLeads.use
 import type { ListLeadsUseCase } from '../application/usecases/listLeads.usecase.js';
 import type { GetLeadTimelineUseCase } from '../application/usecases/timeline.usecase.js';
 import type { UpdateLeadUseCase } from '../application/usecases/updateLead.usecase.js';
+import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type {
   ListVisitsUseCase,
   RecordVisitUseCase,
+  SignVisitMediaUploadUseCase,
 } from '../application/usecases/visits.usecase.js';
 import { toActivityDto, toCallDto, toCallStatDto, toLeadDto, toVisitDto } from './lead.mapper.js';
 import type { ListLeadsQueryDto, CallStatsQueryDto } from '@vastu/contracts';
@@ -123,21 +125,40 @@ export function makeListCallsController(useCase: ListCallsUseCase): RequestHandl
   });
 }
 
-export function makeRecordVisitController(useCase: RecordVisitUseCase): RequestHandler {
+export function makeSignVisitMediaUploadController(
+  useCase: SignVisitMediaUploadUseCase,
+): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    sendSuccess(req, res, await useCase.execute(actorOf(req), idOf(req)), 'Upload ticket issued.');
+  });
+}
+
+export function makeRecordVisitController(
+  useCase: RecordVisitUseCase,
+  storage: StoragePort,
+): RequestHandler {
   return asyncHandler(async (req, res) => {
     sendSuccess(
       req,
       res,
-      toVisitDto(await useCase.execute(actorOf(req), idOf(req), req.body)),
+      toVisitDto(await useCase.execute(actorOf(req), idOf(req), req.body), storage),
       'Visit recorded.',
       201,
     );
   });
 }
 
-export function makeListVisitsController(useCase: ListVisitsUseCase): RequestHandler {
+export function makeListVisitsController(
+  useCase: ListVisitsUseCase,
+  storage: StoragePort,
+): RequestHandler {
   return asyncHandler(async (req, res) => {
-    sendSuccess(req, res, (await useCase.execute(actorOf(req), idOf(req))).map(toVisitDto), 'OK');
+    sendSuccess(
+      req,
+      res,
+      (await useCase.execute(actorOf(req), idOf(req))).map((v) => toVisitDto(v, storage)),
+      'OK',
+    );
   });
 }
 

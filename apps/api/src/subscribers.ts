@@ -100,8 +100,27 @@ export function registerSubscribers({
           notifications.contract.notify({
             userId,
             type: 'FILE_ADDED',
-            title: 'Design completed',
-            body: `${e.designerName} marked design completed for ${e.leadName}${e.mediaCount > 0 ? ` (${e.mediaCount} file${e.mediaCount === 1 ? '' : 's'})` : ''}.`,
+            title: 'Design completed — ready for estimate',
+            body: `${e.designerName} uploaded design for ${e.leadName}${e.mediaCount > 0 ? ` (${e.mediaCount} file${e.mediaCount === 1 ? '' : 's'})` : ''}.`,
+            ref: { kind: 'LEAD', id: e.leadId },
+          }),
+        ),
+    );
+  });
+
+  // Estimate done → notify the Sales owner (or Admins) that the proposal is ready to send on WhatsApp.
+  events.on('lead.estimateDone', async (e) => {
+    const recipients =
+      e.assignedToId !== null ? [e.assignedToId] : await identity.contract.getActiveAdminIds();
+    await Promise.all(
+      recipients
+        .filter((userId) => userId !== e.byUserId)
+        .map((userId) =>
+          notifications.contract.notify({
+            userId,
+            type: 'LEAD_ASSIGNED',
+            title: 'Estimate done — ready to send proposal',
+            body: `${e.leadName}'s design estimate is done. Ready to send the proposal on WhatsApp.`,
             ref: { kind: 'LEAD', id: e.leadId },
           }),
         ),

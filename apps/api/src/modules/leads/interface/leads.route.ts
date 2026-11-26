@@ -253,7 +253,7 @@ export function buildLeadsRouter(c: LeadsControllers): Router {
   );
   router.post(
     '/:id/status',
-    requireRole('ADMIN', 'SALES'),
+    requireRole('ADMIN', 'SALES', 'DESIGNER'),
     validate({ params: leadIdParamsSchema, body: changeLeadStatusBodySchema }),
     c.changeStatus,
   );

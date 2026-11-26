@@ -93,10 +93,17 @@ export class CompleteLeadDesignUseCase {
       media,
     });
 
-    // Advance lead status to DESIGN_ESTIMATE_DONE if it is not already closed or past design.
-    if (!CLOSED_LEAD_STATUSES.includes(lead.status) && lead.status !== 'DESIGN_ESTIMATE_DONE') {
+    // Advance lead status to DESIGN_ESTIMATE_SCHEDULED so the estimate team can finalize pricing.
+    const alreadyPastDesign = [
+      ...CLOSED_LEAD_STATUSES,
+      'DESIGN_ESTIMATE_SCHEDULED',
+      'DESIGN_ESTIMATE_DONE',
+      'PROPOSAL_SENT',
+      'FOLLOW_UP',
+    ].includes(lead.status);
+    if (!alreadyPastDesign) {
       await this.leads.update(leadId, {
-        status: 'DESIGN_ESTIMATE_DONE',
+        status: 'DESIGN_ESTIMATE_SCHEDULED',
         statusChangedAt: now,
       });
     }
@@ -108,7 +115,7 @@ export class CompleteLeadDesignUseCase {
       at: now,
       data: {
         from: lead.status,
-        to: 'DESIGN_ESTIMATE_DONE',
+        to: alreadyPastDesign ? lead.status : 'DESIGN_ESTIMATE_SCHEDULED',
         note: design.note,
         mediaCount: design.media.length,
       },

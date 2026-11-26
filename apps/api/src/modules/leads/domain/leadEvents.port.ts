@@ -2,6 +2,7 @@ import type {
   LeadAssignedEvent,
   LeadCreatedEvent,
   LeadDesignCompletedEvent,
+  LeadEstimateDoneEvent,
   LeadMeasurementDoneEvent,
   LeadWonEvent,
 } from '@/shared/events/appEvents.js';
@@ -13,4 +14,5 @@ export interface LeadEventsPort {
   leadCreated(event: LeadCreatedEvent): void;
   leadMeasurementDone?(event: LeadMeasurementDoneEvent): void;
   leadDesignCompleted?(event: LeadDesignCompletedEvent): void;
+  leadEstimateDone?(event: LeadEstimateDoneEvent): void;
 }

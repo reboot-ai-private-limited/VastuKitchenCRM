@@ -256,8 +256,8 @@ export function CompleteDesignDialog({
             <DialogTitle>Upload design &amp; mark completed</DialogTitle>
             <DialogDescription>
               Attach 3D renders, walkthrough videos, or CAD/PDF drawings (up to {VISIT_MAX_MEDIA}{' '}
-              files). Submitting moves this lead to <strong>Design estimate done</strong> and
-              notifies the sales owner.
+              files). Submitting moves this lead to <strong>Design estimate scheduled</strong> so
+              the estimate can be finalized before sending the WhatsApp proposal.
             </DialogDescription>
           </DialogHeader>
 

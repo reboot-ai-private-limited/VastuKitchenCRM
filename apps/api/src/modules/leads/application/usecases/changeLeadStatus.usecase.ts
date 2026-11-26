@@ -29,6 +29,13 @@ export class ChangeLeadStatusUseCase {
 
   async execute(actor: Actor, id: string, input: ChangeLeadStatusBodyDto): Promise<LeadView> {
     const lead = await this.access.load(id, actor);
+    if (
+      actor.role === 'DESIGNER' &&
+      input.status !== 'DESIGN_ESTIMATE_SCHEDULED' &&
+      input.status !== 'DESIGN_ESTIMATE_DONE'
+    ) {
+      throw AppError.forbidden('Designers can only update design & estimate stages.');
+    }
     // A won lead has a customer account and a project behind it. Only someone who sees every lead
     // (the Admin) may move it back; the project is NOT deleted when they do.
     if (lead.status === 'WON' && scopeFor(actor.role, 'leads') === 'assigned') {
@@ -78,6 +85,13 @@ export class ChangeLeadStatusUseCase {
       this.events.leadMeasurementDone?.({
         leadId: updated.id,
         leadName: updated.name,
+        byUserId: actor.id,
+      });
+    } else if (input.status === 'DESIGN_ESTIMATE_DONE') {
+      this.events.leadEstimateDone?.({
+        leadId: updated.id,
+        leadName: updated.name,
+        assignedToId: updated.assignedToId,
         byUserId: actor.id,
       });
     }

@@ -25,7 +25,9 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApiError } from '@/lib/api/client';
+import { toast } from 'sonner';
 import {
+  useChangeLeadStatus,
   useLead,
   useLeadCalls,
   useLeadDesigns,
@@ -54,12 +56,15 @@ export function LeadDetail({ id }: { id: string }) {
   const { user } = useAuth();
   const can = leadPermissions(user?.role);
   const lead = useLead(id);
+  const changeStatus = useChangeLeadStatus();
   const projects = useLeadProjects(id, lead.data?.status === 'WON');
   const [dialog, setDialog] = useState<'status' | 'assign' | 'edit' | null>(null);
   const [tab, setTab] = useState('timeline');
   // Office has no call or visit log access; those tabs are for Admin and Sales.
   const seesLogs = user?.role === 'ADMIN' || user?.role === 'SALES';
   const proposals = seesLogs;
+  const canMarkEstimateDone =
+    user?.role === 'ADMIN' || user?.role === 'SALES' || user?.role === 'DESIGNER';
 
   if (lead.isError && lead.error instanceof ApiError && lead.error.isNotFound)
     return <NotFoundView />;
@@ -148,6 +153,53 @@ export function LeadDetail({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      {l.status === 'DESIGN_ESTIMATE_SCHEDULED' && canMarkEstimateDone && (
+        <div className="bg-violet-soft/60 border-violet/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Design ready for estimate</p>
+            <p className="text-muted-foreground text-xs">
+              Once the BOQ / pricing estimate is finalized, mark estimate done to hand off for
+              WhatsApp proposal.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            disabled={changeStatus.isPending}
+            onClick={() =>
+              changeStatus.mutate(
+                { id: l.id, status: 'DESIGN_ESTIMATE_DONE' },
+                {
+                  onSuccess: () => toast.success('Marked estimate done — ready to send proposal'),
+                  onError: (er) =>
+                    toast.error(er instanceof ApiError ? er.message : 'Could not update status'),
+                },
+              )
+            }
+          >
+            <CheckCircle2 /> {changeStatus.isPending ? 'Updating…' : 'Mark estimate done'}
+          </Button>
+        </div>
+      )}
+
+      {l.status === 'DESIGN_ESTIMATE_DONE' && proposals && (
+        <div className="bg-success-soft/70 border-success/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-success text-sm font-semibold">
+              Estimate done — ready to send proposal on WhatsApp
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Create the proposal with the finalized estimate and send it directly to {l.name} on
+              WhatsApp.
+            </p>
+          </div>
+          <Button size="sm" asChild>
+            <Link href={`/proposals/new?leadId=${l.id}`}>
+              <MessageCircle /> Send WhatsApp proposal
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Tabs value={tab} onValueChange={setTab} className="min-w-0">

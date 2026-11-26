@@ -3,6 +3,7 @@ import type {
   LeadAssignedEvent,
   LeadCreatedEvent,
   LeadDesignCompletedEvent,
+  LeadEstimateDoneEvent,
   LeadMeasurementDoneEvent,
   LeadWonEvent,
 } from '@/shared/events/appEvents.js';
@@ -29,5 +30,9 @@ export class AppEventsLeadEvents implements LeadEventsPort {
 
   leadDesignCompleted(event: LeadDesignCompletedEvent): void {
     this.bus.emit('lead.designCompleted', event);
+  }
+
+  leadEstimateDone(event: LeadEstimateDoneEvent): void {
+    this.bus.emit('lead.estimateDone', event);
   }
 }

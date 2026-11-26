@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import type { NotificationRefDto } from '@vastu/contracts';
@@ -18,7 +19,8 @@ import {
 } from './push';
 
 /** Remote push does not exist in Expo Go (removed in SDK 53); everything else keeps working there. */
-export const pushSupported = Constants.executionEnvironment !== 'storeClient';
+export const pushSupported =
+  !isRunningInExpoGo() && Constants.executionEnvironment !== 'storeClient';
 
 if (pushSupported) configurePushHandling();
 

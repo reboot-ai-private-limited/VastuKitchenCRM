@@ -23,6 +23,8 @@ const LEAD: Record<LeadStatus, [string, Tone]> = {
   VISIT: ['Visit', 'violet'],
   MEASUREMENT_SCHEDULED: ['Measurement scheduled', 'violet'],
   MEASUREMENT_DONE: ['Measurement done', 'accent'],
+  DESIGN_ESTIMATE_SCHEDULED: ['Design estimate scheduled', 'violet'],
+  DESIGN_ESTIMATE_DONE: ['Design estimate done', 'accent'],
   PROPOSAL_SENT: ['Proposal sent', 'warning'],
   FOLLOW_UP: ['Follow-up', 'orange'],
   WON: ['Won', 'success'],

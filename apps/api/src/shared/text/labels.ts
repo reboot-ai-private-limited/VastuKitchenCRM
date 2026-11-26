@@ -8,6 +8,8 @@ const LEAD_LABELS: Record<LeadStatus, string> = {
   VISIT: 'Visit',
   MEASUREMENT_SCHEDULED: 'Measurement Scheduled',
   MEASUREMENT_DONE: 'Measurement Done',
+  DESIGN_ESTIMATE_SCHEDULED: 'Design Estimate Scheduled',
+  DESIGN_ESTIMATE_DONE: 'Design Estimate Done',
   PROPOSAL_SENT: 'Proposal Sent',
   FOLLOW_UP: 'Follow-up',
   WON: 'Won',

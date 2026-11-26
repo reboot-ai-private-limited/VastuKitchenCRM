@@ -41,6 +41,8 @@ export const STATUS_LABEL: Record<LeadStatus, string> = {
   VISIT: 'Visit',
   MEASUREMENT_SCHEDULED: 'Measurement scheduled',
   MEASUREMENT_DONE: 'Measurement done',
+  DESIGN_ESTIMATE_SCHEDULED: 'Design estimate scheduled',
+  DESIGN_ESTIMATE_DONE: 'Design estimate done',
   PROPOSAL_SENT: 'Proposal sent',
   FOLLOW_UP: 'Follow-up',
   WON: 'Won',

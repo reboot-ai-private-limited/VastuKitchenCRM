@@ -41,6 +41,8 @@ const DOT: Record<LeadStatus, string> = {
   VISIT: 'bg-violet',
   MEASUREMENT_SCHEDULED: 'bg-violet/70',
   MEASUREMENT_DONE: 'bg-primary/80',
+  DESIGN_ESTIMATE_SCHEDULED: 'bg-violet/50',
+  DESIGN_ESTIMATE_DONE: 'bg-primary/60',
   PROPOSAL_SENT: 'bg-warning',
   FOLLOW_UP: 'bg-orange',
   WON: 'bg-success',

@@ -155,14 +155,8 @@ export function LeadDetail({ id }: { id: string }) {
       </div>
 
       {l.status === 'DESIGN_ESTIMATE_SCHEDULED' && canMarkEstimateDone && (
-        <div className="bg-violet-soft/60 border-violet/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Design ready for estimate</p>
-            <p className="text-muted-foreground text-xs">
-              Once the BOQ / pricing estimate is finalized, mark estimate done to hand off for
-              WhatsApp proposal.
-            </p>
-          </div>
+        <div className="bg-violet-soft/60 border-violet/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2.5">
+          <p className="text-sm font-medium">Estimate pending</p>
           <Button
             size="sm"
             disabled={changeStatus.isPending}
@@ -170,7 +164,7 @@ export function LeadDetail({ id }: { id: string }) {
               changeStatus.mutate(
                 { id: l.id, status: 'DESIGN_ESTIMATE_DONE' },
                 {
-                  onSuccess: () => toast.success('Marked estimate done — ready to send proposal'),
+                  onSuccess: () => toast.success('Estimate marked done'),
                   onError: (er) =>
                     toast.error(er instanceof ApiError ? er.message : 'Could not update status'),
                 },
@@ -183,16 +177,8 @@ export function LeadDetail({ id }: { id: string }) {
       )}
 
       {l.status === 'DESIGN_ESTIMATE_DONE' && proposals && (
-        <div className="bg-success-soft/70 border-success/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-success text-sm font-semibold">
-              Estimate done — ready to send proposal on WhatsApp
-            </p>
-            <p className="text-muted-foreground text-xs">
-              Create the proposal with the finalized estimate and send it directly to {l.name} on
-              WhatsApp.
-            </p>
-          </div>
+        <div className="bg-success-soft/70 border-success/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2.5">
+          <p className="text-success text-sm font-medium">Ready to send proposal</p>
           <Button size="sm" asChild>
             <Link href={`/proposals/new?leadId=${l.id}`}>
               <MessageCircle /> Send WhatsApp proposal

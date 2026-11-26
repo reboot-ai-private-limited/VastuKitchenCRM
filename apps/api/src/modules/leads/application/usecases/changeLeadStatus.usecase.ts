@@ -31,10 +31,11 @@ export class ChangeLeadStatusUseCase {
     const lead = await this.access.load(id, actor);
     if (
       actor.role === 'DESIGNER' &&
+      input.status !== 'MEASUREMENT_DONE' &&
       input.status !== 'DESIGN_ESTIMATE_SCHEDULED' &&
       input.status !== 'DESIGN_ESTIMATE_DONE'
     ) {
-      throw AppError.forbidden('Designers can only update design & estimate stages.');
+      throw AppError.forbidden('Designers can only update measurement & design estimate stages.');
     }
     // A won lead has a customer account and a project behind it. Only someone who sees every lead
     // (the Admin) may move it back; the project is NOT deleted when they do.

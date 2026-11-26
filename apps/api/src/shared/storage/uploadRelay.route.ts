@@ -5,6 +5,7 @@ import { AppError } from '@/shared/errors/AppError.js';
 import { authenticate } from '@/shared/http/authenticate.middleware.js';
 import { DocFileModel } from '@/modules/docs/infrastructure/doc.schemas.js';
 import { ComplaintModel } from '@/modules/complaints/infrastructure/complaint.schemas.js';
+import { LeadDesignModel } from '@/modules/leads/infrastructure/leadDesign.schema.js';
 import { LeadVisitModel } from '@/modules/leads/infrastructure/leadVisit.schema.js';
 import { ProjectCommentModel } from '@/modules/projects/infrastructure/projectComment.schema.js';
 import { ProjectPostModel } from '@/modules/projects/infrastructure/projectPost.schema.js';
@@ -74,7 +75,7 @@ export function buildUploadRelayRouter(): Router {
       const storage = createStorage();
       const publicId = typeof req.query.publicId === 'string' ? req.query.publicId : '';
       const shape = new RegExp(
-        `^${escapeRegExp(storage.rootFolder)}/(projects/[a-f0-9]{24}/(files/)?|leads/[a-f0-9]{24}/visits/)[^/]+$`,
+        `^${escapeRegExp(storage.rootFolder)}/(projects/[a-f0-9]{24}/(files/)?|leads/[a-f0-9]{24}/(visits|design)/)[^/]+$`,
       );
       if (!shape.test(publicId) || publicId.includes('..')) {
         throw AppError.badRequest('Unknown file.');
@@ -102,6 +103,7 @@ async function isInUse(publicId: string): Promise<boolean> {
     ComplaintModel.exists({ $or: [inImages, { 'resolutionImages.publicId': publicId }] }),
     DocFileModel.exists({ publicId }),
     LeadVisitModel.exists({ 'media.publicId': publicId }),
+    LeadDesignModel.exists({ 'media.publicId': publicId }),
   ]);
   return hits.some(Boolean);
 }

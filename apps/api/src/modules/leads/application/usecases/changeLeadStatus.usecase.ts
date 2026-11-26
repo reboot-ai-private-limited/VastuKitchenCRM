@@ -74,6 +74,14 @@ export class ChangeLeadStatusUseCase {
       },
     });
 
+    if (input.status === 'MEASUREMENT_DONE') {
+      this.events.leadMeasurementDone?.({
+        leadId: updated.id,
+        leadName: updated.name,
+        byUserId: actor.id,
+      });
+    }
+
     if (announce && updated.customerId) {
       this.events.leadWon({
         leadId: updated.id,

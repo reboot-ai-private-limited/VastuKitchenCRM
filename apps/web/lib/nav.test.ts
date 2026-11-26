@@ -49,7 +49,7 @@ describe('navigation per role (docs/05-design/layout-and-navigation.md)', () => 
       'Stocks',
       'Attendance',
     ]);
-    expect(labels('DESIGNER')).toEqual(['Projects', 'To-dos', 'Complaints', 'Attendance']);
+    expect(labels('DESIGNER')).toEqual(['Leads', 'Projects', 'To-dos', 'Complaints', 'Attendance']);
     expect(labels('TECHNICIAN')).toEqual(['Projects', 'To-dos', 'Complaints', 'Attendance']);
   });
 

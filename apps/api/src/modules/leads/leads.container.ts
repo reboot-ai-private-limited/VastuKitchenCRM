@@ -36,6 +36,11 @@ import {
 } from './application/usecases/proposalHooks.usecase.js';
 import { UpdateLeadUseCase } from './application/usecases/updateLead.usecase.js';
 import {
+  CompleteLeadDesignUseCase,
+  ListLeadDesignsUseCase,
+  SignLeadDesignUploadUseCase,
+} from './application/usecases/designs.usecase.js';
+import {
   ListVisitsUseCase,
   RecordVisitUseCase,
   SignVisitMediaUploadUseCase,
@@ -44,6 +49,7 @@ import { AppEventsLeadEvents } from './infrastructure/appEventsLeadEvents.adapte
 import { IdentityUserDirectory } from './infrastructure/identityUserDirectory.adapter.js';
 import { MongoLeadInsights } from './infrastructure/mongoInsights.adapter.js';
 import { MongoCallRepository } from './infrastructure/mongoCall.adapter.js';
+import { MongoLeadDesignRepository } from './infrastructure/mongoDesign.adapter.js';
 import { MongoLeadActivityRepository } from './infrastructure/mongoLeadActivity.adapter.js';
 import { MongoLeadRepository } from './infrastructure/mongoLead.adapter.js';
 import { MongoVisitRepository } from './infrastructure/mongoVisit.adapter.js';
@@ -51,14 +57,17 @@ import {
   makeAssignLeadController,
   makeCallStatsController,
   makeChangeStatusController,
+  makeCompleteLeadDesignController,
   makeCreateLeadController,
   makeGetLeadController,
   makeImportLeadsController,
   makeListCallsController,
+  makeListLeadDesignsController,
   makeListLeadsController,
   makeListVisitsController,
   makeRecordCallController,
   makeRecordVisitController,
+  makeSignLeadDesignUploadController,
   makeSignVisitMediaUploadController,
   makeTimelineController,
   makeUpdateLeadController,
@@ -90,6 +99,7 @@ export function buildLeadsContainer({
   const leads = new MongoLeadRepository();
   const calls = new MongoCallRepository();
   const visits = new MongoVisitRepository();
+  const designs = new MongoLeadDesignRepository();
   const activities = new MongoLeadActivityRepository();
   const directory = new IdentityUserDirectory(identity);
   const leadEvents = new AppEventsLeadEvents(events);
@@ -126,6 +136,18 @@ export function buildLeadsContainer({
     env.VISIT_MAX_MEDIA,
   );
   const listVisits = new ListVisitsUseCase(access, visits, directory);
+  const signDesignMedia = new SignLeadDesignUploadUseCase(access, storage);
+  const completeDesign = new CompleteLeadDesignUseCase(
+    access,
+    leads,
+    designs,
+    activities,
+    directory,
+    leadEvents,
+    storage,
+    env.VISIT_MAX_MEDIA,
+  );
+  const listDesigns = new ListLeadDesignsUseCase(access, designs, directory);
   const importLeads = new ImportLeadsUseCase(leads, activities);
   const reminderQueries = new ReminderQueriesUseCase(leads);
   const recordProjectEvent = new RecordProjectEventUseCase(activities);
@@ -177,6 +199,9 @@ export function buildLeadsContainer({
         signVisitMedia: makeSignVisitMediaUploadController(signVisitMedia),
         recordVisit: makeRecordVisitController(recordVisit, storage),
         listVisits: makeListVisitsController(listVisits, storage),
+        signDesignMedia: makeSignLeadDesignUploadController(signDesignMedia),
+        completeDesign: makeCompleteLeadDesignController(completeDesign, storage),
+        listDesigns: makeListLeadDesignsController(listDesigns, storage),
       }),
   };
 }

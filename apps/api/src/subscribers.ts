@@ -69,4 +69,42 @@ export function registerSubscribers({
         ),
     );
   });
+
+  // Measurement done → notify active Designer team members (incl. Designer Team Leader).
+  events.on('lead.measurementDone', async (e) => {
+    const staff = await identity.contract.getStaff();
+    const designers = staff
+      .filter((u) => u.active && u.role === 'DESIGNER' && u.id !== e.byUserId)
+      .map((u) => u.id);
+    await Promise.all(
+      designers.map((userId) =>
+        notifications.contract.notify({
+          userId,
+          type: 'LEAD_ASSIGNED',
+          title: 'Measurement done — ready for design',
+          body: `${e.leadName} is ready for design & estimate.`,
+          ref: { kind: 'LEAD', id: e.leadId },
+        }),
+      ),
+    );
+  });
+
+  // Design completed → notify the Sales owner (or Admins if unassigned).
+  events.on('lead.designCompleted', async (e) => {
+    const recipients =
+      e.assignedToId !== null ? [e.assignedToId] : await identity.contract.getActiveAdminIds();
+    await Promise.all(
+      recipients
+        .filter((userId) => userId !== e.byUserId)
+        .map((userId) =>
+          notifications.contract.notify({
+            userId,
+            type: 'FILE_ADDED',
+            title: 'Design completed',
+            body: `${e.designerName} marked design completed for ${e.leadName}${e.mediaCount > 0 ? ` (${e.mediaCount} file${e.mediaCount === 1 ? '' : 's'})` : ''}.`,
+            ref: { kind: 'LEAD', id: e.leadId },
+          }),
+        ),
+    );
+  });
 }

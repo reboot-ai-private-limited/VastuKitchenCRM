@@ -51,6 +51,16 @@ export type LeadStatus = z.infer<typeof leadStatusSchema>;
 /** Statuses a lead is finished in; these are never "stuck". */
 export const CLOSED_LEAD_STATUSES: readonly LeadStatus[] = ['WON', 'LOST', 'INVALID_DATA'];
 
+/** Statuses visible to the Designer team (from measurement done onwards). */
+export const DESIGN_VISIBLE_LEAD_STATUSES: readonly LeadStatus[] = [
+  'MEASUREMENT_DONE',
+  'DESIGN_ESTIMATE_SCHEDULED',
+  'DESIGN_ESTIMATE_DONE',
+  'PROPOSAL_SENT',
+  'FOLLOW_UP',
+  'WON',
+];
+
 export const CALL_OUTCOMES = [
   'INTERESTED',
   'CALL_BACK',
@@ -67,6 +77,7 @@ export const LEAD_ACTIVITY_TYPES = [
   'STATUS_CHANGED',
   'CALL',
   'VISIT',
+  'DESIGN_COMPLETED',
   'PROPOSAL_SENT',
   'PROPOSAL_SEEN',
   'PROJECT_CREATED',
@@ -269,6 +280,54 @@ export const visitSchema = z.object({
   media: z.array(visitMediaSchema).default([]),
 });
 export type VisitDto = z.infer<typeof visitSchema>;
+
+/* ── design deliverables ─────────────────────────────────────────────────── */
+
+export const DESIGN_MEDIA_KINDS = ['IMAGE', 'VIDEO', 'FILE'] as const;
+export const designMediaKindSchema = z.enum(DESIGN_MEDIA_KINDS);
+export type DesignMediaKind = z.infer<typeof designMediaKindSchema>;
+
+export const designMediaInputSchema = z.object({
+  kind: designMediaKindSchema,
+  publicId: z.string().min(1).max(300),
+  fileName: z.string().trim().min(1).max(200).optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  bytes: z.number().int().positive().optional(),
+  durationSec: z.number().nonnegative().optional(),
+  resourceType: z.enum(['image', 'video', 'raw']).optional(),
+  format: z.string().max(20).optional(),
+});
+export type DesignMediaInputDto = z.infer<typeof designMediaInputSchema>;
+
+export const designMediaSchema = z.object({
+  kind: designMediaKindSchema,
+  publicId: z.string(),
+  fileName: z.string().nullable(),
+  url: z.string(),
+  thumbUrl: z.string().nullable(),
+  downloadUrl: z.string(),
+  width: z.number().int().nullable(),
+  height: z.number().int().nullable(),
+  durationSec: z.number().nullable(),
+});
+export type DesignMediaDto = z.infer<typeof designMediaSchema>;
+
+export const completeLeadDesignBodySchema = z.object({
+  note: z.string().trim().min(1).max(2000).optional(),
+  media: z.array(designMediaInputSchema).max(50).optional(),
+});
+export type CompleteLeadDesignBodyDto = z.infer<typeof completeLeadDesignBodySchema>;
+
+export const leadDesignSchema = z.object({
+  id: z.string(),
+  leadId: z.string(),
+  user: z.object({ id: z.string(), name: z.string() }),
+  at: z.string(),
+  note: z.string().nullable(),
+  media: z.array(designMediaSchema).default([]),
+});
+export type LeadDesignDto = z.infer<typeof leadDesignSchema>;
 
 /* ── timeline ─────────────────────────────────────────────────────────────── */
 

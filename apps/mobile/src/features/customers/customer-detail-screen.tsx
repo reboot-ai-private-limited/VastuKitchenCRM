@@ -33,6 +33,7 @@ const ACTIVITY_LABEL: Record<LeadActivityDto['type'], string> = {
   STATUS_CHANGED: 'Lead status updated',
   CALL: 'Phone call logged',
   VISIT: 'Site visit logged',
+  DESIGN_COMPLETED: 'Design completed',
   PROPOSAL_SENT: 'Proposal sent',
   PROPOSAL_SEEN: 'Proposal viewed by customer',
   PROJECT_CREATED: 'Project started',

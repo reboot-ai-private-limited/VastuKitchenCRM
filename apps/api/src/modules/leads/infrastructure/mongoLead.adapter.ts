@@ -92,6 +92,7 @@ export class MongoLeadRepository implements LeadRepositoryPort {
   async list(filter: LeadListFilter): Promise<{ items: Lead[]; total: number }> {
     const query: Record<string, unknown> = {};
     if (filter.status) query['status'] = filter.status;
+    else if (filter.statuses) query['status'] = { $in: filter.statuses };
     else if (filter.excludeLost) query['status'] = { $ne: 'LOST' };
     if (filter.source) query['source'] = filter.source;
     if (filter.product) query['productsOfInterest'] = filter.product;

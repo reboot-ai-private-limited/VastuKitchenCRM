@@ -48,10 +48,27 @@ export interface LeadCreatedEvent {
   byUserId: string;
 }
 
+export interface LeadMeasurementDoneEvent {
+  leadId: string;
+  leadName: string;
+  byUserId: string;
+}
+
+export interface LeadDesignCompletedEvent {
+  leadId: string;
+  leadName: string;
+  assignedToId: string | null;
+  designerName: string;
+  mediaCount: number;
+  byUserId: string;
+}
+
 export interface AppEventMap {
   'lead.created': LeadCreatedEvent;
   'lead.won': LeadWonEvent;
   'lead.assigned': LeadAssignedEvent;
+  'lead.measurementDone': LeadMeasurementDoneEvent;
+  'lead.designCompleted': LeadDesignCompletedEvent;
   'proposal.seen': ProposalSeenEvent;
 }
 

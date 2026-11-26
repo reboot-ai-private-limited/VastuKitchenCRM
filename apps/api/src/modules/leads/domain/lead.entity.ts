@@ -53,6 +53,8 @@ export interface LeadListFilter {
   pageSize: number;
   search?: string | undefined;
   status?: LeadStatus | undefined;
+  /** Restrict to a set of statuses (e.g. Designer team sees measurement-done onwards). */
+  statuses?: readonly LeadStatus[] | undefined;
   source?: LeadSource | undefined;
   product?: LeadProductOfInterest | undefined;
   /** `undefined` = any assignee, `null` = unassigned, string = that user. */

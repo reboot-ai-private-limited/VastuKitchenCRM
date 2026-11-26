@@ -1,4 +1,4 @@
-import type { RoleName } from '@vastu/contracts';
+import { DESIGN_VISIBLE_LEAD_STATUSES, type RoleName } from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import { scopeFor } from '@/shared/access/scope.js';
 import type { Lead } from '../../domain/lead.entity.js';
@@ -19,6 +19,12 @@ export class LeadAccess {
   async load(id: string, actor: Actor): Promise<Lead> {
     const lead = await this.leads.findById(id);
     if (!lead) throw AppError.notFound('Lead not found.');
+    if (actor.role === 'DESIGNER') {
+      if (!DESIGN_VISIBLE_LEAD_STATUSES.includes(lead.status)) {
+        throw AppError.notFound('Lead not found.');
+      }
+      return lead;
+    }
     if (scopeFor(actor.role, 'leads') === 'assigned' && lead.assignedToId !== actor.id) {
       throw AppError.notFound('Lead not found.');
     }

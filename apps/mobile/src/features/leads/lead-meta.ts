@@ -80,6 +80,8 @@ export function describeActivity(a: LeadActivityDto): { title: string; detail?: 
     }
     case 'VISIT':
       return { title: 'Site visit', detail: join(who && `By ${who}`, str(d['note'])) };
+    case 'DESIGN_COMPLETED':
+      return { title: 'Design completed', detail: join(who && `By ${who}`, str(d['note'])) };
     case 'PROPOSAL_SENT':
       return { title: `Proposal ${str(d['number']) ?? ''} sent`.replace('  ', ' '), detail: who ? `By ${who}` : undefined };
     case 'PROPOSAL_SEEN':

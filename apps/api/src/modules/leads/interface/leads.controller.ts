@@ -19,11 +19,23 @@ import type { GetLeadTimelineUseCase } from '../application/usecases/timeline.us
 import type { UpdateLeadUseCase } from '../application/usecases/updateLead.usecase.js';
 import type { StoragePort } from '@/shared/storage/storage.port.js';
 import type {
+  CompleteLeadDesignUseCase,
+  ListLeadDesignsUseCase,
+  SignLeadDesignUploadUseCase,
+} from '../application/usecases/designs.usecase.js';
+import type {
   ListVisitsUseCase,
   RecordVisitUseCase,
   SignVisitMediaUploadUseCase,
 } from '../application/usecases/visits.usecase.js';
-import { toActivityDto, toCallDto, toCallStatDto, toLeadDto, toVisitDto } from './lead.mapper.js';
+import {
+  toActivityDto,
+  toCallDto,
+  toCallStatDto,
+  toLeadDesignDto,
+  toLeadDto,
+  toVisitDto,
+} from './lead.mapper.js';
 import type { ListLeadsQueryDto, CallStatsQueryDto } from '@vastu/contracts';
 
 function actorOf(req: Request): Actor {
@@ -173,5 +185,42 @@ export function makeImportLeadsController(useCase: ImportLeadsUseCase): RequestH
   return asyncHandler(async (req, res) => {
     const result: ImportResultDto = await useCase.execute(actorOf(req), req.body);
     sendSuccess(req, res, result, `Imported ${result.created} lead(s).`, 201);
+  });
+}
+
+export function makeSignLeadDesignUploadController(
+  useCase: SignLeadDesignUploadUseCase,
+): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    sendSuccess(req, res, await useCase.execute(actorOf(req), idOf(req)), 'Upload ticket issued.');
+  });
+}
+
+export function makeCompleteLeadDesignController(
+  useCase: CompleteLeadDesignUseCase,
+  storage: StoragePort,
+): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    sendSuccess(
+      req,
+      res,
+      toLeadDesignDto(await useCase.execute(actorOf(req), idOf(req), req.body), storage),
+      'Design marked completed.',
+      201,
+    );
+  });
+}
+
+export function makeListLeadDesignsController(
+  useCase: ListLeadDesignsUseCase,
+  storage: StoragePort,
+): RequestHandler {
+  return asyncHandler(async (req, res) => {
+    sendSuccess(
+      req,
+      res,
+      (await useCase.execute(actorOf(req), idOf(req))).map((d) => toLeadDesignDto(d, storage)),
+      'OK',
+    );
   });
 }

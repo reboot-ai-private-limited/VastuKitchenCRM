@@ -6,10 +6,12 @@ import {
   callStatSchema,
   callStatsQuerySchema,
   changeLeadStatusBodySchema,
+  completeLeadDesignBodySchema,
   createLeadBodySchema,
   importLeadsBodySchema,
   importResultSchema,
   leadActivitySchema,
+  leadDesignSchema,
   leadIdParamsSchema,
   leadPageSchema,
   leadSchema,
@@ -199,6 +201,9 @@ export interface LeadsControllers {
   signVisitMedia: RequestHandler;
   recordVisit: RequestHandler;
   listVisits: RequestHandler;
+  signDesignMedia: RequestHandler;
+  completeDesign: RequestHandler;
+  listDesigns: RequestHandler;
 }
 
 export function buildLeadsRouter(c: LeadsControllers): Router {
@@ -208,7 +213,7 @@ export function buildLeadsRouter(c: LeadsControllers): Router {
   // Fixed paths first, so `/import` and `/call-stats` are never read as an `:id`.
   router.get(
     '/',
-    requireRole('ADMIN', 'SALES', 'OFFICE'),
+    requireRole('ADMIN', 'SALES', 'DESIGNER', 'OFFICE'),
     validate({ query: listLeadsQuerySchema }),
     c.list,
   );
@@ -232,8 +237,8 @@ export function buildLeadsRouter(c: LeadsControllers): Router {
   );
 
   const id = validate({ params: leadIdParamsSchema });
-  router.get('/:id', requireRole('ADMIN', 'SALES', 'OFFICE'), id, c.get);
-  router.get('/:id/timeline', requireRole('ADMIN', 'SALES', 'OFFICE'), id, c.timeline);
+  router.get('/:id', requireRole('ADMIN', 'SALES', 'DESIGNER', 'OFFICE'), id, c.get);
+  router.get('/:id/timeline', requireRole('ADMIN', 'SALES', 'DESIGNER', 'OFFICE'), id, c.timeline);
   router.patch(
     '/:id',
     requireRole('ADMIN', 'SALES'),
@@ -271,6 +276,24 @@ export function buildLeadsRouter(c: LeadsControllers): Router {
     validate({ params: leadIdParamsSchema, body: recordVisitBodySchema }),
     c.recordVisit,
   );
-  router.get('/:id/visits', requireRole('ADMIN', 'SALES'), id, c.listVisits);
+  router.get('/:id/visits', requireRole('ADMIN', 'SALES', 'DESIGNER'), id, c.listVisits);
+  router.post(
+    '/:id/design/media-upload/sign',
+    requireRole('ADMIN', 'DESIGNER'),
+    id,
+    c.signDesignMedia,
+  );
+  router.post(
+    '/:id/design/complete',
+    requireRole('ADMIN', 'DESIGNER'),
+    validate({ params: leadIdParamsSchema, body: completeLeadDesignBodySchema }),
+    c.completeDesign,
+  );
+  router.get(
+    '/:id/design',
+    requireRole('ADMIN', 'SALES', 'DESIGNER', 'OFFICE'),
+    id,
+    c.listDesigns,
+  );
   return router;
 }

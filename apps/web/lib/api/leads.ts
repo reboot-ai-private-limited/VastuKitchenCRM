@@ -11,11 +11,13 @@ import type {
   AssignLeadBodyDto,
   CallDto,
   ChangeLeadStatusBodyDto,
+  CompleteLeadDesignBodyDto,
   LeadStatus,
   CreateLeadBodyDto,
   ImportLeadsBodyDto,
   ImportResultDto,
   LeadActivityDto,
+  LeadDesignDto,
   LeadDto,
   PaginatedDto,
   RecordVisitBodyDto,
@@ -149,6 +151,33 @@ export function useRecordVisit(leadId: string) {
         qc.invalidateQueries({ queryKey: ['leads', 'visits', leadId] }),
         qc.invalidateQueries({ queryKey: ['leads', 'timeline', leadId] }),
         qc.invalidateQueries({ queryKey: ['leads', 'detail', leadId] }),
+      ]),
+  });
+}
+
+export const useLeadDesigns = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['leads', 'designs', id],
+    queryFn: ({ signal }) => api<LeadDesignDto[]>(`/leads/${id}/design`, { signal }),
+    enabled,
+  });
+
+export const signLeadDesignUpload = (leadId: string) =>
+  api<UploadTicketDto>(`/leads/${leadId}/design/media-upload/sign`, { method: 'POST' });
+
+export function useCompleteLeadDesign(leadId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CompleteLeadDesignBodyDto) =>
+      api<LeadDesignDto>(`/leads/${leadId}/design/complete`, { method: 'POST', body }),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ['leads', 'designs', leadId] }),
+        qc.invalidateQueries({ queryKey: ['leads', 'timeline', leadId] }),
+        qc.invalidateQueries({ queryKey: ['leads', 'detail', leadId] }),
+        qc.invalidateQueries({ queryKey: ['leads', 'list'] }),
+        qc.invalidateQueries({ queryKey: ['leads', 'board'] }),
+        qc.invalidateQueries({ queryKey: ['dashboard'] }),
       ]),
   });
 }

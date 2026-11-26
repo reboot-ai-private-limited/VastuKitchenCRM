@@ -43,6 +43,13 @@ export function describeActivity(a: LeadActivityDto): { title: string; detail?: 
     }
     case 'VISIT':
       return { title: 'Site visit', detail: [who && `By ${who}`, str(d['note'])].filter(Boolean).join(' · ') || undefined };
+    case 'DESIGN_COMPLETED': {
+      const count = typeof d['mediaCount'] === 'number' && d['mediaCount'] > 0 ? `${d['mediaCount']} file${d['mediaCount'] === 1 ? '' : 's'}` : null;
+      return {
+        title: 'Design completed',
+        detail: [who && `By ${who}`, count, str(d['note'])].filter(Boolean).join(' · ') || undefined,
+      };
+    }
     case 'PROPOSAL_SENT':
       return { title: `Proposal ${str(d['number']) ?? ''} sent`.replace('  ', ' '), detail: who ? `By ${who}` : undefined };
     case 'PROPOSAL_SEEN':

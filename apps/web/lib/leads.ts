@@ -61,6 +61,11 @@ export function leadPermissions(role: RoleName | undefined) {
     filterByAssignee: role === 'ADMIN',
     /** Sales only see their own leads, so the "assigned to" filter makes no sense for them. */
     importCsv: role === 'ADMIN' || role === 'OFFICE',
+    /** Designer team leader & Admin can upload design deliverables and mark design completed. */
+    completeDesign: role === 'ADMIN' || role === 'DESIGNER',
+    /** Admin, Sales, and Designer (to inspect measurement photos/videos) can view visits. */
+    viewVisits: role === 'ADMIN' || role === 'SALES' || role === 'DESIGNER',
+    logVisit: role === 'ADMIN' || role === 'SALES',
   };
 }
 

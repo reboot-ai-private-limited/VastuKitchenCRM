@@ -73,6 +73,7 @@ export class FakeLeads implements LeadRepositoryPort {
         (filter.assignedToId === undefined || l.assignedToId === filter.assignedToId) &&
         (!filter.customersOnly || l.customerId !== null) &&
         (!filter.product || l.productsOfInterest.includes(filter.product)) &&
+        (!filter.statuses || filter.statuses.includes(l.status)) &&
         (!filter.excludeLost || l.status !== 'LOST'),
     );
     return { items, total: items.length };

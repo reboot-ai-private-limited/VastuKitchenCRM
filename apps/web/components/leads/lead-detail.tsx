@@ -2,10 +2,13 @@
 
 import {
   ArrowLeft,
+  CheckCircle2,
   Clock,
+  Download,
   FileText,
   MapPin,
   MessageCircle,
+  Palette,
   Pencil,
   Phone,
   Plus,
@@ -22,7 +25,13 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApiError } from '@/lib/api/client';
-import { useLead, useLeadCalls, useLeadTimeline, useLeadVisits } from '@/lib/api/leads';
+import {
+  useLead,
+  useLeadCalls,
+  useLeadDesigns,
+  useLeadTimeline,
+  useLeadVisits,
+} from '@/lib/api/leads';
 import { useLeadProjects } from '@/lib/api/projects';
 import { useProposals } from '@/lib/api/proposals';
 import { ProposalChipBadge } from '@/components/proposals/proposals-view';
@@ -36,6 +45,7 @@ import {
   telUrl,
   whatsappUrl,
 } from '@/lib/leads';
+import { CompleteDesignDialog } from './complete-design-dialog';
 import { EditLeadDialog } from './edit-lead-dialog';
 import { AssignDialog, StatusDialog } from './lead-dialogs';
 import { RecordVisitDialog } from './record-visit-dialog';
@@ -113,6 +123,11 @@ export function LeadDetail({ id }: { id: string }) {
                 Assign
               </Button>
             )}
+            {can.completeDesign && !locked && (
+              <Button onClick={() => setTab('design')}>
+                <CheckCircle2 /> Upload design
+              </Button>
+            )}
             {proposals && (
               <Button asChild>
                 <Link href={`/proposals/new?leadId=${l.id}`}>
@@ -140,7 +155,8 @@ export function LeadDetail({ id }: { id: string }) {
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             {proposals && <TabsTrigger value="proposals">Proposals</TabsTrigger>}
             {seesLogs && <TabsTrigger value="calls">Calls</TabsTrigger>}
-            {seesLogs && <TabsTrigger value="visits">Visits</TabsTrigger>}
+            {can.viewVisits && <TabsTrigger value="visits">Visits</TabsTrigger>}
+            <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
           <TabsContent value="timeline">
@@ -162,13 +178,18 @@ export function LeadDetail({ id }: { id: string }) {
               </Panel>
             </TabsContent>
           )}
-          {seesLogs && (
+          {can.viewVisits && (
             <TabsContent value="visits">
               <Panel>
-                <Visits id={id} active={tab === 'visits'} />
+                <Visits id={id} active={tab === 'visits'} canLog={can.logVisit} />
               </Panel>
             </TabsContent>
           )}
+          <TabsContent value="design">
+            <Panel>
+              <Designs id={id} active={tab === 'design'} canComplete={can.completeDesign} />
+            </Panel>
+          </TabsContent>
           <TabsContent value="details">
             <Panel>
               <dl className="grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2">
@@ -316,7 +337,7 @@ function Calls({ id, active }: { id: string; active: boolean }) {
   );
 }
 
-function Visits({ id, active }: { id: string; active: boolean }) {
+function Visits({ id, active, canLog }: { id: string; active: boolean; canLog: boolean }) {
   const q = useLeadVisits(id, active);
   const [adding, setAdding] = useState(false);
 
@@ -329,11 +350,17 @@ function Visits({ id, active }: { id: string; active: boolean }) {
         <EmptyState
           icon={MapPin}
           title="No visits logged"
-          description="Log a measurement or site visit with photos and videos."
+          description={
+            canLog
+              ? 'Log a measurement or site visit with photos and videos.'
+              : 'Measurement photos and videos will appear here once logged.'
+          }
           action={
-            <Button onClick={() => setAdding(true)}>
-              <Plus /> Log visit
-            </Button>
+            canLog ? (
+              <Button onClick={() => setAdding(true)}>
+                <Plus /> Log visit
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -342,9 +369,11 @@ function Visits({ id, active }: { id: string; active: boolean }) {
             <span className="text-muted-foreground text-xs font-medium">
               {q.data.length} {q.data.length === 1 ? 'visit' : 'visits'}
             </span>
-            <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
-              <Plus /> Log visit
-            </Button>
+            {canLog && (
+              <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+                <Plus /> Log visit
+              </Button>
+            )}
           </div>
           <ul className="divide-y">
             {q.data.map((v) => (
@@ -428,6 +457,124 @@ function Visits({ id, active }: { id: string; active: boolean }) {
         </div>
       )}
       <RecordVisitDialog leadId={id} open={adding} onOpenChange={setAdding} />
+    </>
+  );
+}
+
+function Designs({
+  id,
+  active,
+  canComplete,
+}: {
+  id: string;
+  active: boolean;
+  canComplete: boolean;
+}) {
+  const q = useLeadDesigns(id, active);
+  const [open, setOpen] = useState(false);
+
+  if (q.isPending) return <ListSkeleton />;
+  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
+
+  return (
+    <>
+      {q.data.length === 0 ? (
+        <EmptyState
+          icon={Palette}
+          title="No design uploaded yet"
+          description={
+            canComplete
+              ? 'Upload 3D renders, walkthrough videos, or drawings and mark design completed.'
+              : 'Design deliverables will appear here once the designer team completes them.'
+          }
+          action={
+            canComplete ? (
+              <Button onClick={() => setOpen(true)}>
+                <CheckCircle2 /> Upload design &amp; mark completed
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div>
+          <div className="flex items-center justify-between border-b px-4 py-2.5">
+            <span className="text-muted-foreground text-xs font-medium">
+              {q.data.length} {q.data.length === 1 ? 'submission' : 'submissions'}
+            </span>
+            {canComplete && (
+              <Button size="sm" onClick={() => setOpen(true)}>
+                <CheckCircle2 /> Upload design &amp; mark completed
+              </Button>
+            )}
+          </div>
+          <ul className="divide-y">
+            {q.data.map((d) => (
+              <li key={d.id} className="flex gap-3 px-4 py-3">
+                <Palette className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium">{d.user.name}</p>
+                      {d.note && <p className="text-muted-foreground text-xs">{d.note}</p>}
+                    </div>
+                    <time dateTime={d.at} className="text-muted-foreground shrink-0 text-xs">
+                      {formatDate(d.at)}, {formatTime(d.at)}
+                    </time>
+                  </div>
+                  {d.media.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {d.media.map((m) =>
+                        m.kind === 'VIDEO' ? (
+                          <video
+                            key={m.publicId}
+                            src={m.url}
+                            poster={m.thumbUrl ?? undefined}
+                            controls
+                            preload="metadata"
+                            className="bg-secondary aspect-video w-full rounded-lg border object-cover"
+                          />
+                        ) : m.kind === 'IMAGE' ? (
+                          <a
+                            key={m.publicId}
+                            href={m.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-secondary block aspect-video overflow-hidden rounded-lg border"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={m.thumbUrl ?? m.url}
+                              alt={m.fileName ?? 'Design render'}
+                              className="size-full object-cover transition-transform hover:scale-105"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            key={m.publicId}
+                            href={m.downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-secondary hover:bg-secondary/80 flex aspect-video flex-col items-center justify-center gap-1.5 rounded-lg border p-3 text-center transition-colors"
+                          >
+                            <FileText className="text-primary size-6" aria-hidden />
+                            <span className="line-clamp-2 text-xs font-medium break-all">
+                              {m.fileName ?? 'Design file'}
+                            </span>
+                            <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                              <Download className="size-3" aria-hidden /> Download
+                            </span>
+                          </a>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <CompleteDesignDialog leadId={id} open={open} onOpenChange={setOpen} />
     </>
   );
 }

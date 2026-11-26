@@ -37,7 +37,7 @@ export const NAV: readonly NavItem[] = [
     href: '/leads',
     label: 'Leads',
     icon: Users,
-    roles: ['ADMIN', 'SALES', 'OFFICE'],
+    roles: ['ADMIN', 'SALES', 'DESIGNER', 'OFFICE'],
     group: 'Sales',
   },
   {

@@ -17,6 +17,7 @@ const lead = (id: string): LeadDto => ({
   email: null,
   city: null,
   notes: null,
+  productsOfInterest: [],
   source: 'OTHER',
   status: 'NEW',
   statusChangedAt: '2026-01-01T00:00:00Z',

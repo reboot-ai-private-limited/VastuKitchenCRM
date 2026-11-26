@@ -12,6 +12,7 @@ export const toLeadDto = ({ lead, assigneeName, isStuck }: LeadView): LeadDto =>
   email: lead.email,
   city: lead.city,
   notes: lead.notes,
+  productsOfInterest: lead.productsOfInterest,
   source: lead.source,
   status: lead.status,
   statusChangedAt: lead.statusChangedAt.toISOString(),

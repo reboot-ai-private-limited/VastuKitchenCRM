@@ -1,14 +1,20 @@
-import { CLOSED_LEAD_STATUSES, type LeadSource, type LeadStatus } from '@vastu/contracts';
+import {
+  CLOSED_LEAD_STATUSES,
+  type LeadProductOfInterest,
+  type LeadSource,
+  type LeadStatus,
+} from '@vastu/contracts';
 
 export interface Lead {
   id: string;
   name: string;
-  /** 10 digits, unique across leads. */
+  /** Normalized phone (10 digits for India, +975/+977 for Bhutan/Nepal), unique across leads. */
   phone: string;
   altPhone: string | null;
   email: string | null;
   city: string | null;
   notes: string | null;
+  productsOfInterest: LeadProductOfInterest[];
   source: LeadSource;
   status: LeadStatus;
   /** Reset on every status change; what "stuck" is measured from. */
@@ -26,8 +32,9 @@ export interface Lead {
   createdAt: Date;
 }
 
-export type NewLead = Omit<Lead, 'id' | 'createdAt' | 'newProjectRequested'> & {
+export type NewLead = Omit<Lead, 'id' | 'createdAt' | 'newProjectRequested' | 'productsOfInterest'> & {
   newProjectRequested?: boolean;
+  productsOfInterest?: LeadProductOfInterest[];
 };
 export type LeadPatch = Partial<Omit<Lead, 'id' | 'createdAt'>>;
 
@@ -47,6 +54,7 @@ export interface LeadListFilter {
   search?: string | undefined;
   status?: LeadStatus | undefined;
   source?: LeadSource | undefined;
+  product?: LeadProductOfInterest | undefined;
   /** `undefined` = any assignee, `null` = unassigned, string = that user. */
   assignedToId?: string | null | undefined;
   /** Only leads that have a customer account (the Customers list). */

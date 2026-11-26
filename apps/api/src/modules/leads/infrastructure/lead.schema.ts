@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Model, type Types } from 'mongoose';
-import { LEAD_SOURCES, LEAD_STATUSES } from '@vastu/contracts';
+import { LEAD_PRODUCTS_OF_INTEREST, LEAD_SOURCES, LEAD_STATUSES } from '@vastu/contracts';
 
 export interface LeadDoc {
   name: string;
@@ -8,6 +8,7 @@ export interface LeadDoc {
   email: string | null;
   city: string | null;
   notes: string | null;
+  productsOfInterest: (typeof LEAD_PRODUCTS_OF_INTEREST)[number][];
   source: (typeof LEAD_SOURCES)[number];
   status: (typeof LEAD_STATUSES)[number];
   statusChangedAt: Date;
@@ -27,6 +28,7 @@ const schema = new Schema<LeadDoc>(
     email: { type: String, default: null },
     city: { type: String, default: null },
     notes: { type: String, default: null },
+    productsOfInterest: { type: [String], enum: LEAD_PRODUCTS_OF_INTEREST, default: [] },
     source: { type: String, enum: LEAD_SOURCES, required: true },
     status: { type: String, enum: LEAD_STATUSES, required: true, default: 'NEW' },
     statusChangedAt: { type: Date, required: true },
@@ -42,6 +44,7 @@ schema.index({ assignedToId: 1, status: 1 });
 schema.index({ status: 1, statusChangedAt: 1 });
 schema.index({ createdAt: -1 });
 schema.index({ customerId: 1 });
+schema.index({ productsOfInterest: 1 });
 
 export const LeadModel: Model<LeadDoc> =
   (mongoose.models['Lead'] as Model<LeadDoc>) ?? mongoose.model<LeadDoc>('Lead', schema);

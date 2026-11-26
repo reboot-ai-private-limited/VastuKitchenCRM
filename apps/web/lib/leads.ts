@@ -1,13 +1,26 @@
 import {
+  LEAD_PRODUCTS_OF_INTEREST,
   LEAD_SOURCES,
   LEAD_STATUSES,
   formatDisplayPhone,
   toE164Phone,
   toWaDigits,
+  type LeadProductOfInterest,
   type LeadSource,
   type LeadStatus,
   type RoleName,
 } from '@vastu/contracts';
+
+export const PRODUCT_OF_INTEREST_LABEL: Record<LeadProductOfInterest, string> = {
+  MODULAR_KITCHEN: 'Modular Kitchen',
+  WARDROBE: 'Wardrobe',
+  TV_UNIT: 'TV Unit',
+  STORAGE_CROCKERY: 'Storage / Crockery Unit',
+  VANITY_BATHROOM: 'Vanity / Bathroom',
+  FULL_HOME_INTERIOR: 'Full Home Interior',
+  APPLIANCES_HARDWARE: 'Appliances / Hardware',
+  OTHER: 'Other',
+};
 
 export const SOURCE_LABEL: Record<LeadSource, string> = {
   WEBSITE: 'Website',
@@ -49,6 +62,7 @@ export interface LeadFilters {
   search: string;
   status: LeadStatus | null;
   source: LeadSource | null;
+  product: LeadProductOfInterest | null;
   /** `me`, `unassigned`, or a user id. */
   assignedTo: string | null;
   stuck: boolean;
@@ -60,6 +74,7 @@ export const DEFAULT_FILTERS: LeadFilters = {
   search: '',
   status: null,
   source: null,
+  product: null,
   assignedTo: null,
   stuck: false,
   page: 1,
@@ -76,6 +91,7 @@ export function parseFilters(params: { get(name: string): string | null }): Lead
     search: (params.get('q') ?? '').trim(),
     status: oneOf(LEAD_STATUSES, params.get('status')),
     source: oneOf(LEAD_SOURCES, params.get('source')),
+    product: oneOf(LEAD_PRODUCTS_OF_INTEREST, params.get('product')),
     assignedTo: params.get('assigned') || null,
     stuck: params.get('stuck') === '1',
     page: Number.isFinite(page) && page >= 1 ? page : 1,
@@ -89,6 +105,7 @@ export function filtersToSearch(f: LeadFilters): string {
   if (f.search) p.set('q', f.search);
   if (f.status) p.set('status', f.status);
   if (f.source) p.set('source', f.source);
+  if (f.product) p.set('product', f.product);
   if (f.assignedTo) p.set('assigned', f.assignedTo);
   if (f.stuck) p.set('stuck', '1');
   if (f.page > 1) p.set('page', String(f.page));

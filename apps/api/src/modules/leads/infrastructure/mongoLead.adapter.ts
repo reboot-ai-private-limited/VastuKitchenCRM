@@ -17,6 +17,7 @@ function toEntity(doc: HydratedDocument<LeadDoc>): Lead {
     email: doc.email,
     city: doc.city,
     notes: doc.notes,
+    productsOfInterest: doc.productsOfInterest ?? [],
     source: doc.source,
     status: doc.status,
     statusChangedAt: doc.statusChangedAt,
@@ -92,6 +93,7 @@ export class MongoLeadRepository implements LeadRepositoryPort {
     const query: Record<string, unknown> = {};
     if (filter.status) query['status'] = filter.status;
     if (filter.source) query['source'] = filter.source;
+    if (filter.product) query['productsOfInterest'] = filter.product;
     if (filter.customersOnly) query['customerId'] = { $ne: null };
 
     if (filter.assignedToId !== undefined) {

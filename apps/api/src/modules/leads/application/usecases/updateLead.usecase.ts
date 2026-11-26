@@ -39,6 +39,7 @@ export class UpdateLeadUseCase {
     if (input.email !== undefined) patch.email = input.email;
     if (input.city !== undefined) patch.city = input.city;
     if (input.notes !== undefined) patch.notes = input.notes;
+    if (input.productsOfInterest !== undefined) patch.productsOfInterest = input.productsOfInterest;
     if (input.source !== undefined) patch.source = input.source;
 
     const updated = await this.leads.update(id, patch);

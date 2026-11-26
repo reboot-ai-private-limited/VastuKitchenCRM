@@ -29,6 +29,7 @@ export class ListLeadsUseCase {
       search: query.search,
       status: query.status,
       source: query.source,
+      product: query.product,
       assignedToId,
       stuckBefore:
         query.stuck === true

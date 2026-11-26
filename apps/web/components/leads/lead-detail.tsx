@@ -28,7 +28,14 @@ import { useProposals } from '@/lib/api/proposals';
 import { ProposalChipBadge } from '@/components/proposals/proposals-view';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatDuration, formatINR, formatTime, relativeAge } from '@/lib/format';
-import { SOURCE_LABEL, formatPhone, leadPermissions, telUrl, whatsappUrl } from '@/lib/leads';
+import {
+  PRODUCT_OF_INTEREST_LABEL,
+  SOURCE_LABEL,
+  formatPhone,
+  leadPermissions,
+  telUrl,
+  whatsappUrl,
+} from '@/lib/leads';
 import { EditLeadDialog } from './edit-lead-dialog';
 import { AssignDialog, StatusDialog } from './lead-dialogs';
 
@@ -168,6 +175,20 @@ export function LeadDetail({ id }: { id: string }) {
                 <Field label="Alternate phone">{l.altPhone ? formatPhone(l.altPhone) : null}</Field>
                 <Field label="Email">{l.email}</Field>
                 <Field label="City">{l.city}</Field>
+                <Field label="Product of interest" wide>
+                  {l.productsOfInterest.length > 0 ? (
+                    <span className="flex flex-wrap gap-1.5 pt-0.5">
+                      {l.productsOfInterest.map((p) => (
+                        <span
+                          key={p}
+                          className="bg-secondary text-secondary-foreground rounded-full px-2.5 py-0.5 text-xs font-medium"
+                        >
+                          {PRODUCT_OF_INTEREST_LABEL[p]}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
+                </Field>
                 <Field label="Notes" wide>
                   {l.notes}
                 </Field>

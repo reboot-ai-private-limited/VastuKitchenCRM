@@ -17,6 +17,19 @@ export const LEAD_SOURCES = [
 export const leadSourceSchema = z.enum(LEAD_SOURCES);
 export type LeadSource = z.infer<typeof leadSourceSchema>;
 
+export const LEAD_PRODUCTS_OF_INTEREST = [
+  'MODULAR_KITCHEN',
+  'WARDROBE',
+  'TV_UNIT',
+  'STORAGE_CROCKERY',
+  'VANITY_BATHROOM',
+  'FULL_HOME_INTERIOR',
+  'APPLIANCES_HARDWARE',
+  'OTHER',
+] as const;
+export const leadProductOfInterestSchema = z.enum(LEAD_PRODUCTS_OF_INTEREST);
+export type LeadProductOfInterest = z.infer<typeof leadProductOfInterestSchema>;
+
 export const LEAD_STATUSES = [
   'NEW',
   'CONTACTED',
@@ -59,6 +72,9 @@ export type LeadActivityType = z.infer<typeof leadActivityTypeSchema>;
 /* ── lead ─────────────────────────────────────────────────────────────────── */
 
 const optionalText = z.string().trim().min(1).max(500);
+const productsOfInterestField = z
+  .array(leadProductOfInterestSchema)
+  .transform((arr) => [...new Set(arr)]);
 
 export const leadSchema = z.object({
   id: z.string(),
@@ -68,6 +84,7 @@ export const leadSchema = z.object({
   email: z.string().nullable(),
   city: z.string().nullable(),
   notes: z.string().nullable(),
+  productsOfInterest: z.array(leadProductOfInterestSchema).default([]),
   source: leadSourceSchema,
   status: leadStatusSchema,
   statusChangedAt: z.string(),
@@ -90,6 +107,7 @@ export const createLeadBodySchema = z.object({
   email: z.string().trim().email().optional(),
   city: optionalText.optional(),
   notes: z.string().trim().min(1).max(2000).optional(),
+  productsOfInterest: productsOfInterestField.optional(),
   source: leadSourceSchema,
 });
 export type CreateLeadBodyDto = z.infer<typeof createLeadBodySchema>;
@@ -103,6 +121,7 @@ export const updateLeadBodySchema = z
     email: z.string().trim().email().nullable(),
     city: optionalText.nullable(),
     notes: z.string().trim().min(1).max(2000).nullable(),
+    productsOfInterest: productsOfInterestField,
     source: leadSourceSchema,
   })
   .partial()
@@ -133,6 +152,7 @@ export const listLeadsQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
   status: leadStatusSchema.optional(),
   source: leadSourceSchema.optional(),
+  product: leadProductOfInterestSchema.optional(),
   /** `me`, `unassigned`, or a user id. Sales users are always limited to their own leads. */
   assignedTo: z.string().min(1).optional(),
   stuck: z

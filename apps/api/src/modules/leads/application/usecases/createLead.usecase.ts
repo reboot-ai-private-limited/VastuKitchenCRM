@@ -30,6 +30,7 @@ export class CreateLeadUseCase {
       email: input.email ?? null,
       city: input.city ?? null,
       notes: input.notes ?? null,
+      productsOfInterest: input.productsOfInterest ?? [],
       source: input.source,
       status: 'NEW',
       statusChangedAt: now,

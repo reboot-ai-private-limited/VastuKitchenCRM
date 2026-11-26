@@ -1,9 +1,11 @@
 'use client';
 
 import {
+  LEAD_PRODUCTS_OF_INTEREST,
   LEAD_SOURCES,
   LEAD_STATUSES,
   type LeadDto,
+  type LeadProductOfInterest,
   type LeadSource,
   type LeadStatus,
 } from '@vastu/contracts';
@@ -38,6 +40,7 @@ import { useAuth } from '@/lib/auth';
 import { relativeAge } from '@/lib/format';
 import {
   DEFAULT_FILTERS,
+  PRODUCT_OF_INTEREST_LABEL,
   SOURCE_LABEL,
   STATUS_LABEL,
   filtersToSearch,
@@ -189,6 +192,24 @@ export function LeadsView() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={filters.product ?? ALL}
+          onValueChange={(v) =>
+            setFilters({ product: v === ALL ? null : (v as LeadProductOfInterest) })
+          }
+        >
+          <SelectTrigger aria-label="Product of interest" className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All products</SelectItem>
+            {LEAD_PRODUCTS_OF_INTEREST.map((p) => (
+              <SelectItem key={p} value={p}>
+                {PRODUCT_OF_INTEREST_LABEL[p]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {can.filterByAssignee && (
           <Select
             value={filters.assignedTo ?? ALL}
@@ -334,6 +355,23 @@ function LeadRow({
         <span className="tabular text-muted-foreground block text-xs">
           {formatPhone(lead.phone)}
         </span>
+        {lead.productsOfInterest.length > 0 && (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {lead.productsOfInterest.slice(0, 2).map((p) => (
+              <span
+                key={p}
+                className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-medium"
+              >
+                {PRODUCT_OF_INTEREST_LABEL[p]}
+              </span>
+            ))}
+            {lead.productsOfInterest.length > 2 && (
+              <span className="text-muted-foreground text-[11px]">
+                +{lead.productsOfInterest.length - 2}
+              </span>
+            )}
+          </span>
+        )}
       </TableCell>
       <TableCell>
         <span className="inline-flex items-center gap-1.5">

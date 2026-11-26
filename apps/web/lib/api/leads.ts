@@ -39,6 +39,7 @@ export const useLeads = (f: LeadFilters, enabled = true) =>
           search: f.search,
           status: f.status,
           source: f.source,
+          product: f.product,
           assignedTo: f.assignedTo,
           stuck: f.stuck ? 'true' : undefined,
         },
@@ -137,7 +138,7 @@ export const BOARD_PAGE_SIZE = 50;
 /** One board column: its own paged query, so "load more" and the count are per column. */
 export const useBoardColumn = (status: LeadStatus, f: LeadFilters) =>
   useInfiniteQuery({
-    queryKey: ['leads', 'board', status, f.search, f.source, f.assignedTo, f.stuck],
+    queryKey: ['leads', 'board', status, f.search, f.source, f.product, f.assignedTo, f.stuck],
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
       api<PaginatedDto<LeadDto>>('/leads', {
@@ -147,6 +148,7 @@ export const useBoardColumn = (status: LeadStatus, f: LeadFilters) =>
           status,
           search: f.search,
           source: f.source,
+          product: f.product,
           assignedTo: f.assignedTo,
           stuck: f.stuck ? 'true' : undefined,
         },

@@ -51,6 +51,7 @@ export class FakeLeads implements LeadRepositoryPort {
     if (this.rows.some((l) => l.phone === lead.phone)) throw AppError.conflict('dup');
     const created: Lead = {
       ...lead,
+      productsOfInterest: lead.productsOfInterest ?? [],
       newProjectRequested: lead.newProjectRequested ?? false,
       id: `l${++this.seq}`,
       createdAt: new Date(),
@@ -70,7 +71,8 @@ export class FakeLeads implements LeadRepositoryPort {
     const items = this.rows.filter(
       (l) =>
         (filter.assignedToId === undefined || l.assignedToId === filter.assignedToId) &&
-        (!filter.customersOnly || l.customerId !== null),
+        (!filter.customersOnly || l.customerId !== null) &&
+        (!filter.product || l.productsOfInterest.includes(filter.product)),
     );
     return { items, total: items.length };
   }

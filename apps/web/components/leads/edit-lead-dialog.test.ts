@@ -10,6 +10,7 @@ const lead: LeadDto = {
   email: 'r@x.com',
   city: 'Siliguri',
   notes: null,
+  productsOfInterest: [],
   source: 'JUSTDIAL',
   status: 'NEW',
   statusChangedAt: '2026-01-01T00:00:00Z',
@@ -26,6 +27,7 @@ const form = {
   email: 'r@x.com',
   city: 'Siliguri',
   notes: '',
+  productsOfInterest: [],
   source: 'JUSTDIAL' as const,
 };
 
@@ -38,4 +40,8 @@ describe('diffLead', () => {
     }));
   it('clears an emptied optional field with null', () =>
     expect(diffLead(lead, { ...form, email: '' })).toEqual({ email: null }));
+  it('sends productsOfInterest only when selection changes', () =>
+    expect(
+      diffLead(lead, { ...form, productsOfInterest: ['MODULAR_KITCHEN', 'WARDROBE'] }),
+    ).toEqual({ productsOfInterest: ['MODULAR_KITCHEN', 'WARDROBE'] }));
 });

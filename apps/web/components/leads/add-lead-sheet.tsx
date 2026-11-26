@@ -4,6 +4,7 @@ import {
   LEAD_SOURCES,
   createLeadBodySchema,
   type CreateLeadBodyDto,
+  type LeadProductOfInterest,
   type LeadSource,
 } from '@vastu/contracts';
 import Link from 'next/link';
@@ -32,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
 import { useCreateLead } from '@/lib/api/leads';
 import { SOURCE_LABEL } from '@/lib/leads';
+import { ProductInterestPicker } from './product-interest-picker';
 
 interface Form {
   name: string;
@@ -40,6 +42,7 @@ interface Form {
   email: string;
   city: string;
   notes: string;
+  productsOfInterest: LeadProductOfInterest[];
   source: LeadSource | '';
 }
 const EMPTY: Form = {
@@ -49,6 +52,7 @@ const EMPTY: Form = {
   email: '',
   city: '',
   notes: '',
+  productsOfInterest: [],
   source: '',
 };
 
@@ -83,7 +87,11 @@ export function AddLeadSheet({
     setBanner(null);
     setDuplicateId(null);
     // Empty optional fields are omitted, not sent as "".
-    const raw = Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim() !== ''));
+    const { productsOfInterest, ...textFields } = form;
+    const raw: Record<string, unknown> = Object.fromEntries(
+      Object.entries(textFields).filter(([, v]) => v.trim() !== ''),
+    );
+    if (productsOfInterest.length > 0) raw['productsOfInterest'] = productsOfInterest;
     const parsed = createLeadBodySchema.safeParse(raw);
     if (!parsed.success) {
       const next: Record<string, string> = {};
@@ -113,7 +121,11 @@ export function AddLeadSheet({
     });
   }
 
-  const field = (id: keyof Form, label: string, props: React.ComponentProps<typeof Input> = {}) => (
+  const field = (
+    id: Exclude<keyof Form, 'productsOfInterest' | 'source'>,
+    label: string,
+    props: React.ComponentProps<typeof Input> = {},
+  ) => (
     <div className="space-y-1.5">
       <Label htmlFor={`lead-${id}`}>{label}</Label>
       <Input
@@ -187,6 +199,14 @@ export function AddLeadSheet({
                 </SelectContent>
               </Select>
               {errors.source && <p className="text-danger text-xs">{errors.source}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Product of interest</Label>
+              <ProductInterestPicker
+                value={form.productsOfInterest}
+                onChange={(v) => set('productsOfInterest', v)}
+                disabled={create.isPending}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="lead-altPhone">Alternate phone</Label>

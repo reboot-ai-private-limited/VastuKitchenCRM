@@ -4,6 +4,7 @@ import {
   LEAD_SOURCES,
   updateLeadBodySchema,
   type LeadDto,
+  type LeadProductOfInterest,
   type LeadSource,
   type UpdateLeadBodyDto,
 } from '@vastu/contracts';
@@ -32,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ApiError } from '@/lib/api/client';
 import { useUpdateLead } from '@/lib/api/leads';
 import { SOURCE_LABEL } from '@/lib/leads';
+import { ProductInterestPicker } from './product-interest-picker';
 
 interface Form {
   name: string;
@@ -40,6 +42,7 @@ interface Form {
   email: string;
   city: string;
   notes: string;
+  productsOfInterest: LeadProductOfInterest[];
   source: LeadSource;
 }
 
@@ -50,6 +53,7 @@ const toForm = (l: LeadDto): Form => ({
   email: l.email ?? '',
   city: l.city ?? '',
   notes: l.notes ?? '',
+  productsOfInterest: l.productsOfInterest ?? [],
   source: l.source,
 });
 
@@ -61,6 +65,9 @@ export function diffLead(before: LeadDto, form: Form): UpdateLeadBodyDto {
     if (form[k].trim() !== was[k]) out[k] = form[k].trim();
   for (const k of ['altPhone', 'email', 'city', 'notes'] as const)
     if (form[k].trim() !== was[k]) out[k] = form[k].trim() === '' ? null : form[k].trim();
+  const prevProducts = [...was.productsOfInterest].sort().join(',');
+  const nextProducts = [...form.productsOfInterest].sort().join(',');
+  if (prevProducts !== nextProducts) out['productsOfInterest'] = form.productsOfInterest;
   return out as UpdateLeadBodyDto;
 }
 
@@ -108,7 +115,7 @@ export function EditLeadDialog({ lead, onClose }: { lead: LeadDto; onClose: () =
   }
 
   const field = (
-    id: Exclude<keyof Form, 'source' | 'notes'>,
+    id: Exclude<keyof Form, 'source' | 'notes' | 'productsOfInterest'>,
     label: string,
     props: React.ComponentProps<typeof Input> = {},
   ) => (
@@ -165,6 +172,14 @@ export function EditLeadDialog({ lead, onClose }: { lead: LeadDto; onClose: () =
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Product of interest</Label>
+            <ProductInterestPicker
+              value={form.productsOfInterest}
+              onChange={(v) => set('productsOfInterest', v)}
+              disabled={update.isPending}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="el-altPhone">Alternate phone</Label>

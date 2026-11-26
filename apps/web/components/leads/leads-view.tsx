@@ -9,7 +9,7 @@ import {
   type LeadSource,
   type LeadStatus,
 } from '@vastu/contracts';
-import { Clock, Columns3, FileUp, Plus, Rows3, Search, Users } from 'lucide-react';
+import { Archive, Clock, Columns3, FileUp, Plus, Rows3, Search, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
@@ -237,6 +237,15 @@ export function LeadsView() {
         >
           <Clock /> Stuck
         </Button>
+        {!board && filters.status !== 'LOST' && (
+          <Button
+            variant={filters.showLost ? 'secondary' : 'outline'}
+            aria-pressed={filters.showLost}
+            onClick={() => setFilters({ showLost: !filters.showLost })}
+          >
+            <Archive /> Show lost
+          </Button>
+        )}
         {filtered && (
           <Button variant="ghost" onClick={() => clearFilters()}>
             Clear

@@ -159,6 +159,10 @@ export const listLeadsQuerySchema = z.object({
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),
+  excludeLost: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
 });
 export type ListLeadsQueryDto = z.infer<typeof listLeadsQuerySchema>;
 export const leadPageSchema = paginatedSchema(leadSchema);

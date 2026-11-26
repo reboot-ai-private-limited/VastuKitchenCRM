@@ -61,4 +61,6 @@ export interface LeadListFilter {
   customersOnly?: boolean | undefined;
   /** Only leads (not Won/Lost) whose status last changed before this moment. */
   stuckBefore?: Date | undefined;
+  /** Hide LOST leads unless explicitly requested. */
+  excludeLost?: boolean | undefined;
 }

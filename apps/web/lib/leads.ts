@@ -66,6 +66,7 @@ export interface LeadFilters {
   /** `me`, `unassigned`, or a user id. */
   assignedTo: string | null;
   stuck: boolean;
+  showLost: boolean;
   page: number;
   view: 'table' | 'board';
 }
@@ -77,6 +78,7 @@ export const DEFAULT_FILTERS: LeadFilters = {
   product: null,
   assignedTo: null,
   stuck: false,
+  showLost: false,
   page: 1,
   view: 'table',
 };
@@ -94,6 +96,7 @@ export function parseFilters(params: { get(name: string): string | null }): Lead
     product: oneOf(LEAD_PRODUCTS_OF_INTEREST, params.get('product')),
     assignedTo: params.get('assigned') || null,
     stuck: params.get('stuck') === '1',
+    showLost: params.get('lost') === '1',
     page: Number.isFinite(page) && page >= 1 ? page : 1,
     view: params.get('view') === 'board' ? 'board' : 'table',
   };
@@ -108,6 +111,7 @@ export function filtersToSearch(f: LeadFilters): string {
   if (f.product) p.set('product', f.product);
   if (f.assignedTo) p.set('assigned', f.assignedTo);
   if (f.stuck) p.set('stuck', '1');
+  if (f.showLost) p.set('lost', '1');
   if (f.page > 1) p.set('page', String(f.page));
   if (f.view === 'board') p.set('view', 'board');
   const s = p.toString();

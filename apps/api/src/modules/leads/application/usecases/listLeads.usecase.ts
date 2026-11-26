@@ -35,6 +35,7 @@ export class ListLeadsUseCase {
         query.stuck === true
           ? new Date(this.now().getTime() - (await this.stuckDays()) * 86_400_000)
           : undefined,
+      excludeLost: query.excludeLost === true && !query.status ? true : undefined,
     });
     return { items: await this.views.build(items), total };
   }

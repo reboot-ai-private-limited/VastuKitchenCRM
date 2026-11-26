@@ -42,6 +42,7 @@ export const useLeads = (f: LeadFilters, enabled = true) =>
           product: f.product,
           assignedTo: f.assignedTo,
           stuck: f.stuck ? 'true' : undefined,
+          excludeLost: !f.status && !f.showLost ? 'true' : undefined,
         },
         signal,
       }),

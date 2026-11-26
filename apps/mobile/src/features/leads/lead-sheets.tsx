@@ -9,6 +9,7 @@ import {
 } from '@vastu/contracts';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
+import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
@@ -157,11 +158,11 @@ export function EditLeadSheet({ lead, visible, onClose }: { lead: LeadDto; visib
   const submit = () => {
     const body: Record<string, string | null> = {};
     const name = f.name.trim();
-    const phone = f.phone.replace(/\D/g, '').slice(-10);
+    const phone = f.phone.trim();
     if (name !== lead.name) body.name = name;
     if (phone !== lead.phone) body.phone = phone;
     (['altPhone', 'email', 'city', 'notes'] as const).forEach((k) => {
-      const v = (k === 'altPhone' ? f[k].replace(/\D/g, '').slice(-10) : f[k].trim()) || null;
+      const v = f[k].trim() || null;
       if (v !== (lead[k] ?? null)) body[k] = v;
     });
     const parsed = updateLeadBodySchema.safeParse(body);
@@ -200,8 +201,26 @@ export function EditLeadSheet({ lead, visible, onClose }: { lead: LeadDto; visib
     >
       <View style={{ gap: space[3] }}>
         {field('name', 'Name')}
-        {field('phone', 'Mobile number', false, { keyboardType: 'number-pad' })}
-        {field('altPhone', 'Alternate number', false, { keyboardType: 'number-pad' })}
+        <View style={{ gap: 4 }}>
+          <Text variant="caption" muted>
+            Mobile number
+          </Text>
+          <PhoneField
+            value={f.phone}
+            onChangeText={(v) => setF((p) => ({ ...p, phone: v }))}
+            accessibilityLabel="Mobile number"
+          />
+        </View>
+        <View style={{ gap: 4 }}>
+          <Text variant="caption" muted>
+            Alternate number
+          </Text>
+          <PhoneField
+            value={f.altPhone}
+            onChangeText={(v) => setF((p) => ({ ...p, altPhone: v }))}
+            accessibilityLabel="Alternate number"
+          />
+        </View>
         {field('email', 'Email', false, { keyboardType: 'email-address', autoCapitalize: 'none' })}
         {field('city', 'City / locality')}
         {field('notes', 'Notes', true)}

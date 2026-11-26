@@ -1,3 +1,4 @@
+import { toWaDigits } from '@vastu/contracts';
 import type { Proposal } from '../../domain/proposal.entity.js';
 import type { ActorRef, LeadsGatewayPort } from '../../domain/leadsGateway.port.js';
 import type { ProposalRepositoryPort } from '../../domain/proposal.repository.port.js';
@@ -25,7 +26,7 @@ export class ProposalLinks {
     const message =
       `Namaste ${firstName}, here is your proposal ${proposal.number} ` +
       `from ${companyName}: ${this.publicUrl(proposal.token)}`;
-    return `https://wa.me/91${proposal.customer.phone}?text=${encodeURIComponent(message)}`;
+    return `https://wa.me/${toWaDigits(proposal.customer.phone)}?text=${encodeURIComponent(message)}`;
   }
 }
 

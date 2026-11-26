@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loginBodySchema, otpRequestBodySchema, otpVerifyBodySchema } from '@vastu/contracts';
 import { Button } from '@/components/ui/button';
+import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Text } from '@/components/ui/text';
@@ -17,6 +18,7 @@ import { ApiError, NetworkError } from '@/lib/api/client';
 import { loginPassword, requestOtp, verifyOtp } from '@/lib/api/endpoints/auth';
 import { parseInviteToken } from '@/lib/auth/invite';
 import { consumeSessionExpired, session } from '@/lib/auth/session';
+import { formatPhone } from '@/lib/format';
 
 const PHONE_KEY = 'auth.lastPhone';
 const OTP_TTL_S = 300;
@@ -193,20 +195,7 @@ export function LoginScreen() {
       <View style={{ gap: space[4] }}>
         {mode === 'password' ? (
           <Animated.View key="password" entering={FadeIn.duration(200)} style={{ gap: space[4] }}>
-            <View style={styles.inputRow}>
-              <Text variant="label" muted>
-                +91
-              </Text>
-              <TextInput
-                value={phone}
-                onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
-                placeholder="10-digit mobile number"
-                placeholderTextColor={colors.placeholder}
-                keyboardType="number-pad"
-                textContentType="telephoneNumber"
-                style={styles.input}
-              />
-            </View>
+            <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="Mobile number" />
             <View style={styles.inputRow}>
               <TextInput
                 value={password}
@@ -227,21 +216,12 @@ export function LoginScreen() {
           </Animated.View>
         ) : step === 'phone' ? (
           <Animated.View key="phone" entering={FadeIn.duration(200)} style={{ gap: space[4] }}>
-            <View style={styles.inputRow}>
-              <Text variant="label" muted>
-                +91
-              </Text>
-              <TextInput
-                value={phone}
-                onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
-                placeholder="10-digit mobile number"
-                placeholderTextColor={colors.placeholder}
-                keyboardType="number-pad"
-                textContentType="telephoneNumber"
-                autoFocus
-                style={styles.input}
-              />
-            </View>
+            <PhoneField
+              value={phone}
+              onChangeText={setPhone}
+              accessibilityLabel="Mobile number"
+              autoFocus
+            />
             <Button title="Send code" onPress={sendCode} loading={busy} disabled={cooldown > 0 || offline} fullWidth size="lg" />
             <Text variant="caption" muted>
               No code? Ask your admin.
@@ -249,7 +229,7 @@ export function LoginScreen() {
           </Animated.View>
         ) : (
           <Animated.View key="code" entering={FadeIn.duration(200)} style={{ gap: space[4] }}>
-            <Text muted>Enter the 6-digit code sent on WhatsApp to +91 {phone}</Text>
+            <Text muted>Enter the 6-digit code sent on WhatsApp to {formatPhone(phone)}</Text>
             <Text variant="caption" muted>
               {expired ? 'This code has expired. Send a new one.' : `Code valid for ${mmss(validFor)}`}
             </Text>

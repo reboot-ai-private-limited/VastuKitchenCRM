@@ -1,18 +1,10 @@
 import { z } from 'zod';
 import { roleSchema } from './auth.js';
+import { phoneSchema } from './phone.js';
+
+export { phoneSchema };
 
 /* ── shared field schemas ─────────────────────────────────────────────────── */
-
-/** Indian mobile number. Accepts `+91 98765 43210`, `098765…`, `9876543210`; stores 10 digits. */
-export const phoneSchema = z
-  .string()
-  .transform((v) => {
-    const digits = v.replace(/\D/g, '');
-    return digits.length === 12 && digits.startsWith('91')
-      ? digits.slice(2)
-      : digits.replace(/^0/, '');
-  })
-  .pipe(z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'));
 
 /** bcrypt only reads the first 72 BYTES, so longer passwords are refused rather than truncated. */
 export const passwordSchema = z

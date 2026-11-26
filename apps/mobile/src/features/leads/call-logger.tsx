@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, TextInput, View } from 'react-native';
-import { CALL_OUTCOMES, type CallOutcome } from '@vastu/contracts';
+import { CALL_OUTCOMES, toE164Phone, type CallOutcome } from '@vastu/contracts';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -85,7 +85,7 @@ export function useCallLogger(leadId: string, phone: string) {
     setDurationSec(null);
     setNote('');
     setError(null);
-    void Linking.openURL(`tel:${phone}`).catch(() => {
+    void Linking.openURL(`tel:${toE164Phone(phone)}`).catch(() => {
       startedAt.current = null;
     });
   }, [phone]);

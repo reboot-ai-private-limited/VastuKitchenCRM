@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { ApiError } from '@/lib/api/client';
 import { useAddCustomer } from '@/lib/api/customers';
 
@@ -97,13 +98,7 @@ export function AddCustomerDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="cu-phone">Phone *</Label>
-              <Input
-                id="cu-phone"
-                inputMode="numeric"
-                placeholder="10-digit mobile"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+              <PhoneInput id="cu-phone" value={phone} onChange={setPhone} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cu-city">City</Label>

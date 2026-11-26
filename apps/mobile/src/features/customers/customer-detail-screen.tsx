@@ -168,7 +168,7 @@ function CustomerDetail() {
             <Card style={{ gap: space[2] }}>
               <Text variant="label">Customer app access</Text>
               <Text variant="caption" muted>
-                Generate a one-time invite link or let the customer sign in with OTP on {digits ? `+91 ${digits}` : formatPhone(c.phone)}.
+                Generate a one-time invite link or let the customer sign in with OTP on {formatPhone(c.phone)}.
               </Text>
               <Button
                 title="Share invite link"

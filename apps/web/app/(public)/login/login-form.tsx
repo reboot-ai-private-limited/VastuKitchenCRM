@@ -3,11 +3,16 @@
 import { Eye, EyeOff, Loader2, TriangleAlert } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { otpRequestBodySchema, otpVerifyBodySchema } from '@vastu/contracts';
+import {
+  formatInternationalPhone,
+  otpRequestBodySchema,
+  otpVerifyBodySchema,
+} from '@vastu/contracts';
 import { Logo } from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth';
 import { landingFor } from '@/lib/nav';
@@ -148,7 +153,7 @@ export function LoginForm() {
               {mode === 'password'
                 ? 'Use your phone number and password.'
                 : onCodeStep
-                  ? `We sent a 6-digit code to +91 ${phone.replace(/\D/g, '').slice(-10)} on WhatsApp.`
+                  ? `We sent a 6-digit code to ${formatInternationalPhone(phone)} on WhatsApp.`
                   : 'We’ll send a one-time code to your WhatsApp.'}
             </p>
           </div>
@@ -166,23 +171,15 @@ export function LoginForm() {
 
           <div className="space-y-1.5">
             <Label htmlFor="phone">Phone number *</Label>
-            <div className="relative">
-              <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 grid place-items-center">
-                +91
-              </span>
-              <Input
-                id="phone"
-                inputMode="numeric"
-                autoComplete="username"
-                autoFocus
-                maxLength={10}
-                value={phone}
-                disabled={onCodeStep}
-                onChange={(e) => setPhone(e.target.value)}
-                className="h-10 pl-11 tabular"
-                aria-invalid={!!fieldError && !onCodeStep}
-              />
-            </div>
+            <PhoneInput
+              id="phone"
+              autoComplete="username"
+              autoFocus
+              value={phone}
+              disabled={onCodeStep}
+              onChange={setPhone}
+              aria-invalid={!!fieldError && !onCodeStep}
+            />
           </div>
 
           {onCodeStep && (

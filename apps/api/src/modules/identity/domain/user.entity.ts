@@ -3,8 +3,10 @@ import type { AttendanceType, RoleName } from '@vastu/contracts';
 export interface User {
   id: string;
   name: string;
-  /** 10 digits, unique. The login identifier. */
+  /** Primary login identifier. */
   phone: string;
+  /** Extra login phone numbers for CUSTOMER accounts (e.g. spouse, family, architect). */
+  additionalPhones: string[];
   role: RoleName;
   /** Text copied from the designations master list (not a reference). Null for customers. */
   designation: string | null;
@@ -18,7 +20,9 @@ export interface User {
   createdAt: Date;
 }
 
-export type NewUser = Omit<User, 'id' | 'createdAt'>;
+export type NewUser = Omit<User, 'id' | 'createdAt' | 'additionalPhones'> & {
+  additionalPhones?: string[];
+};
 
 /** A staff member as HR needs them: how they are tracked and what they are paid. */
 export interface StaffMember {

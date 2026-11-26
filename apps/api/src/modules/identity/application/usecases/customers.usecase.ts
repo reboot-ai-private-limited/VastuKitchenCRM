@@ -1,4 +1,9 @@
-import type { ClientKind, CreateCustomerBodyDto } from '@vastu/contracts';
+import {
+  MAX_CUSTOMER_ADDITIONAL_PHONES,
+  type ClientKind,
+  type CreateCustomerBodyDto,
+  type CustomerPhonesDto,
+} from '@vastu/contracts';
 import { AppError } from '@/shared/errors/AppError.js';
 import type { InviteRepositoryPort } from '../../domain/invite.repository.port.js';
 import type { TokenGeneratorPort } from '../../domain/tokenGenerator.port.js';
@@ -87,5 +92,56 @@ export class RedeemInviteUseCase {
     const user = await this.users.findById(invite.userId);
     if (!user || !user.active || user.role !== 'CUSTOMER') throw invalidInvite();
     return this.issuer.issue(user, client);
+  }
+}
+
+export class GetCustomerPhonesUseCase {
+  constructor(private readonly users: UserRepositoryPort) {}
+
+  async execute(customerId: string): Promise<CustomerPhonesDto> {
+    const customer = await this.users.findById(customerId);
+    if (!customer || customer.role !== 'CUSTOMER') throw AppError.notFound('Customer not found.');
+    return { primaryPhone: customer.phone, additionalPhones: customer.additionalPhones };
+  }
+}
+
+export class AddCustomerPhoneUseCase {
+  constructor(private readonly users: UserRepositoryPort) {}
+
+  async execute(customerId: string, phone: string): Promise<CustomerPhonesDto> {
+    const customer = await this.users.findById(customerId);
+    if (!customer || customer.role !== 'CUSTOMER') throw AppError.notFound('Customer not found.');
+    if (customer.phone === phone || customer.additionalPhones.includes(phone)) {
+      throw AppError.conflict('This phone number is already linked to this customer.');
+    }
+    if (customer.additionalPhones.length >= MAX_CUSTOMER_ADDITIONAL_PHONES) {
+      throw AppError.badRequest(
+        `At most ${MAX_CUSTOMER_ADDITIONAL_PHONES} additional login numbers can be added.`,
+      );
+    }
+    const taken = await this.users.findByPhone(phone);
+    if (taken) {
+      throw AppError.conflict('This phone number already belongs to another account.');
+    }
+    const next = [...customer.additionalPhones, phone];
+    const updated = await this.users.update(customerId, { additionalPhones: next });
+    if (!updated) throw AppError.notFound('Customer not found.');
+    return { primaryPhone: updated.phone, additionalPhones: updated.additionalPhones };
+  }
+}
+
+export class RemoveCustomerPhoneUseCase {
+  constructor(private readonly users: UserRepositoryPort) {}
+
+  async execute(customerId: string, phone: string): Promise<CustomerPhonesDto> {
+    const customer = await this.users.findById(customerId);
+    if (!customer || customer.role !== 'CUSTOMER') throw AppError.notFound('Customer not found.');
+    if (!customer.additionalPhones.includes(phone)) {
+      throw AppError.notFound('Phone number not found on this customer.');
+    }
+    const next = customer.additionalPhones.filter((p) => p !== phone);
+    const updated = await this.users.update(customerId, { additionalPhones: next });
+    if (!updated) throw AppError.notFound('Customer not found.');
+    return { primaryPhone: updated.phone, additionalPhones: updated.additionalPhones };
   }
 }

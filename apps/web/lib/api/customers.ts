@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import type {
   AddCustomerBodyDto,
   CustomerDto,
+  CustomerPhonesDto,
   ImportCustomersBodyDto,
   ImportCustomersResultDto,
   PaginatedDto,
@@ -65,5 +66,34 @@ export function useStartNewProject(id: string) {
   return useMutation({
     mutationFn: () => api<CustomerDto>(`/customers/${id}/new-project`, { method: 'POST' }),
     onSuccess: refresh,
+  });
+}
+
+export const useCustomerPhones = (id: string) =>
+  useQuery({
+    queryKey: ['customers', 'phones', id],
+    queryFn: ({ signal }) => api<CustomerPhonesDto>(`/identity/customers/${id}/phones`, { signal }),
+  });
+
+export function useAddCustomerPhone(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phone: string) =>
+      api<CustomerPhonesDto>(`/identity/customers/${id}/phones`, {
+        method: 'POST',
+        body: { phone },
+      }),
+    onSuccess: (data) => qc.setQueryData(['customers', 'phones', id], data),
+  });
+}
+
+export function useRemoveCustomerPhone(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phone: string) =>
+      api<CustomerPhonesDto>(`/identity/customers/${id}/phones/${encodeURIComponent(phone)}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: (data) => qc.setQueryData(['customers', 'phones', id], data),
   });
 }

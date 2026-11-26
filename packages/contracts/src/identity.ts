@@ -180,3 +180,19 @@ export type CustomerInviteDto = z.infer<typeof customerInviteSchema>;
 
 export const redeemInviteBodySchema = z.object({ token: z.string().min(1) });
 export type RedeemInviteBodyDto = z.infer<typeof redeemInviteBodySchema>;
+
+export const MAX_CUSTOMER_ADDITIONAL_PHONES = 5;
+
+export const customerPhonesSchema = z.object({
+  primaryPhone: z.string(),
+  additionalPhones: z.array(z.string()),
+});
+export type CustomerPhonesDto = z.infer<typeof customerPhonesSchema>;
+
+export const addCustomerPhoneBodySchema = z.object({ phone: phoneSchema });
+export type AddCustomerPhoneBodyDto = z.infer<typeof addCustomerPhoneBodySchema>;
+
+export const removeCustomerPhoneParamsSchema = z.object({
+  id: z.string().min(1),
+  phone: phoneSchema,
+});

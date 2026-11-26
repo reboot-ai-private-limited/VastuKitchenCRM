@@ -47,7 +47,8 @@ export class RequestOtpUseCase {
       codeHash: this.tokens.hash(code),
       expiresAt: new Date(now.getTime() + OTP_TTL_MS),
     });
-    await this.sender.send(user.phone, code);
+    // Send to the exact login phone requested (supports a customer's additional login numbers too).
+    await this.sender.send(phone, code);
   }
 }
 

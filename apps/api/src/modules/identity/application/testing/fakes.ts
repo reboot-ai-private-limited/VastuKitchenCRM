@@ -26,14 +26,20 @@ export class FakeUsers implements UserRepositoryPort {
     return this.rows.find((u) => u.id === id) ?? null;
   }
   async findByPhone(phone: string) {
-    return this.rows.find((u) => u.phone === phone) ?? null;
+    return this.rows.find((u) => u.phone === phone || u.additionalPhones.includes(phone)) ?? null;
   }
   async findByIds(ids: string[]) {
     return this.rows.filter((u) => ids.includes(u.id));
   }
   async create(user: NewUser) {
-    if (this.rows.some((u) => u.phone === user.phone)) throw AppError.conflict('dup');
-    const created: User = { ...user, id: `u${++this.seq}`, createdAt: new Date() };
+    if (this.rows.some((u) => u.phone === user.phone || u.additionalPhones.includes(user.phone)))
+      throw AppError.conflict('dup');
+    const created: User = {
+      ...user,
+      additionalPhones: user.additionalPhones ?? [],
+      id: `u${++this.seq}`,
+      createdAt: new Date(),
+    };
     this.rows.push(created);
     return created;
   }

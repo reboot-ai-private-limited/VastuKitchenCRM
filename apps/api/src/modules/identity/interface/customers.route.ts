@@ -1,7 +1,9 @@
 import { Router, type RequestHandler } from 'express';
 import {
+  addCustomerPhoneBodySchema,
   createCustomerBodySchema,
   customerInviteSchema,
+  removeCustomerPhoneParamsSchema,
   userIdParamsSchema,
   userSchema,
 } from '@vastu/contracts';
@@ -43,12 +45,43 @@ openApiRegistry.registerPath({
 export interface CustomersControllers {
   create: RequestHandler;
   invite: RequestHandler;
+  getPhones: RequestHandler;
+  addPhone: RequestHandler;
+  removePhone: RequestHandler;
 }
 
 export function buildCustomersRouter(c: CustomersControllers): Router {
   const router = Router();
-  router.use(authenticate, requireRole('ADMIN', 'SALES'));
-  router.post('/', validate({ body: createCustomerBodySchema }), c.create);
-  router.post('/:id/invite', validate({ params: userIdParamsSchema }), c.invite);
+  router.use(authenticate);
+  router.post(
+    '/',
+    requireRole('ADMIN', 'SALES'),
+    validate({ body: createCustomerBodySchema }),
+    c.create,
+  );
+  router.post(
+    '/:id/invite',
+    requireRole('ADMIN', 'SALES'),
+    validate({ params: userIdParamsSchema }),
+    c.invite,
+  );
+  router.get(
+    '/:id/phones',
+    requireRole('ADMIN', 'SALES', 'OFFICE'),
+    validate({ params: userIdParamsSchema }),
+    c.getPhones,
+  );
+  router.post(
+    '/:id/phones',
+    requireRole('ADMIN', 'SALES'),
+    validate({ params: userIdParamsSchema, body: addCustomerPhoneBodySchema }),
+    c.addPhone,
+  );
+  router.delete(
+    '/:id/phones/:phone',
+    requireRole('ADMIN', 'SALES'),
+    validate({ params: removeCustomerPhoneParamsSchema }),
+    c.removePhone,
+  );
   return router;
 }

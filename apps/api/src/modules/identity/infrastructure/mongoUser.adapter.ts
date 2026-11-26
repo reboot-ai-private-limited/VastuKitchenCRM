@@ -11,6 +11,7 @@ function toEntity(doc: HydratedDocument<UserDoc>): User {
     id: doc.id as string,
     name: doc.name,
     phone: doc.phone,
+    additionalPhones: doc.additionalPhones ?? [],
     role: doc.role,
     designation: doc.designation,
     attendanceType: doc.attendanceType,
@@ -29,7 +30,7 @@ export class MongoUserRepository implements UserRepositoryPort {
   }
 
   async findByPhone(phone: string): Promise<User | null> {
-    const doc = await UserModel.findOne({ phone });
+    const doc = await UserModel.findOne({ $or: [{ phone }, { additionalPhones: phone }] });
     return doc ? toEntity(doc) : null;
   }
 

@@ -1,6 +1,16 @@
 'use client';
 
-import { ArrowLeft, FolderKanban, MessageCircle, Phone, Rocket, UserRound } from 'lucide-react';
+import { MAX_CUSTOMER_ADDITIONAL_PHONES, phoneSchema } from '@vastu/contracts';
+import {
+  ArrowLeft,
+  FolderKanban,
+  MessageCircle,
+  Phone,
+  Plus,
+  Rocket,
+  UserRound,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -20,17 +30,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/lib/api/client';
-import { useCustomer, useStartNewProject } from '@/lib/api/customers';
+import {
+  useAddCustomerPhone,
+  useCustomer,
+  useCustomerPhones,
+  useRemoveCustomerPhone,
+  useStartNewProject,
+} from '@/lib/api/customers';
+import { useAuth } from '@/lib/auth';
 import { initials, relativeAge } from '@/lib/format';
 import { formatPhone, telUrl, whatsappUrl } from '@/lib/leads';
 
 export function CustomerDetail({ id }: { id: string }) {
+  const { user } = useAuth();
   const q = useCustomer(id);
+  const phones = useCustomerPhones(id);
+  const addPhone = useAddCustomerPhone(id);
+  const removePhone = useRemoveCustomerPhone(id);
   const router = useRouter();
   const start = useStartNewProject(id);
   const [confirm, setConfirm] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [phoneErr, setPhoneErr] = useState<string | null>(null);
+  const canEditPhones = user?.role === 'ADMIN' || user?.role === 'SALES';
 
   if (q.isError && q.error instanceof ApiError && q.error.isNotFound) return <NotFoundView />;
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
@@ -108,6 +133,90 @@ export function CustomerDetail({ id }: { id: string }) {
           </Button>
         </div>
       )}
+
+      <section aria-label="Login numbers" className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Login numbers</h2>
+          <span className="text-muted-foreground tabular text-xs">
+            {(phones.data?.additionalPhones.length ?? 0) + 1} /{' '}
+            {MAX_CUSTOMER_ADDITIONAL_PHONES + 1}
+          </span>
+        </div>
+        <div className="bg-card shadow-card space-y-3 rounded-xl border p-4">
+          <div className="flex flex-wrap gap-2">
+            <span className="bg-secondary text-secondary-foreground tabular inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+              <Phone className="size-3" aria-hidden /> {formatPhone(c.phone)}
+              <span className="text-muted-foreground font-normal">Primary</span>
+            </span>
+            {phones.data?.additionalPhones.map((p) => (
+              <span
+                key={p}
+                className="bg-secondary text-secondary-foreground tabular inline-flex items-center gap-1.5 rounded-full py-1 pr-2 pl-3 text-xs font-medium"
+              >
+                <Phone className="size-3" aria-hidden /> {formatPhone(p)}
+                {canEditPhones && (
+                  <button
+                    type="button"
+                    disabled={removePhone.isPending}
+                    aria-label={`Remove ${formatPhone(p)}`}
+                    onClick={() =>
+                      removePhone.mutate(p, {
+                        onSuccess: () => toast.success('Login number removed'),
+                        onError: (er) =>
+                          toast.error(
+                            er instanceof ApiError ? er.message : 'Could not remove number',
+                          ),
+                      })
+                    }
+                    className="hover:bg-foreground/10 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+
+          {canEditPhones &&
+            (phones.data?.additionalPhones.length ?? 0) < MAX_CUSTOMER_ADDITIONAL_PHONES && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setPhoneErr(null);
+                  const parsed = phoneSchema.safeParse(newPhone);
+                  if (!parsed.success) {
+                    setPhoneErr(parsed.error.issues[0]?.message ?? 'Enter a valid mobile number.');
+                    return;
+                  }
+                  addPhone.mutate(parsed.data, {
+                    onSuccess: () => {
+                      toast.success('Login number added');
+                      setNewPhone('');
+                    },
+                    onError: (er) =>
+                      setPhoneErr(
+                        er instanceof ApiError ? er.message : 'Could not add login number.',
+                      ),
+                  });
+                }}
+                className="space-y-1.5"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <PhoneInput
+                    value={newPhone}
+                    onChange={setNewPhone}
+                    disabled={addPhone.isPending}
+                    className="w-full max-w-xs"
+                  />
+                  <Button type="submit" size="sm" disabled={addPhone.isPending || !newPhone.trim()}>
+                    <Plus /> {addPhone.isPending ? 'Adding…' : 'Add login number'}
+                  </Button>
+                </div>
+                {phoneErr && <p className="text-danger text-xs">{phoneErr}</p>}
+              </form>
+            )}
+        </div>
+      </section>
 
       <section aria-label="Projects" className="space-y-3">
         <h2 className="text-sm font-semibold">

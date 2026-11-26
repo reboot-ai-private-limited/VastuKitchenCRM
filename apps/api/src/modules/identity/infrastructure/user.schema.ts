@@ -4,6 +4,7 @@ import { ATTENDANCE_TYPES, ROLE_NAMES } from '@vastu/contracts';
 export interface UserDoc {
   name: string;
   phone: string;
+  additionalPhones: string[];
   role: (typeof ROLE_NAMES)[number];
   designation: string | null;
   attendanceType: (typeof ATTENDANCE_TYPES)[number] | null;
@@ -18,6 +19,7 @@ const schema = new Schema<UserDoc>(
   {
     name: { type: String, required: true, trim: true },
     phone: { type: String, required: true, unique: true },
+    additionalPhones: { type: [String], default: [], index: true },
     role: { type: String, enum: ROLE_NAMES, required: true, index: true },
     designation: { type: String, default: null },
     attendanceType: { type: String, enum: [...ATTENDANCE_TYPES, null], default: null },

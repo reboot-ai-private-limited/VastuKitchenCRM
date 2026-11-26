@@ -6,9 +6,12 @@ import { WaAgentClient } from '@/shared/whatsapp/waAgentClient.js';
 import { SessionIssuer } from './application/services/sessionIssuer.js';
 import { ChangePasswordUseCase } from './application/usecases/changePassword.usecase.js';
 import {
+  AddCustomerPhoneUseCase,
   CreateCustomerInviteUseCase,
   CreateCustomerUseCase,
+  GetCustomerPhonesUseCase,
   RedeemInviteUseCase,
+  RemoveCustomerPhoneUseCase,
 } from './application/usecases/customers.usecase.js';
 import {
   BootstrapAdminUseCase,
@@ -53,8 +56,11 @@ import {
 } from './interface/auth.controller.js';
 import { buildAuthRouter } from './interface/auth.route.js';
 import {
+  makeAddCustomerPhoneController,
   makeCreateCustomerController,
   makeCreateInviteController,
+  makeGetCustomerPhonesController,
+  makeRemoveCustomerPhoneController,
 } from './interface/customers.controller.js';
 import { buildCustomersRouter } from './interface/customers.route.js';
 import {
@@ -157,6 +163,9 @@ export function buildIdentityContainer(): IdentityContainer {
     env.CUSTOMER_INVITE_TTL_DAYS,
   );
   const redeemInvite = new RedeemInviteUseCase(users, invites, tokens, issuer);
+  const getCustomerPhones = new GetCustomerPhonesUseCase(users);
+  const addCustomerPhone = new AddCustomerPhoneUseCase(users);
+  const removeCustomerPhone = new RemoveCustomerPhoneUseCase(users);
 
   const summarise = (u: {
     id: string;
@@ -233,6 +242,9 @@ export function buildIdentityContainer(): IdentityContainer {
         buildCustomersRouter({
           create: makeCreateCustomerController(createCustomer),
           invite: makeCreateInviteController(createInvite),
+          getPhones: makeGetCustomerPhonesController(getCustomerPhones),
+          addPhone: makeAddCustomerPhoneController(addCustomerPhone),
+          removePhone: makeRemoveCustomerPhoneController(removeCustomerPhone),
         }),
       );
       return router;

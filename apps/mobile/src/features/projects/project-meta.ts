@@ -2,7 +2,7 @@ import type { ComplaintStatus, DesignStage, PostVisibility, ProjectStage } from 
 import type { Tone } from '@/constants/theme';
 
 export const STAGE_LABEL: Record<ProjectStage, string> = { DESIGN: 'Design', SITE: 'Site work', CLOSED: 'Closed' };
-export const STAGE_TONE: Record<ProjectStage, Tone> = { DESIGN: 'violet', SITE: 'orange', CLOSED: 'neutral' };
+export const STAGE_TONE: Record<ProjectStage, Tone> = { DESIGN: 'violet', SITE: 'warning', CLOSED: 'neutral' };
 export const STAGE_ORDER: ProjectStage[] = ['DESIGN', 'SITE', 'CLOSED'];
 
 export const DESIGN_LABEL: Record<DesignStage, string> = {
@@ -10,6 +10,13 @@ export const DESIGN_LABEL: Record<DesignStage, string> = {
   IN_DESIGN: 'In design',
   SHARED: 'Design shared',
   APPROVED: 'Design approved',
+};
+/** Short design sub-status for pairing right next to a `Design` stage badge. */
+export const DESIGN_SUB_LABEL: Record<DesignStage, string> = {
+  NOT_STARTED: 'Not started',
+  IN_DESIGN: 'In progress',
+  SHARED: 'Shared',
+  APPROVED: 'Approved',
 };
 export const DESIGN_TONE: Record<DesignStage, Tone> = {
   NOT_STARTED: 'neutral',

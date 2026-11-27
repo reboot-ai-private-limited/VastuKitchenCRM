@@ -1,9 +1,14 @@
 // Tokens copied from apps/web/app/globals.css (see docs/mobile/02-design-system.md). No raw hex outside this file.
 export const colors = {
   background: '#ffffff',
+  pageSoft: '#f6f8f7',
   foreground: '#0f1c1a',
+  inkDeep: '#172b26',
+  inkMuted: '#52645e',
   card: '#ffffff',
+  cardBorder: '#dce5e1',
   primary: '#0e8f78',
+  tealStrong: '#087a67',
   primaryPressed: '#0b7563',
   primarySoft: '#e4f5f0',
   primaryForeground: '#ffffff',

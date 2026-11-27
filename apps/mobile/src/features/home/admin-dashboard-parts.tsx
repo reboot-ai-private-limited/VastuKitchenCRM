@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import type { DashboardAttentionDto, DashboardCountersDto, DashboardDto, DashboardPersonDto } from '@vastu/contracts';
@@ -137,6 +137,11 @@ export function TeamCard({
   days: number;
   offDay: boolean;
 }) {
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const [scrollX, setScrollX] = useState(0);
+  const [viewW, setViewW] = useState(0);
+  // True while some columns are still hidden off the right edge.
+  const moreRight = viewW > 0 && scrollX + viewW < TABLE_W - 1;
   const rows = [...people].sort((a, b) => a.name.localeCompare(b.name));
   if (rows.length === 0) {
     return (
@@ -199,31 +204,54 @@ export function TeamCard({
       </View>
 
       {/* Scrolling columns */}
-      <ScrollView horizontal style={{ flex: 1 }} contentOffset={{ x: 0, y: 0 }} showsHorizontalScrollIndicator nestedScrollEnabled bounces={false}>
-        <View style={{ width: TABLE_W }}>
-          <View style={[styles.headRow, { height: HEAD_H }]}>
-            {COLS.map((c) => (
-              <View key={c.key} style={[styles.headCell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
-                <Text variant="caption" muted style={{ fontSize: 11 }}>
-                  {c.label}
-                </Text>
-              </View>
-            ))}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          contentOffset={{ x: 0, y: 0 }}
+          showsHorizontalScrollIndicator
+          nestedScrollEnabled
+          bounces={false}
+          onLayout={(e) => setViewW(e.nativeEvent.layout.width)}
+          onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+          scrollEventThrottle={16}
+        >
+          <View style={{ width: TABLE_W }}>
+            <View style={[styles.headRow, { height: HEAD_H }]}>
+              {COLS.map((c) => (
+                <View key={c.key} style={[styles.headCell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
+                  <Text variant="caption" muted style={{ fontSize: 11 }}>
+                    {c.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            {rows.map((p) => {
+              const row = cells(p);
+              return (
+                <View key={p.userId} style={[styles.rowLine, { height: ROW_H }]}>
+                  {COLS.map((c, i) => (
+                    <View key={c.key} style={[styles.cell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
+                      {row[i]}
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
           </View>
-          {rows.map((p) => {
-            const row = cells(p);
-            return (
-              <View key={p.userId} style={[styles.rowLine, { height: ROW_H }]}>
-                {COLS.map((c, i) => (
-                  <View key={c.key} style={[styles.cell, { width: c.w }, c.right && { alignItems: 'flex-end' }]}>
-                    {row[i]}
-                  </View>
-                ))}
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+        </ScrollView>
+        {moreRight ? (
+          <Pressable
+            onPress={() => scrollRef.current?.scrollTo({ x: scrollX + viewW / 2 })}
+            accessibilityRole="button"
+            accessibilityLabel="Show more columns"
+            hitSlop={12}
+            style={styles.headMore}
+          >
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -295,6 +323,16 @@ const styles = StyleSheet.create({
   kpi: { gap: 4, padding: space[4] },
   headRow: { flexDirection: 'row', backgroundColor: colors.muted },
   headCell: { justifyContent: 'center', paddingHorizontal: space[3], backgroundColor: colors.muted },
+  headMore: {
+    position: 'absolute',
+    top: 0,
+    right: -1,
+    width: 29,
+    height: HEAD_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.muted,
+  },
   rowLine: {
     flexDirection: 'row',
     alignItems: 'center',

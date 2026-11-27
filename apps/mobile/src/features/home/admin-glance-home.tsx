@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import Animated, { interpolate, useAnimatedStyle, useDerivedValue, withSpring } from 'react-native-reanimated';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -12,14 +13,16 @@ import { Chip } from '@/components/ui/chip';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StackedActivityCards } from '@/components/ui/stacked-activity-cards';
 import { Text } from '@/components/ui/text';
-import { colors, radius, space, tone, type Tone } from '@/constants/theme';
+import { colors, font, radius, space, tone, type Tone } from '@/constants/theme';
 import { routeFor } from '@/features/alerts/route-for';
 import { CheckInCard } from '@/features/attendance/check-in-card';
 import { ComplaintsCard, KpiRow, TeamCard } from './admin-dashboard-parts';
 import { NetworkError } from '@/lib/api/client';
 import { getDashboard } from '@/lib/api/endpoints/dashboard';
 import { useSession } from '@/lib/auth/session';
+import { softTick } from '@/lib/haptics';
 import {
   addDays,
   businessDate,
@@ -61,13 +64,28 @@ function computeRange(preset: RangePreset): { from: string; to: string } {
   return { from: `${businessMonth()}-01`, to: today };
 }
 
+function AnimatedChevron({ expanded, color }: { expanded: boolean; color: string }) {
+  const progress = useDerivedValue<number>(
+    () => withSpring(expanded ? 1 : 0, { damping: 26, stiffness: 240, mass: 0.9 }),
+    [expanded],
+  );
+  const style = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(progress.value, [0, 1], [0, 180])}deg` }],
+  }));
+  return (
+    <Animated.View style={style}>
+      <Feather name="chevron-down" size={15} color={color} />
+    </Animated.View>
+  );
+}
+
 export function AdminGlanceHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useSession();
 
   const [preset, setPreset] = useState<RangePreset>('today');
-  const [selectedBucket, setSelectedBucket] = useState<AttentionKey | null>(null);
+  const [selectedBucket, setSelectedBucket] = useState<AttentionKey | 'none' | null>(null);
   const range = useMemo(() => computeRange(preset), [preset]);
 
   const q = useQuery({
@@ -84,11 +102,11 @@ export function AdminGlanceHome() {
   }, [attention]);
 
   const activeBucketKey: AttentionKey | null =
-    selectedBucket && attention && attention[selectedBucket].total > 0
-      ? selectedBucket
-      : (nonEmptyBuckets[0]?.key ?? null);
-
-  const activeItems = activeBucketKey && attention ? attention[activeBucketKey].items.slice(0, 5) : [];
+    selectedBucket === 'none'
+      ? null
+      : selectedBucket && attention && attention[selectedBucket].total > 0
+        ? selectedBucket
+        : (nonEmptyBuckets[0]?.key ?? null);
 
   const rangeTitle = RANGE_OPTIONS.find((r) => r.key === preset)?.label ?? 'Today';
 
@@ -175,9 +193,6 @@ export function AdminGlanceHome() {
           {attention ? (
             <Reveal>
               <View style={{ gap: space[2] }}>
-                <Text variant="caption" muted style={styles.eyebrow}>
-                  NEEDS YOUR ATTENTION
-                </Text>
                 {nonEmptyBuckets.length === 0 ? (
                   <Card style={styles.allClearCard}>
                     <View style={[styles.iconCircle, { backgroundColor: tone.success.bg }]}>
@@ -191,68 +206,77 @@ export function AdminGlanceHome() {
                     </View>
                   </Card>
                 ) : (
-                  <Card style={{ gap: space[3] }}>
-                    <View style={{ gap: space[2] }}>
-                      {nonEmptyBuckets.map((b) => {
-                        const block = attention[b.key];
-                        const selected = b.key === activeBucketKey;
-                        const countStr = `${block.total}${block.capped ? '+' : ''}`;
-                        return (
+                  <View style={{ gap: 2 }}>
+                    {nonEmptyBuckets.map((b) => {
+                      const block = attention[b.key];
+                      const selected = b.key === activeBucketKey;
+                      const countStr = `${block.total}${block.capped ? '+' : ''}`;
+                      const accent = tone[b.tone];
+                      const bucketItems = block.items;
+                      return (
+                        <View key={b.key}>
                           <PressableScale
-                            key={b.key}
-                            onPress={() => setSelectedBucket(b.key)}
+                            onPress={() => {
+                              softTick();
+                              setSelectedBucket(selected ? 'none' : b.key);
+                            }}
                             accessibilityRole="button"
-                            accessibilityState={{ selected }}
+                            accessibilityState={{ expanded: selected, selected }}
                             style={[
                               styles.bucketRow,
                               {
-                                backgroundColor: selected ? colors.primary : tone[b.tone].bg,
+                                backgroundColor: selected ? `${accent.fg}BF` : `${accent.fg}9E`,
+                                borderColor: 'transparent',
                               },
                             ]}
                           >
                             <Feather
                               name={b.icon}
-                              size={14}
-                              color={selected ? colors.primaryForeground : tone[b.tone].fg}
+                              size={16}
+                              color={colors.primaryForeground}
                             />
                             <Text
                               variant="caption"
-                              color={selected ? colors.primaryForeground : tone[b.tone].fg}
-                              style={{ fontVariant: ['tabular-nums'] }}
+                              color={colors.primaryForeground}
+                              style={{
+                                flex: 1,
+                                fontFamily: font.semibold,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.8,
+                              }}
                             >
-                              {b.label} · {countStr}
+                              {b.label}
                             </Text>
+                            <Text
+                              variant="label"
+                              color={colors.primaryForeground}
+                              style={{ fontVariant: ['tabular-nums'], fontFamily: font.bold }}
+                            >
+                              {countStr}
+                            </Text>
+                            <AnimatedChevron expanded={selected} color={colors.primaryForeground} />
                           </PressableScale>
-                        );
-                      })}
-                    </View>
 
-                    <View style={{ gap: space[2] }}>
-                      {activeItems.map((item, idx) => {
-                        const href = routeFor(item.ref, 'ADMIN');
-                        return (
-                          <PressableScale
-                            key={`${item.ref.kind}-${item.ref.id}-${idx}`}
-                            disabled={!href}
-                            onPress={() => href && router.push(href)}
-                            style={styles.attentionRow}
-                          >
-                            <View style={{ flex: 1, gap: 2 }}>
-                              <Text variant="label" numberOfLines={1}>
-                                {item.title}
-                              </Text>
-                              <Text variant="caption" muted numberOfLines={2}>
-                                {item.detail}
-                              </Text>
-                            </View>
-                            {href ? (
-                              <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-                            ) : null}
-                          </PressableScale>
-                        );
-                      })}
-                    </View>
-                  </Card>
+                          <StackedActivityCards
+                            expanded={selected}
+                            items={bucketItems.map((item, idx) => ({
+                              id: `${item.ref.kind}-${item.ref.id}-${idx}`,
+                              title: item.title,
+                              detail: item.detail,
+                              actionable: Boolean(routeFor(item.ref, 'ADMIN')),
+                            }))}
+                            accent={accent}
+                            icon={b.icon}
+                            onPressItem={(_card, idx) => {
+                              const target = bucketItems[idx];
+                              const href = target ? routeFor(target.ref, 'ADMIN') : null;
+                              if (href) router.push(href);
+                            }}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
                 )}
               </View>
             </Reveal>
@@ -321,10 +345,30 @@ const styles = StyleSheet.create({
   bucketRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 44,
-    paddingHorizontal: 12,
+    gap: space[3],
+    minHeight: 54,
+    paddingHorizontal: space[4],
     borderRadius: radius.md,
+    borderWidth: 1,
+  },
+  bucketIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bucketCount: {
+    minWidth: 26,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedQueue: {
+    paddingTop: 2,
+    paddingBottom: space[1],
   },
   attentionRow: {
     flexDirection: 'row',

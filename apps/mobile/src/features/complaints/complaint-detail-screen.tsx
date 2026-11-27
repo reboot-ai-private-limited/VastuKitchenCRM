@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Keyboard, ScrollView, TextInput, View } from 'react-native';
+import { Fragment, useCallback, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import type { ComplaintDto, ComplaintEventDto } from '@vastu/contracts';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { PhotoAttachBar } from '@/components/ui/photo-attach-bar';
 import { PhotoGrid } from '@/components/ui/photo-grid';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -15,12 +15,27 @@ import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { ROLE_LABEL } from '@/constants/roles';
-import { colors, font, hit, radius, space } from '@/constants/theme';
+import { colors, font, hit, radius, space, tone, type Tone } from '@/constants/theme';
+import { BottomBar } from '@/features/projects/bottom-bar';
+import { dayLabel } from '@/features/projects/chat-stream';
+import { CommentCard } from '@/features/projects/comment-card';
+import { DetailHeader, headerMutedText } from '@/features/projects/detail-header';
+import { MessageBar } from '@/features/projects/message-bar';
+import { SheetRow } from '@/features/projects/sheet-row';
+import { SlidingSwitch } from '@/features/projects/sliding-switch';
+import {
+  DaySeparator,
+  TimelineEntryHeader,
+  TimelineEntryRow,
+  TimelineEventRow,
+} from '@/features/projects/timeline-item';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { signCommentUpload, signResolveUpload } from '@/lib/api/endpoints/complaints';
 import { listUsers } from '@/lib/api/endpoints/users';
-import { timeAgo } from '@/lib/format';
-import { EVENT_LABEL, STATUS_LABEL, STATUS_TONE } from './complaint-meta';
+import { useSession } from '@/lib/auth/session';
+import { businessDate, formatDate, formatTime } from '@/lib/format';
+import { STATUS_LABEL, STATUS_TONE } from './complaint-meta';
+import { complaintTimeline } from './complaint-timeline';
 import {
   useAssignComplaint,
   useComplaintAction,
@@ -42,27 +57,67 @@ const ACTION_HINT: Record<ComplaintAction, string> = {
   reopen: 'Why is it being reopened? (required)',
   close: 'Closing note (optional)',
 };
+const MODE_OPTION = {
+  comment: { value: 'comment', label: 'Message', icon: 'message-circle' },
+  resolve: { value: 'resolve', label: 'Resolve', icon: 'check-circle' },
+  reopen: { value: 'reopen', label: 'Reopen', icon: 'rotate-ccw' },
+  close: { value: 'close', label: 'Close', icon: 'archive' },
+} as const;
+
+/** How a status change reads in the timeline. Assignments are routine, so they get one line. */
+const EVENT_CARD: Record<
+  'RESOLVED' | 'REOPENED' | 'CLOSED',
+  { tag: string; verb: string; t: Tone }
+> = {
+  RESOLVED: { tag: 'RESOLVED', verb: 'resolved this complaint', t: 'success' },
+  REOPENED: { tag: 'REOPENED', verb: 'reopened this complaint', t: 'warning' },
+  CLOSED: { tag: 'CLOSED', verb: 'closed this complaint', t: 'neutral' },
+};
+
+function StatusEntry({
+  event,
+  note,
+  photos,
+  mine,
+}: {
+  event: ComplaintEventDto & { type: 'RESOLVED' | 'REOPENED' | 'CLOSED' };
+  note: string | null;
+  photos: ComplaintDto['resolutionImages'];
+  mine: boolean;
+}) {
+  const meta = EVENT_CARD[event.type];
+  const actor = event.actor?.name ?? 'System';
+  return (
+    <TimelineEntryRow authorName={actor} accentAvatar={mine}>
+      <TimelineEntryHeader text={`${actor} ${meta.verb}`} meta={formatTime(event.at)} />
+      <View style={[styles.eventCard, { backgroundColor: tone[meta.t].bg }]}>
+        <Text variant="caption" color={tone[meta.t].fg} style={{ fontFamily: font.semibold }}>
+          {meta.tag}
+        </Text>
+        {note ? <Text color={colors.inkDeep}>{note}</Text> : null}
+        <PhotoGrid images={photos} label="Resolution photo" />
+      </View>
+    </TimelineEntryRow>
+  );
+}
 
 export function ComplaintDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user } = useSession();
   const q = useComplaintDetail(id);
   const act = useComplaintAction(id);
   const assign = useAssignComplaint(id);
   const delComment = useDeleteComplaintComment(id);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [mode, setMode] = useState<ComplaintAction>('comment');
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [pickedMode, setMode] = useState<ComplaintAction>('comment');
   const [text, setText] = useState('');
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const c = q.data;
-  const [kbOpen, setKbOpen] = useState(false);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setKbOpen(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKbOpen(false));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  // If someone else moved the complaint on, a picked action may no longer be allowed.
+  const mode: ComplaintAction =
+    pickedMode !== 'comment' && c && !c.can[pickedMode] ? 'comment' : pickedMode;
 
   // Resolution photos use the resolver-only ticket; message photos use the complaint-scoped one (assignees need not be project members).
   const sign = useCallback(
@@ -92,6 +147,8 @@ export function ComplaintDetailScreen() {
           setText('');
           photos.clear();
           setMode('comment');
+          // The new entry lands at the end of the timeline.
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
         },
       },
     );
@@ -105,12 +162,14 @@ export function ComplaintDetailScreen() {
         : act.error.message
     : null;
 
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
   let content;
   if (q.isPending) {
     content = (
       <View style={{ gap: space[3] }}>
-        <Skeleton height={28} width="60%" />
-        <Skeleton height={120} />
+        <Skeleton height={70} width="85%" />
+        <Skeleton height={140} />
       </View>
     );
   } else if (q.isError || !c) {
@@ -118,141 +177,133 @@ export function ComplaintDetailScreen() {
     content = (
       <View style={{ gap: space[3], alignItems: 'center', paddingVertical: space[8] }}>
         <Text muted>{notFound ? 'This complaint could not be found.' : 'Could not load this complaint.'}</Text>
-        {!notFound ? <Button title="Retry" variant="outline" onPress={() => void q.refetch()} /> : null}
+        {!notFound ? <Button title="Try again" variant="outline" onPress={() => void q.refetch()} /> : null}
       </View>
     );
   } else {
-    const actions = (['resolve', 'reopen', 'close'] as const).filter((a) => c.can[a]);
+    const raiser = c.raisedBy?.name ?? c.customer.name;
+    const items = complaintTimeline(c);
     content = (
-      <Reveal style={{ gap: space[5] }}>
-        <View style={{ gap: space[2] }}>
-          <Text variant="title">{c.projectName}</Text>
-          <View style={{ flexDirection: 'row', gap: space[2] }}>
-            <Badge label={STATUS_LABEL[c.status]} t={STATUS_TONE[c.status]} />
-            {c.reopenCount > 0 ? <Badge label={`Reopened ${c.reopenCount}x`} t="orange" /> : null}
-          </View>
-          <Text variant="caption" muted>
-            {c.customer.name} · raised {timeAgo(c.createdAt)}
-            {c.assignedTo ? ` · assigned to ${c.assignedTo.name}` : ''}
-          </Text>
-        </View>
-
-        <Card style={{ gap: space[2] }}>
-          <Text>{c.description}</Text>
-          <PhotoGrid images={c.images} label="Complaint photo" />
-        </Card>
-
-        {c.resolutionNote ? (
-          <Card style={{ gap: space[2] }}>
-            <Text variant="caption" muted>
-              Resolution
-            </Text>
-            <Text>{c.resolutionNote}</Text>
-            <PhotoGrid images={c.resolutionImages} label="Resolution photo" />
-          </Card>
+      <Reveal style={{ gap: space[4] }}>
+        {c.can.assign ? (
+          <SheetRow
+            icon="user-plus"
+            label={c.assignedTo ? 'Reassign' : 'Assign'}
+            caption={c.assignedTo ? `Assigned to ${c.assignedTo.name}` : 'Not assigned yet'}
+            onPress={() => setAssignOpen(true)}
+          />
         ) : null}
 
-        {actions.length > 0 || c.can.assign ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-            {c.can.assign ? (
-              <Button
-                title={c.assignedTo ? 'Reassign' : 'Assign'}
-                size="sm"
-                variant="outline"
-                onPress={() => setAssignOpen(true)}
-              />
-            ) : null}
-            {actions.map((a) => (
-              <Button
-                key={a}
-                title={ACTION_LABEL[a]}
-                size="sm"
-                variant={mode === a ? 'default' : 'outline'}
-                onPress={() => setMode(mode === a ? 'comment' : a)}
-              />
-            ))}
-          </View>
-        ) : null}
-
-        <View style={{ gap: space[3] }}>
-          <Text variant="section">Conversation</Text>
-          {c.comments.length === 0 ? <Text muted>No messages yet.</Text> : null}
-          {c.comments.map((m) => (
-            <Card key={m.id} style={{ gap: space[1] }}>
-              <View style={{ flexDirection: 'row', gap: space[2] }}>
-                <Text variant="label" style={{ flex: 1 }} numberOfLines={1}>
-                  {m.author.name}
+        <View>
+          <DaySeparator label={dayLabel(c.createdAt)} />
+          <View style={styles.item}>
+            <TimelineEntryRow authorName={raiser} accentAvatar={c.raisedBy?.id === user?.id}>
+              <TimelineEntryHeader text={`${raiser} raised a complaint`} meta={formatTime(c.createdAt)} />
+              <View style={[styles.eventCard, { backgroundColor: tone.danger.bg }]}>
+                <Text variant="caption" color={tone.danger.fg} style={{ fontFamily: font.semibold }}>
+                  COMPLAINT
                 </Text>
-                <Text variant="caption" muted>
-                  {timeAgo(m.createdAt)}
-                </Text>
+                <Text color={colors.inkDeep}>{c.description}</Text>
+                <PhotoGrid images={c.images} label="Complaint photo" />
               </View>
-              {m.text ? <Text>{m.text}</Text> : null}
-              <PhotoGrid images={m.images} label={`Photo from ${m.author.name}`} />
-              {m.canDelete ? (
-                <PressableScale
-                  onPress={() => delComment.mutate(m.id)}
-                  disabled={delComment.isPending}
-                  accessibilityLabel={`Delete message from ${m.author.name}`}
-                  style={{ alignSelf: 'flex-start', minHeight: hit, justifyContent: 'center' }}
-                >
-                  <Text variant="caption" color={colors.destructive}>
-                    Delete
-                  </Text>
-                </PressableScale>
-              ) : null}
-            </Card>
-          ))}
+            </TimelineEntryRow>
+          </View>
+
+          {items.map((item, i) => {
+            const previousAt = items[i - 1]?.at ?? c.createdAt;
+            const newDay = businessDate(previousAt) !== businessDate(item.at);
+            let row;
+            if (item.type === 'comment') {
+              const m = item.comment;
+              row = (
+                <TimelineEntryRow authorName={m.author.name} accentAvatar={m.author.id === user?.id}>
+                  <CommentCard
+                    author={m.author.name}
+                    isCustomer={m.author.isCustomer}
+                    at={m.createdAt}
+                    text={m.text}
+                    {...(m.canDelete ? { onDelete: () => delComment.mutate(m.id) } : {})}
+                    deleting={delComment.isPending}
+                  >
+                    <PhotoGrid images={m.images} label={`Photo from ${m.author.name}`} />
+                  </CommentCard>
+                </TimelineEntryRow>
+              );
+            } else {
+              const e = item.event;
+              if (e.type === 'RESOLVED' || e.type === 'REOPENED' || e.type === 'CLOSED') {
+                row = (
+                  <StatusEntry
+                    event={{ ...e, type: e.type }}
+                    note={item.isResolution ? (c.resolutionNote ?? e.note) : e.note}
+                    photos={item.isResolution ? c.resolutionImages : []}
+                    mine={e.actor?.id === user?.id}
+                  />
+                );
+              } else {
+                const actor = e.actor?.name ?? 'System';
+                row = (
+                  <TimelineEventRow
+                    text={`${actor} assigned this${e.assignee ? ` to ${e.assignee.name}` : ''}`}
+                    at={e.at}
+                    highlighted
+                  />
+                );
+              }
+            }
+            return (
+              <Fragment key={item.key}>
+                {newDay ? <DaySeparator label={dayLabel(item.at)} /> : null}
+                <View style={styles.item}>{row}</View>
+              </Fragment>
+            );
+          })}
+
           {delComment.isError ? (
             <Text variant="caption" color={colors.destructive}>
               {delComment.error.message}
             </Text>
           ) : null}
         </View>
-
-        <View style={{ gap: space[3] }}>
-          <Text variant="section">History</Text>
-          {c.history.map((h, i) => (
-            <Text key={i} variant="caption" muted>
-              {EVENT_LABEL[h.type]} · {h.actor?.name ?? 'System'} · {timeAgo(h.at)}
-              {h.type === 'ASSIGNED' && h.assignee ? ` · to ${h.assignee.name}` : ''}
-              {h.note && !(h.type === 'ASSIGNED' && h.assignee) ? ` · ${h.note}` : ''}
-            </Text>
-          ))}
-        </View>
       </Reveal>
     );
   }
 
+  const actions = c ? (['resolve', 'reopen', 'close'] as const).filter((a) => c.can[a]) : [];
+
   return (
     <>
-      <Stack.Screen
-        options={{ headerShown: true, title: '', headerShadowVisible: false, headerTintColor: colors.primary }}
-      />
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        behavior="padding"
-      >
+      <Stack.Screen options={{ headerShown: false }} />
+      <KeyboardAvoidingView style={styles.root} behavior="padding">
+        <DetailHeader title={c?.projectName ?? 'Complaint'} onBack={goBack}>
+          {c ? (
+            <>
+              <Text variant="caption" color={headerMutedText} numberOfLines={1} style={{ flexShrink: 1 }}>
+                {c.customer.name} · {formatDate(c.createdAt)}
+                {c.assignedTo && !c.can.assign ? ` · ${c.assignedTo.name}` : ''}
+              </Text>
+              <Badge label={STATUS_LABEL[c.status]} t={STATUS_TONE[c.status]} />
+              {c.reopenCount > 0 ? <Badge label={`Reopened x${c.reopenCount}`} t="warning" /> : null}
+            </>
+          ) : null}
+        </DetailHeader>
         <ScrollView
-          contentContainerStyle={{ padding: space[4], paddingTop: space[1], paddingBottom: space[6], gap: space[5] }}
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: space[4], paddingBottom: space[6] }}
           keyboardShouldPersistTaps="handled"
         >
           {content}
         </ScrollView>
         {c ? (
-          <View
-            style={{
-              padding: space[3],
-              paddingBottom: (kbOpen ? 0 : insets.bottom) + space[3],
-              gap: space[2],
-              borderTopWidth: 1,
-              borderTopColor: colors.border,
-            }}
-          >
-            {errorText ? (
-              <Text variant="caption" color={colors.destructive} accessibilityRole="alert">
-                {errorText}
-              </Text>
+          <BottomBar>
+            {actions.length > 0 ? (
+              <SlidingSwitch<ComplaintAction>
+                options={[MODE_OPTION.comment, ...actions.map((a) => MODE_OPTION[a])]}
+                value={mode}
+                onChange={setMode}
+                disabled={act.isPending}
+              />
             ) : null}
             {canAttach ? (
               <PhotoAttachBar
@@ -262,40 +313,53 @@ export function ComplaintDetailScreen() {
                 onGallery={() => void photos.pickFromGallery()}
                 onRemove={photos.remove}
                 onRetry={photos.retry}
+                hideActions
               />
             ) : null}
-            <View style={{ flexDirection: 'row', gap: space[2], alignItems: 'flex-end' }}>
-              <TextInput
-                value={text}
-                onChangeText={setText}
-                placeholder={ACTION_HINT[mode]}
-                placeholderTextColor={colors.placeholder}
-                accessibilityLabel={ACTION_HINT[mode]}
-                multiline
-                style={{
-                  flex: 1,
-                  minHeight: hit,
-                  maxHeight: 120,
-                  paddingHorizontal: space[3],
-                  paddingVertical: space[2],
-                  borderRadius: radius.lg,
-                  borderWidth: 1,
-                  borderColor: colors.input,
-                  fontFamily: font.regular,
-                  fontSize: 16,
-                  color: colors.foreground,
-                }}
-              />
+            <MessageBar
+              value={text}
+              onChangeText={setText}
+              placeholder={ACTION_HINT[mode]}
+              error={errorText}
+              {...(canAttach ? { onAttach: () => setAttachOpen(true) } : {})}
+              {...(mode === 'comment'
+                ? { onSend: submit, canSend: canSubmit && photos.uploadsDone, sending: act.isPending }
+                : {})}
+            />
+            {mode !== 'comment' ? (
+              // A status change is named on its button, so it is never sent by a bare arrow.
               <Button
-                title={mode === 'comment' ? 'Send' : 'Submit'}
+                title={ACTION_LABEL[mode]}
                 loading={act.isPending}
-                disabled={!canSubmit}
+                disabled={!canSubmit || !photos.uploadsDone}
                 onPress={submit}
+                fullWidth
               />
-            </View>
-          </View>
+            ) : null}
+          </BottomBar>
         ) : null}
       </KeyboardAvoidingView>
+
+      <BottomSheet visible={attachOpen} onClose={() => setAttachOpen(false)} title="Add attachment">
+        <SheetRow
+          icon="camera"
+          label="Take photo"
+          caption="Use the camera"
+          onPress={() => {
+            setAttachOpen(false);
+            void photos.takePhoto();
+          }}
+        />
+        <SheetRow
+          icon="image"
+          label="Choose from gallery"
+          caption="Attach photos from your phone"
+          onPress={() => {
+            setAttachOpen(false);
+            void photos.pickFromGallery();
+          }}
+        />
+      </BottomSheet>
 
       <BottomSheet
         visible={assignOpen}
@@ -305,21 +369,30 @@ export function ComplaintDetailScreen() {
       >
         {staffQ.isPending ? <Skeleton height={80} /> : null}
         {staffQ.isError ? <Text muted>Could not load staff. Try again.</Text> : null}
-        {(staffQ.data ?? []).map((u) => (
-          <PressableScale
-            key={u.id}
-            onPress={() => assign.mutate(u.id, { onSuccess: () => setAssignOpen(false) })}
-            disabled={assign.isPending}
-            accessibilityLabel={`Assign to ${u.name}`}
-            accessibilityState={{ selected: c?.assignedTo?.id === u.id }}
-            style={{ minHeight: hit, justifyContent: 'center' }}
-          >
-            <Text variant="label">{u.name}</Text>
-            <Text variant="caption" muted>
-              {u.designation ?? ROLE_LABEL[u.role]}
-            </Text>
-          </PressableScale>
-        ))}
+        {(staffQ.data ?? []).map((u) => {
+          const selected = c?.assignedTo?.id === u.id;
+          return (
+            <PressableScale
+              key={u.id}
+              onPress={() => assign.mutate(u.id, { onSuccess: () => setAssignOpen(false) })}
+              disabled={assign.isPending}
+              accessibilityRole="button"
+              accessibilityLabel={`Assign to ${u.name}`}
+              accessibilityState={{ selected }}
+              style={[styles.person, selected && styles.personSelected]}
+            >
+              <Avatar name={u.name} size={32} accent={selected} />
+              <View style={{ flex: 1 }}>
+                <Text variant="label" color={colors.inkDeep}>
+                  {u.name}
+                </Text>
+                <Text variant="caption" color={colors.inkMuted}>
+                  {u.designation ?? ROLE_LABEL[u.role]}
+                </Text>
+              </View>
+            </PressableScale>
+          );
+        })}
         {assign.isError ? (
           <Text variant="caption" color={colors.destructive}>
             {assign.error.message}
@@ -329,3 +402,22 @@ export function ComplaintDetailScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.pageSoft },
+  item: { marginVertical: space[2] },
+  eventCard: { borderRadius: radius.xl, padding: space[3], gap: space[2] },
+  person: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    minHeight: hit,
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  personSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+});

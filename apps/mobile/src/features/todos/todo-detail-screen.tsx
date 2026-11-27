@@ -1,37 +1,66 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
-import { Image } from 'expo-image';
-import { Feather } from '@expo/vector-icons';
+import { Fragment, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { PressableScale } from '@/components/ui/pressable-scale';
+import { PhotoGrid } from '@/components/ui/photo-grid';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space } from '@/constants/theme';
+import { colors, font, radius, space, tone } from '@/constants/theme';
+import { BottomBar } from '@/features/projects/bottom-bar';
+import { dayLabel } from '@/features/projects/chat-stream';
+import { CommentCard } from '@/features/projects/comment-card';
+import { DetailHeader, headerMutedText } from '@/features/projects/detail-header';
+import { MessageBar } from '@/features/projects/message-bar';
+import { SheetRow } from '@/features/projects/sheet-row';
+import {
+  DaySeparator,
+  TimelineEntryHeader,
+  TimelineEntryRow,
+  TimelineEventRow,
+} from '@/features/projects/timeline-item';
 import { ApiError } from '@/lib/api/client';
-import { formatDate, timeAgo } from '@/lib/format';
+import { useSession } from '@/lib/auth/session';
+import { businessDate, formatDay, formatTime } from '@/lib/format';
 import { PendingSyncBadge } from '@/offline';
 import { useAddTodoComment, useTodoComments, usePendingTodoDone, useTodoDetail, useToggleTodo } from './use-todos';
+
+/** A titled line of people in the details card. */
+function People({ label, people }: { label: string; people: { id: string; name: string }[] }) {
+  return (
+    <View style={{ gap: space[2], paddingVertical: space[2] }}>
+      <Text variant="caption" color={colors.inkMuted} style={{ fontFamily: font.semibold }}>
+        {label}
+      </Text>
+      {people.length === 0 ? (
+        <Text muted>Unassigned</Text>
+      ) : (
+        people.map((p) => (
+          <View key={p.id} style={styles.person}>
+            <Avatar name={p.name} size={32} />
+            <Text variant="label" color={colors.inkDeep} style={{ flex: 1 }}>
+              {p.name}
+            </Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
 
 export function TodoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { user } = useSession();
   const q = useTodoDetail(id);
   const comments = useTodoComments(id);
   const toggle = useToggleTodo();
   const addComment = useAddTodoComment(id);
   const [draft, setDraft] = useState('');
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   const todo = q.data;
   const pendingDone = usePendingTodoDone(id);
@@ -41,16 +70,22 @@ export function TodoDetailScreen() {
     const trimmed = draft.trim();
     if (!trimmed || addComment.isPending) return;
     addComment.mutate(trimmed, {
-      onSuccess: () => setDraft(''),
+      onSuccess: () => {
+        setDraft('');
+        // The new comment lands at the end of the timeline.
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+      },
     });
   };
+
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   let body;
   if (q.isPending) {
     body = (
       <View style={{ gap: space[3] }}>
-        <Skeleton height={28} width="70%" />
-        <Skeleton height={120} />
+        <Skeleton height={70} width="85%" />
+        <Skeleton height={140} />
       </View>
     );
   } else if (q.isError || !todo) {
@@ -58,222 +93,174 @@ export function TodoDetailScreen() {
     body = (
       <View style={{ gap: space[3], alignItems: 'center', paddingVertical: space[8] }}>
         <Text muted>{notFound ? 'This to-do could not be found.' : 'Could not load this to-do.'}</Text>
-        {!notFound ? <Button title="Retry" variant="outline" onPress={() => void q.refetch()} /> : null}
+        {!notFound ? <Button title="Try again" variant="outline" onPress={() => void q.refetch()} /> : null}
       </View>
     );
   } else {
+    const author = todo.createdBy?.name ?? 'Someone';
+    // Comments and the completion, oldest first. A tick not yet synced has no time to place it at.
+    const completed = isDone ? todo.completed : null;
+    const items = [
+      ...(comments.data ?? []).map((c) => ({ key: c.id, at: c.createdAt, comment: c })),
+      ...(completed ? [{ key: 'completed', at: completed.at, comment: null }] : []),
+    ].sort((a, b) => a.at.localeCompare(b.at));
+
     body = (
       <>
         <Reveal>
-          <View style={{ gap: space[2] }}>
-            <Text variant="title">{todo.title}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-              {isDone ? (
-                <Badge label={todo.completed ? `Completed by ${todo.completed.by.name}` : 'Completed'} t="success" />
-              ) : todo.isOverdue ? (
-                <Badge label="Overdue" t="danger" />
-              ) : (
-                <Badge label="Open" t="info" />
-              )}
-              {pendingDone !== null ? <PendingSyncBadge filter={(i) => i.entityKey === `todo:${id}`} /> : null}
-              {todo.dueOn ? <Badge label={`Due ${formatDate(todo.dueOn)}`} t="neutral" /> : null}
-            </View>
+          <View style={styles.details}>
+            <People label="ASSIGNED TO" people={todo.assignees} />
+            {todo.notifyOnDone.length > 0 ? (
+              <People label="NOTIFY WHEN DONE" people={todo.notifyOnDone} />
+            ) : null}
           </View>
         </Reveal>
+
+        <SheetRow
+          icon="layers"
+          label="Open project"
+          caption="Chat, to-dos, complaints and docs"
+          onPress={() =>
+            router.push({ pathname: '/projects/[id]', params: { id: todo.projectId } } as Href)
+          }
+        />
 
         <Reveal index={1}>
-          <View style={{ flexDirection: 'row', gap: space[3] }}>
-            <View style={{ flex: 1 }}>
-              <Button
-                title={isDone ? 'Reopen to-do' : 'Mark complete'}
-                variant={isDone ? 'outline' : 'default'}
-                size="lg"
-                loading={toggle.isPending}
-                onPress={() => toggle.mutate({ id: todo.id, done: !isDone })}
-                fullWidth
-              />
-            </View>
-            <PressableScale
-              onPress={() =>
-                router.push({ pathname: '/projects/[id]', params: { id: todo.projectId } } as Href)
-              }
-              style={styles.projectBtn}
-              accessibilityLabel="Open project"
-            >
-              <Feather name="layers" size={18} color={colors.primary} />
-              <Text variant="label" color={colors.primary}>
-                Project
-              </Text>
-            </PressableScale>
+          <DaySeparator label={dayLabel(todo.createdAt)} />
+          <View style={styles.item}>
+            <TimelineEntryRow authorName={author} accentAvatar={todo.createdBy?.id === user?.id}>
+              <TimelineEntryHeader text={`${author} added a to-do`} meta={formatTime(todo.createdAt)} />
+              <View style={styles.todoCard}>
+                <Text variant="caption" color={tone.violet.fg} style={{ fontFamily: font.semibold }}>
+                  TO-DO
+                </Text>
+                <Text variant="section" color={colors.inkDeep}>
+                  {todo.title}
+                </Text>
+                {todo.notes ? <Text color={colors.inkDeep}>{todo.notes}</Text> : null}
+                <PhotoGrid images={todo.images} label="To-do photo" />
+              </View>
+            </TimelineEntryRow>
           </View>
-        </Reveal>
 
-        <Reveal index={2}>
-          <Card style={{ gap: space[3] }}>
-            {todo.notes ? (
-              <View style={{ gap: 4 }}>
-                <Text variant="caption" muted>
-                  Notes
-                </Text>
-                <Text>{todo.notes}</Text>
-              </View>
-            ) : null}
+          {items.map((item, i) => {
+            const previousAt = items[i - 1]?.at ?? todo.createdAt;
+            const newDay = businessDate(previousAt) !== businessDate(item.at);
+            const c = item.comment;
+            return (
+              <Fragment key={item.key}>
+                {newDay ? <DaySeparator label={dayLabel(item.at)} /> : null}
+                <View style={styles.item}>
+                  {c ? (
+                    <TimelineEntryRow authorName={c.author.name} accentAvatar={c.author.id === user?.id}>
+                      <CommentCard
+                        author={c.author.name}
+                        at={c.createdAt}
+                        text={c.text}
+                      >
+                        <PhotoGrid images={c.images} label={`Photo from ${c.author.name}`} />
+                      </CommentCard>
+                    </TimelineEntryRow>
+                  ) : (
+                    <TimelineEventRow
+                      text={`${completed?.by.name ?? 'Someone'} completed this to-do`}
+                      at={item.at}
+                      highlighted
+                      highlightTone="success"
+                    />
+                  )}
+                </View>
+              </Fragment>
+            );
+          })}
 
-            <View style={{ gap: 4 }}>
-              <Text variant="caption" muted>
-                Assigned to
-              </Text>
-              <Text>
-                {todo.assignees.length > 0 ? todo.assignees.map((a) => a.name).join(', ') : 'Unassigned'}
-              </Text>
-            </View>
-
-            {todo.notifyOnDone.length > 0 ? (
-              <View style={{ gap: 4 }}>
-                <Text variant="caption" muted>
-                  Notify when done
-                </Text>
-                <Text>{todo.notifyOnDone.map((p) => p.name).join(', ')}</Text>
-              </View>
-            ) : null}
-
-            {todo.createdBy ? (
-              <View style={{ gap: 4 }}>
-                <Text variant="caption" muted>
-                  Created
-                </Text>
-                <Text>
-                  {todo.createdBy.name} · {timeAgo(todo.createdAt)}
-                </Text>
-              </View>
-            ) : null}
-
-            {todo.images.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-                {todo.images.map((img) => (
-                  <Image
-                    key={img.publicId}
-                    source={{ uri: img.thumbUrl }}
-                    style={styles.photo}
-                    contentFit="cover"
-                  />
-                ))}
-              </View>
-            ) : null}
-          </Card>
-        </Reveal>
-
-        <View style={{ gap: space[3] }}>
-          <Text variant="section">Comments</Text>
           {comments.isPending ? (
-            <Skeleton height={80} />
+            <Skeleton height={70} width="85%" />
           ) : comments.isError ? (
             <Button title="Retry comments" variant="outline" size="sm" onPress={() => void comments.refetch()} />
           ) : (comments.data ?? []).length === 0 ? (
-            <Text muted>No comments yet.</Text>
-          ) : (
-            (comments.data ?? []).map((c) => (
-              <Card key={c.id} style={{ gap: space[1] }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space[2] }}>
-                  <Text variant="label">{c.author.name}</Text>
-                  <Text variant="caption" muted>
-                    {timeAgo(c.createdAt)}
-                  </Text>
-                </View>
-                {c.text ? <Text>{c.text}</Text> : null}
-              </Card>
-            ))
-          )}
-        </View>
+            <Text variant="caption" muted style={{ textAlign: 'center', paddingVertical: space[3] }}>
+              No comments yet.
+            </Text>
+          ) : null}
+        </Reveal>
       </>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior="padding"
-    >
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'To-do',
-          headerShadowVisible: false,
-          headerTintColor: colors.primary,
-        }}
-      />
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
+      <Stack.Screen options={{ headerShown: false }} />
+      <DetailHeader title="To-do" onBack={goBack}>
+        {todo ? (
+          <>
+            {isDone ? (
+              <Badge label="Done" t="success" />
+            ) : todo.isOverdue ? (
+              <Badge label="Overdue" t="danger" />
+            ) : (
+              <Badge label="Open" t="violet" />
+            )}
+            {todo.dueOn ? (
+              <Text variant="caption" color={headerMutedText}>
+                Due {formatDay(todo.dueOn)}
+              </Text>
+            ) : null}
+            {pendingDone !== null ? (
+              <PendingSyncBadge filter={(i) => i.entityKey === `todo:${id}`} />
+            ) : null}
+          </>
+        ) : null}
+      </DetailHeader>
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: space[4], paddingTop: space[1], paddingBottom: space[8], gap: space[5] }}
+        contentContainerStyle={{ padding: space[4], paddingBottom: space[6], gap: space[3] }}
         keyboardShouldPersistTaps="handled"
       >
         {body}
       </ScrollView>
 
       {todo ? (
-        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, space[3]) }]}>
-          <TextInput
+        <BottomBar>
+          <Button
+            title={isDone ? 'Reopen to-do' : 'Mark complete'}
+            variant={isDone ? 'outline' : 'default'}
+            loading={toggle.isPending}
+            onPress={() => toggle.mutate({ id: todo.id, done: !isDone })}
+            fullWidth
+          />
+          <MessageBar
             value={draft}
             onChangeText={setDraft}
-            placeholder="Write a comment..."
-            placeholderTextColor={colors.placeholder}
-            style={styles.input}
-            multiline
+            placeholder="Write a comment…"
+            onSend={submitComment}
+            canSend={!!draft.trim()}
+            sending={addComment.isPending}
+            error={addComment.error?.message ?? null}
           />
-          <Button
-            title="Send"
-            size="sm"
-            loading={addComment.isPending}
-            disabled={!draft.trim()}
-            onPress={submitComment}
-          />
-        </View>
+        </BottomBar>
       ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  projectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space[2],
-    height: 52,
-    paddingHorizontal: space[4],
-    borderRadius: radius.lg,
+  root: { flex: 1, backgroundColor: colors.pageSoft },
+  item: { marginVertical: space[2] },
+  details: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  photo: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.md,
-    backgroundColor: colors.muted,
-  },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[2],
-    paddingHorizontal: space[4],
-    paddingTop: space[2],
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  input: {
-    flex: 1,
-    minHeight: 42,
-    maxHeight: 100,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
     paddingHorizontal: space[3],
-    paddingVertical: space[2],
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.input,
-    backgroundColor: colors.background,
-    fontFamily: font.regular,
-    fontSize: 15,
-    color: colors.foreground,
+    paddingVertical: space[1],
+  },
+  person: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  todoCard: {
+    backgroundColor: tone.violet.bg,
+    borderRadius: radius.xl,
+    padding: space[3],
+    gap: space[2],
   },
 });

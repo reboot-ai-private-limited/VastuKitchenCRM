@@ -20,14 +20,13 @@ import type { CommentDto, ComplaintDto, PostDto, ProjectDto } from '@vastu/contr
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, hit, radius, space, tone } from '@/constants/theme';
-import { formatDate, formatTime } from '@/lib/format';
+import { formatTime } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
-import { buildStream, activityText, type StreamItem } from './chat-stream';
+import { buildStream, activityText, withoutActor, type StreamItem } from './chat-stream';
 import { ComplaintCard } from './complaint-card';
 import { PostThread } from './post-thread';
 import { AudienceChip, PhotoGrid, PostCard, type OpenPhotos } from './post-card';
@@ -185,9 +184,11 @@ const TODO_ACTION_LABEL: Record<string, string> = {
 
 function TodoEventCard({
   activity,
+  mine,
   at,
   onPress,
 }: {
+  mine: boolean;
   activity: Extract<StreamItem, { type: 'activity' }>['activity'];
   at: string;
   onPress?: () => void;
@@ -196,7 +197,7 @@ function TodoEventCard({
   const title =
     (typeof activity.data['todoTitle'] === 'string' && activity.data['todoTitle']) ||
     (typeof activity.data['title'] === 'string' && activity.data['title']) ||
-    activityText(activity);
+    withoutActor(activityText(activity), actor);
   const action = TODO_ACTION_LABEL[activity.type] ?? 'Updated';
 
   return (
@@ -204,7 +205,7 @@ function TodoEventCard({
       <View style={[styles.eventCard, { backgroundColor: tone.violet.bg }]}>
         <View style={styles.eventCardHeader}>
           <Text variant="label" color={colors.inkDeep} numberOfLines={1} style={styles.eventAuthor}>
-            {actor}
+            {mine ? 'You' : actor}
           </Text>
           <Text variant="caption" color={tone.violet.fg} style={{ fontFamily: font.semibold }}>
             TO-DO · {action.toUpperCase()}
@@ -214,7 +215,7 @@ function TodoEventCard({
           {title}
         </Text>
         <Text variant="caption" color={colors.inkMuted}>
-          {formatDate(at)}, {formatTime(at)}
+          {formatTime(at)}
         </Text>
       </View>
     </PressableScale>
@@ -236,6 +237,7 @@ function ComplaintUpdateCard({
   updateKind,
   text,
   actorName,
+  mine,
   at,
   photos,
   complaint,
@@ -246,6 +248,7 @@ function ComplaintUpdateCard({
   updateKind: 'ASSIGNED' | 'RESOLVED' | 'REOPENED' | 'CLOSED' | 'COMMENT';
   text: string;
   actorName: string;
+  mine: boolean;
   at: string;
   photos: ComplaintDto['resolutionImages'];
   complaint: ComplaintDto;
@@ -263,7 +266,7 @@ function ComplaintUpdateCard({
       <PressableScale onPress={onPress} accessibilityLabel="Jump to complaint" style={{ gap: space[2] }}>
         <View style={styles.eventCardHeader}>
           <Text variant="label" color={colors.inkDeep} numberOfLines={1} style={styles.eventAuthor}>
-            {actorName}
+            {mine ? 'You' : actorName}
           </Text>
           <Text variant="caption" color={palette.fg} style={{ fontFamily: font.semibold }}>
             {meta.label}
@@ -271,7 +274,7 @@ function ComplaintUpdateCard({
         </View>
         {text ? (
           <Text color={colors.inkDeep} numberOfLines={updateKind === 'COMMENT' ? 4 : 2}>
-            {text}
+            {updateKind === 'COMMENT' ? text : withoutActor(text, actorName)}
           </Text>
         ) : null}
       </PressableScale>
@@ -282,7 +285,7 @@ function ComplaintUpdateCard({
       ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] }}>
         <Text variant="caption" color={colors.inkMuted}>
-          {formatDate(at)}, {formatTime(at)}
+          {formatTime(at)}
         </Text>
         {commentCount > 0 ? (
           <PressableScale onPress={onOpenComplaint} hitSlop={8}>
@@ -548,7 +551,7 @@ export function ChatSegment({
                 connectAbove={connectAbove}
                 connectBelow={connectBelow}
               >
-                <TimelineEntryHeader text={`${actorName} shared a file`} meta={formatTime(item.at)} />
+                <TimelineEntryHeader text={`${item.activity.actor?.id === userId ? 'You' : actorName} shared a file`} meta={formatTime(item.at)} />
                 <TimelineFileRows
                   files={[{ activityId: item.activity.id, fileId, name: rawName }]}
                   onOpenFile={onOpenDocs}
@@ -569,6 +572,7 @@ export function ChatSegment({
               >
                 <TodoEventCard
                   activity={item.activity}
+                  mine={item.activity.actor?.id === userId}
                   at={item.at}
                   onPress={
                     todoId
@@ -606,17 +610,17 @@ export function ChatSegment({
                 <View style={[styles.eventCard, { backgroundColor: palette.bg }]}>
                   <View style={styles.eventCardHeader}>
                     <Text variant="label" color={colors.inkDeep} numberOfLines={1} style={styles.eventAuthor}>
-                      {actorName}
+                      {item.activity.actor?.id === userId ? 'You' : actorName}
                     </Text>
                     <Text variant="caption" color={palette.fg} style={{ fontFamily: font.semibold }}>
                       {tag}
                     </Text>
                   </View>
                   <Text color={colors.inkDeep} numberOfLines={2}>
-                    {activityText(item.activity)}
+                    {withoutActor(activityText(item.activity), actorName)}
                   </Text>
                   <Text variant="caption" color={colors.inkMuted}>
-                    {formatDate(item.at)}, {formatTime(item.at)}
+                    {formatTime(item.at)}
                   </Text>
                 </View>
               </PressableScale>
@@ -651,7 +655,11 @@ export function ChatSegment({
               connectAbove={connectAbove}
               connectBelow={connectBelow}
             >
-              <ComplaintCard complaint={item.complaint} onPress={() => openComplaint(item.complaint.id)} />
+              <ComplaintCard
+                complaint={item.complaint}
+                mine={item.complaint.raisedBy?.id === userId}
+                onPress={() => openComplaint(item.complaint.id)}
+              />
             </TimelineEntryRow>
           </View>
         );
@@ -668,6 +676,7 @@ export function ChatSegment({
                 updateKind={item.updateKind}
                 text={item.text}
                 actorName={item.actorName}
+                mine={item.actorId === userId}
                 at={item.at}
                 photos={item.photos}
                 complaint={item.complaint}
@@ -955,8 +964,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[1],
   },
   updatePhotoWrap: {
-    width: 240,
-    maxWidth: '100%',
+    width: '100%',
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,

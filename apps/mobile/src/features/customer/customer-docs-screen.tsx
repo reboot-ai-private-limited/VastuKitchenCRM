@@ -23,47 +23,50 @@ import { DocUploadBar } from '@/features/projects/doc-upload-bar';
 import { CustomerHeader, useActiveCustomerProject } from './customer-shell-shared';
 
 function SharedFileCard({ file, index, highlighted }: { file: DocFileDto; index: number; highlighted?: boolean }) {
-  const thumb = file.thumbUrl ?? file.previewUrl;
+  const bigPreview = file.kind === 'IMAGE' ? (file.previewUrl ?? file.url) : file.thumbUrl;
 
   return (
     <Reveal index={index}>
       <PressableScale onPress={() => void Linking.openURL(file.url)}>
-        <Card style={[styles.fileCard, highlighted && { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}>
-          {thumb ? (
-            <Image source={{ uri: thumb }} style={styles.thumb} contentFit="cover" />
-          ) : (
-            <View style={[styles.extBox, { backgroundColor: tone.info.bg }]}>
-              <Feather name="file-text" size={20} color={tone.info.fg} />
-              <Text variant="caption" color={tone.info.fg}>
-                {(file.format ?? 'DOC').slice(0, 4).toUpperCase()}
+        <Card style={[styles.fileCardWrap, highlighted && { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}>
+          {bigPreview ? (
+            <Image source={{ uri: bigPreview }} style={styles.bigPreview} contentFit="cover" />
+          ) : null}
+          <View style={styles.fileCard}>
+            {!bigPreview ? (
+              <View style={[styles.extBox, { backgroundColor: tone.info.bg }]}>
+                <Feather name="file-text" size={20} color={tone.info.fg} />
+                <Text variant="caption" color={tone.info.fg}>
+                  {(file.format ?? 'DOC').slice(0, 4).toUpperCase()}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="label" numberOfLines={1} ellipsizeMode="middle">
+                {file.name}
+              </Text>
+              <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
+                {formatBytes(file.bytes)} · {formatDate(file.createdAt)}
               </Text>
             </View>
-          )}
 
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="label" numberOfLines={1} ellipsizeMode="middle">
-              {file.name}
-            </Text>
-            <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
-              {formatBytes(file.bytes)} · {formatDate(file.createdAt)}
-            </Text>
+            <IconButton
+              icon="share-2"
+              label={`Share ${file.name}`}
+              onPress={() =>
+                void Share.share({
+                  message: `${file.name}: ${file.downloadUrl}`,
+                  url: file.downloadUrl,
+                })
+              }
+            />
+            <IconButton
+              icon="external-link"
+              label={`Open ${file.name}`}
+              onPress={() => void Linking.openURL(file.url)}
+            />
           </View>
-
-          <IconButton
-            icon="share-2"
-            label={`Share ${file.name}`}
-            onPress={() =>
-              void Share.share({
-                message: `${file.name}: ${file.downloadUrl}`,
-                url: file.downloadUrl,
-              })
-            }
-          />
-          <IconButton
-            icon="external-link"
-            label={`Open ${file.name}`}
-            onPress={() => void Linking.openURL(file.url)}
-          />
         </Card>
       </PressableScale>
     </Reveal>
@@ -164,16 +167,20 @@ export function CustomerDocsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  fileCardWrap: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  bigPreview: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    backgroundColor: colors.muted,
+  },
   fileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
-  },
-  thumb: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.muted,
+    padding: space[3],
   },
   extBox: {
     width: 52,

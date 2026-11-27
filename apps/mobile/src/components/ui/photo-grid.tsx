@@ -5,26 +5,47 @@ import { Image } from 'expo-image';
 import { colors, hit, radius, space } from '@/constants/theme';
 import { PressableScale } from './pressable-scale';
 
-type Img = { publicId: string; url: string; thumbUrl: string };
+type Img = {
+  publicId: string;
+  url: string;
+  thumbUrl: string;
+  width?: number | null;
+  height?: number | null;
+};
 
-/** Thumbnails that open full-size in a viewer. `label` names the group for screen readers. */
+function ratioOf(img: Img): number {
+  if (!img.width || !img.height) return 4 / 3;
+  return Math.min(2, Math.max(0.5, img.width / img.height));
+}
+
+/** Big proportional thumbnails (full-width for 1 photo, 2-column grid for multiple) that open full-size in a viewer. */
 export function PhotoGrid({ images, label = 'Photo' }: { images: Img[]; label?: string }) {
   const [open, setOpen] = useState<Img | null>(null);
   if (images.length === 0) return null;
+  const shown = images.slice(0, 6);
+  const single = shown.length === 1;
   return (
     <>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[1] }}>
-        {images.slice(0, 6).map((img, i) => (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+        {shown.map((img, i) => (
           <PressableScale
             key={img.publicId}
             onPress={() => setOpen(img)}
             accessibilityLabel={`${label} ${i + 1} of ${images.length}, open full size`}
-            style={{ width: '32%', aspectRatio: 1 }}
+            style={{
+              width: single ? '100%' : '49%',
+              aspectRatio: single ? ratioOf(img) : 1,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: colors.cardBorder,
+              overflow: 'hidden',
+              backgroundColor: colors.muted,
+            }}
           >
             <Image
-              source={{ uri: img.thumbUrl }}
-              style={{ flex: 1, borderRadius: radius.md, backgroundColor: colors.muted }}
-              contentFit="cover"
+              source={{ uri: single ? img.url : img.thumbUrl }}
+              style={{ flex: 1 }}
+              contentFit={single ? 'contain' : 'cover'}
               accessible={false}
             />
           </PressableScale>

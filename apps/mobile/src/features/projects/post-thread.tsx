@@ -36,14 +36,15 @@ export function PostThread({ projectId, post, mine, hideAudience = false, closed
       <View
         ref={kb.ref}
         collapsable={false}
-        style={{ flex: 1, backgroundColor: colors.pageSoft, paddingTop: insets.top, paddingBottom: kb.pad }}
+        style={{ flex: 1, backgroundColor: colors.pageSoft, paddingBottom: kb.pad }}
       >
-        <View style={styles.header}>
-          <Text variant="section" color={colors.inkDeep} style={{ flex: 1 }}>
+        {/* Teal behind the notch, like the project header it opens from. */}
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <Text variant="section" color={colors.primaryForeground} style={{ flex: 1 }}>
             Discussion
           </Text>
           <PressableScale onPress={onClose} accessibilityLabel="Close discussion" style={styles.close}>
-            <Feather name="x" size={22} color={colors.inkMuted} />
+            <Feather name="x" size={22} color={colors.primaryForeground} />
           </PressableScale>
         </View>
         <ScrollView
@@ -171,9 +172,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: space[4],
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    backgroundColor: colors.primary,
   },
   close: { width: hit, height: hit, alignItems: 'center', justifyContent: 'center' },
   dividerRow: {

@@ -2,20 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, space } from '@/constants/theme';
+import { colors, font, space, tone } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
-import { formatDate } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
 import { ChatSegment } from './chat-segment';
+import { DetailHeader, headerButton, headerMutedText } from './detail-header';
 import { InfoSheet, projectPermissions } from './info-sheet';
 import { PhotoViewer, type ViewerPhoto } from './photo-viewer';
 import { DESIGN_SUB_LABEL, STAGE_LABEL, STAGE_TONE } from './project-meta';
@@ -25,10 +23,10 @@ import { useProjectDetail, useScreenActive, type FeedMode } from './use-projects
 
 type Tab = 'chat' | 'todos' | 'complaints' | 'docs';
 const TAB_META = {
-  chat: { icon: 'message-circle', t: 'accent', caption: 'Updates, photos, files and replies' },
-  todos: { icon: 'check-square', t: 'violet', caption: 'Tasks on this project' },
-  complaints: { icon: 'life-buoy', t: 'danger', caption: 'Raised complaints and their status' },
-  docs: { icon: 'folder', t: 'info', caption: 'Documents and uploads' },
+  chat: { label: 'Chat', icon: 'message-circle', t: 'accent', caption: 'Updates, photos, files and replies' },
+  todos: { label: 'To-dos', icon: 'check-square', t: 'violet', caption: 'Tasks on this project' },
+  complaints: { label: 'Complaints', icon: 'life-buoy', t: 'danger', caption: 'Raised complaints and their status' },
+  docs: { label: 'Docs', icon: 'folder', t: 'info', caption: 'Documents and uploads' },
 } as const;
 
 export function ProjectDetailScreen() {
@@ -44,7 +42,6 @@ export function ProjectDetailScreen() {
     tab?: string;
   }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const q = useProjectDetail(id);
   const { user } = useSession();
   const screenActive = useScreenActive();
@@ -90,26 +87,12 @@ export function ProjectDetailScreen() {
   const stackScreen = <Stack.Screen options={{ headerShown: false }} />;
 
   const topBar = (
-    <View style={[styles.headerBar, { paddingTop: insets.top + 6 }]}>
-      <StatusBar style="light" />
-      <View style={styles.titleRow}>
-        <PressableScale
-          onPress={handleBack}
-          accessibilityRole="button"
-          accessibilityLabel={tab !== 'chat' ? 'Back to chat' : 'Go back'}
-          hitSlop={8}
-          style={styles.navBtn}
-        >
-          <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
-        </PressableScale>
-        <Text
-          color={colors.primaryForeground}
-          numberOfLines={2}
-          style={styles.titleText}
-        >
-          {p?.name ?? ''}
-        </Text>
-        {p ? (
+    <DetailHeader
+      title={p?.name ?? ''}
+      onBack={handleBack}
+      backLabel={tab !== 'chat' ? 'Back to chat' : 'Go back'}
+      right={
+        p ? (
           <View style={styles.headerActions}>
             <PressableScale
               onPress={() => {
@@ -119,7 +102,7 @@ export function ProjectDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Project info"
               hitSlop={8}
-              style={styles.navBtn}
+              style={headerButton}
             >
               <Feather name="info" size={21} color={colors.primaryForeground} />
             </PressableScale>
@@ -131,37 +114,37 @@ export function ProjectDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Project menu"
               hitSlop={8}
-              style={styles.navBtn}
+              style={headerButton}
             >
               <Feather name="more-vertical" size={21} color={colors.primaryForeground} />
             </PressableScale>
           </View>
-        ) : (
-          <View style={styles.navBtn} />
-        )}
-      </View>
-
+        ) : undefined
+      }
+    >
       {p ? (
-        <View style={styles.contextRow}>
+        <>
           <Text
             variant="caption"
-            color="rgba(255, 255, 255, 0.85)"
+            color={headerMutedText}
             numberOfLines={1}
             style={styles.customerName}
           >
-            {p.customer.name} · {formatDate(p.createdAt)}
+            {/* Away from the chat, say which page this is. */}
+            {tab === 'chat' ? '' : `${TAB_META[tab].label} · `}
+            {p.customer.name}
           </Text>
           <View style={styles.stageWrap}>
             <Badge label={STAGE_LABEL[p.stage]} t={STAGE_TONE[p.stage]} />
             {p.stage === 'DESIGN' ? (
-              <Text variant="caption" color="rgba(255, 255, 255, 0.85)" numberOfLines={1}>
+              <Text variant="caption" color={headerMutedText} numberOfLines={1}>
                 {DESIGN_SUB_LABEL[p.designStage]}
               </Text>
             ) : null}
           </View>
-        </View>
+        </>
       ) : null}
-    </View>
+    </DetailHeader>
   );
 
   if (q.isPending) {
@@ -197,12 +180,7 @@ export function ProjectDetailScreen() {
   }
 
   const perms = projectPermissions(p, user ? { id: user.id, role: user.role } : null);
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'chat', label: 'Chat' },
-    ...(perms.isStaff ? [{ key: 'todos' as const, label: 'To-dos' }] : []),
-    { key: 'complaints', label: 'Complaints' },
-    { key: 'docs', label: 'Docs' },
-  ];
+  const tabs: Tab[] = ['chat', ...(perms.isStaff ? ['todos' as const] : []), 'complaints', 'docs'];
 
   return (
     <View style={styles.root}>
@@ -210,17 +188,17 @@ export function ProjectDetailScreen() {
       {topBar}
 
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="Project">
-        {tabs.map((t) => (
+        {tabs.map((key) => (
           <SheetRow
-            key={t.key}
-            icon={TAB_META[t.key].icon}
-            t={TAB_META[t.key].t}
-            label={t.label}
-            caption={TAB_META[t.key].caption}
-            selected={tab === t.key}
+            key={key}
+            icon={TAB_META[key].icon}
+            t={TAB_META[key].t}
+            label={TAB_META[key].label}
+            caption={TAB_META[key].caption}
+            selected={tab === key}
             onPress={() => {
               softTick();
-              setTab(t.key);
+              setTab(key);
               setMenuOpen(false);
             }}
           />
@@ -272,6 +250,29 @@ export function ProjectDetailScreen() {
       </BottomSheet>
 
       <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>
+        {perms.isStaff && mode === 'CLIENT' ? (
+          // The feed is filtered: say so, and offer the way back.
+          <View style={styles.previewBar}>
+            <Feather name="eye" size={14} color={tone.success.fg} />
+            <Text variant="caption" color={tone.success.fg} style={{ flex: 1 }}>
+              Showing only what the customer sees
+            </Text>
+            <PressableScale
+              onPress={() => {
+                softTick();
+                setMode('ALL');
+                setFinalRequest(0);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Show the full timeline"
+              hitSlop={12}
+            >
+              <Text variant="caption" color={tone.success.fg} style={{ fontFamily: font.semibold }}>
+                Show all
+              </Text>
+            </PressableScale>
+          </View>
+        ) : null}
         <ChatSegment
           project={p}
           userId={user?.id ?? ''}
@@ -322,40 +323,17 @@ export function ProjectDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  headerBar: {
-    backgroundColor: colors.primary,
-    paddingBottom: 12,
-    gap: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: space[1],
-  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  navBtn: {
-    width: 40,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleText: {
-    flex: 1,
-    fontSize: 17,
-    lineHeight: 22,
-    fontFamily: font.semibold,
-    paddingTop: 7,
-    paddingHorizontal: 2,
-  },
-  contextRow: {
+  previewBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
-    paddingLeft: 46,
-    paddingRight: space[4],
+    paddingHorizontal: space[4],
+    paddingVertical: space[2],
+    backgroundColor: tone.success.bg,
   },
   customerName: {
     fontSize: 13,

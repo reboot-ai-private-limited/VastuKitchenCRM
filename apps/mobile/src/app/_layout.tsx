@@ -62,7 +62,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <KeyboardProvider>
+        {/* Without this the provider keeps the whole app below the status bar, so no header can reach the notch. */}
+        <KeyboardProvider statusBarTranslucent>
           <QueryClientProvider client={queryClient}>
             <StatusBar style="dark" />
             <UpdateBanner />

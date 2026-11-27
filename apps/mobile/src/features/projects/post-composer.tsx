@@ -19,6 +19,7 @@ import { ApiError, NetworkError } from '@/lib/api/client';
 import { softTick } from '@/lib/haptics';
 import { SheetRow } from './sheet-row';
 import { SlidingSwitch } from './sliding-switch';
+import { useDocUpload } from './use-doc-upload';
 import { usePhotoAttachments } from './use-photo-attachments';
 
 export type ReplyTarget = {
@@ -100,6 +101,14 @@ export function PostComposer({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const visibility: PostVisibility = replyTo ? replyTo.visibility : final ? 'CLIENT' : pickedVisibility;
+  const canAttachDoc = kind === 'post' && !final && !replyTo;
+  const docUpload = useDocUpload(projectId, fixedClient ? 'CLIENT' : visibility);
+
+  const pickDocs = async () => {
+    setError(null);
+    const problem = await docUpload.pickAndUpload();
+    if (problem) setError(problem);
+  };
 
   useEffect(() => {
     if (!fixedClient && defaultVisibility) {
@@ -256,6 +265,15 @@ export function PostComposer({
         )
       ) : null}
 
+      {docUpload.busy ? (
+        <View style={styles.docProgress}>
+          <ActivityIndicator size="small" color={colors.tealStrong} />
+          <Text variant="caption" color={colors.tealStrong} style={{ fontFamily: font.semibold }}>
+            {docUpload.progress ?? 'Uploading document...'}
+          </Text>
+        </View>
+      ) : null}
+
       {shownError ? (
         <Text variant="caption" color={colors.destructive}>
           {shownError}
@@ -313,9 +331,10 @@ export function PostComposer({
               softTick();
               setAttachOpen(true);
             }}
+            disabled={docUpload.busy}
             accessibilityRole="button"
             accessibilityLabel="Add attachment"
-            style={styles.plusBtn}
+            style={[styles.plusBtn, { opacity: docUpload.busy ? 0.5 : 1 }]}
           >
             <Feather name="plus" size={20} color={colors.inkDeep} />
           </PressableScale>
@@ -374,6 +393,21 @@ export function PostComposer({
               void photos.pickFromGallery();
             }}
           />
+          {canAttachDoc ? (
+            <SheetRow
+              icon="file-text"
+              label="Upload document"
+              caption={
+                fixedClient
+                  ? 'PDF, Word, Excel, CAD — saved to project Docs'
+                  : `PDF, Word, Excel, CAD · ${AUDIENCE_LABEL[visibility]}`
+              }
+              onPress={() => {
+                setAttachOpen(false);
+                void pickDocs();
+              }}
+            />
+          ) : null}
         </View>
       </BottomSheet>
     </View>
@@ -445,6 +479,17 @@ const styles = StyleSheet.create({
     backgroundColor: tone.success.bg,
     borderWidth: 1,
     borderColor: `${tone.success.fg}55`,
+  },
+  docProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   replyPreview: {
     flexDirection: 'row',

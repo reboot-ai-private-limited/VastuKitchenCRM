@@ -211,12 +211,9 @@ export function ComplaintsSegment({ project, active }: { project: ProjectDto; ac
               {newDay ? <DaySeparator label={dayLabel(item.createdAt)} /> : null}
               <View style={styles.item}>
                 <TimelineEntryRow authorName={author} accentAvatar={item.raisedBy?.id === user?.id}>
-                  <TimelineEntryHeader
-                    text={`${author} raised a complaint`}
-                    meta={formatTime(item.createdAt)}
-                  />
                   <ComplaintCard
                     complaint={item}
+                    mine={item.raisedBy?.id === user?.id}
                     onPress={() =>
                       router.push({ pathname: '/complaints/[id]', params: { id: item.id } })
                     }
@@ -369,6 +366,7 @@ export function DocsSegment({
                         .filter(Boolean)
                         .join(' · '),
                       thumbUrl: f.thumbUrl,
+                      previewUrl: f.kind === 'IMAGE' ? (f.previewUrl ?? f.url) : null,
                       audience: f.visibility,
                       highlighted: highlight === f.id,
                     }))}

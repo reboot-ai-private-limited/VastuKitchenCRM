@@ -60,6 +60,7 @@ export function useDocUpload(projectId: string | undefined, visibility: 'TEAM' |
       setProgress(null);
       void qc.invalidateQueries({ queryKey: ['projects', 'files', projectId] });
       void qc.invalidateQueries({ queryKey: ['customer', 'files', projectId] });
+      void qc.invalidateQueries({ queryKey: ['projects', 'posts', projectId] });
     }
     return problems.length ? problems.join('\n') : null;
   }, [projectId, visibility, qc]);

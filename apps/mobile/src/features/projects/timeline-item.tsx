@@ -137,12 +137,14 @@ export type TimelineFile = FileBatchEntry & {
   /** Second line, e.g. `PDF · 2 KB`. */
   meta?: string;
   thumbUrl?: string | null;
+  /** Full-size image preview URL when the file is an image. */
+  previewUrl?: string | null;
   /** Who can see it; shown as a badge. */
   audience?: PostVisibility;
   highlighted?: boolean;
 };
 
-/** Compact file attachment rows with document/PDF icon and filename. */
+/** File attachment rows: big preview for image docs, compact document/PDF row for other files. */
 export function TimelineFileRows({
   files,
   onOpenFile,
@@ -158,6 +160,7 @@ export function TimelineFileRows({
         const isImg = /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name);
         const iconName = isImg ? 'image' : 'file-text';
         const iconTone = isPdf ? tone.danger : isImg ? tone.info : tone.accent;
+        const bigPreview = f.previewUrl ?? f.thumbUrl;
         return (
           <PressableScale
             key={f.activityId}
@@ -165,36 +168,42 @@ export function TimelineFileRows({
             accessibilityRole="button"
             accessibilityLabel={`Open ${f.name}`}
             style={[
-              styles.fileRow,
               idx > 0 && styles.fileRowBorder,
               f.highlighted && { backgroundColor: tone.success.bg },
             ]}
           >
-            {f.thumbUrl ? (
-              <Image source={{ uri: f.thumbUrl }} style={styles.fileIcon} contentFit="cover" />
-            ) : (
-              <View style={[styles.fileIcon, { backgroundColor: iconTone.bg }]}>
-                <Feather name={iconName} size={14} color={iconTone.fg} />
+            {bigPreview ? (
+              <Image
+                source={{ uri: bigPreview }}
+                style={styles.filePreview}
+                contentFit="cover"
+              />
+            ) : null}
+            <View style={styles.fileRow}>
+              {!bigPreview ? (
+                <View style={[styles.fileIcon, { backgroundColor: iconTone.bg }]}>
+                  <Feather name={iconName} size={14} color={iconTone.fg} />
+                </View>
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <Text variant="caption" color={colors.inkDeep} numberOfLines={1} style={styles.fileName}>
+                  {f.name}
+                </Text>
+                {f.meta ? (
+                  <Text variant="caption" muted numberOfLines={1} style={styles.time}>
+                    {f.meta}
+                  </Text>
+                ) : null}
               </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text variant="caption" color={colors.inkDeep} numberOfLines={1} style={styles.fileName}>
-                {f.name}
-              </Text>
-              {f.meta ? (
-                <Text variant="caption" muted numberOfLines={1} style={styles.time}>
-                  {f.meta}
+              {f.audience ? (
+                <Badge label={f.audience === 'CLIENT' ? 'Shared' : 'Team'} t={AUDIENCE_TONE[f.audience]} />
+              ) : isPdf ? (
+                <Text variant="caption" color={tone.danger.fg} style={styles.pdfTag}>
+                  PDF
                 </Text>
               ) : null}
+              <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
             </View>
-            {f.audience ? (
-              <Badge label={f.audience === 'CLIENT' ? 'Shared' : 'Team'} t={AUDIENCE_TONE[f.audience]} />
-            ) : isPdf ? (
-              <Text variant="caption" color={tone.danger.fg} style={styles.pdfTag}>
-                PDF
-              </Text>
-            ) : null}
-            <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
           </PressableScale>
         );
       })}
@@ -308,6 +317,11 @@ const styles = StyleSheet.create({
     gap: space[2],
     paddingHorizontal: space[3],
     paddingVertical: 9,
+  },
+  filePreview: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    backgroundColor: colors.muted,
   },
   fileRowBorder: {
     borderTopWidth: StyleSheet.hairlineWidth,

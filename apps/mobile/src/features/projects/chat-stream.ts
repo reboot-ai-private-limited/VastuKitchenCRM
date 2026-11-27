@@ -68,6 +68,13 @@ export function activityText(a: ProjectActivityDto): string {
   }
 }
 
+/** Drops a leading actor name, for lines shown under that name already. */
+export function withoutActor(text: string, actor: string): string {
+  if (!text.startsWith(`${actor} `)) return text;
+  const rest = text.slice(actor.length + 1);
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
 function eventText(e: ComplaintEventDto): string {
   const who = e.actor?.name ?? 'Someone';
   switch (e.type) {

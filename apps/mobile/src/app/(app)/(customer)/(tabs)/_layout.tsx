@@ -1,8 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QuietTabButton } from '@/components/ui/quiet-tab-button';
-import { colors, font } from '@/constants/theme';
+import { PillTabBar } from '@/components/ui/pill-tab-bar';
 
 function TabIcon({ name, color }: { name: keyof typeof Feather.glyphMap; color: string }) {
   return <Feather name={name} size={22} color={color} />;
@@ -13,25 +11,10 @@ function TabIcon({ name, color }: { name: keyof typeof Feather.glyphMap; color: 
  * Uses `customer-complaints` as the file segment so Expo Router URL patterns stay 100% unique.
  */
 export default function CustomerTabsLayout() {
-  const insets = useSafeAreaInsets();
-
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarButton: QuietTabButton,
-        animation: 'fade',
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarLabelStyle: { fontFamily: font.medium, fontSize: 11 },
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          height: 60 + insets.bottom,
-          paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 6),
-        },
-      }}
+      tabBar={(props) => <PillTabBar {...props} />}
+      screenOptions={{ headerShown: false, animation: 'fade' }}
     >
       <Tabs.Screen
         name="project"

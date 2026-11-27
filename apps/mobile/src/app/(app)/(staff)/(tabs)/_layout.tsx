@@ -1,14 +1,12 @@
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QuietTabButton } from '@/components/ui/quiet-tab-button';
+import { PillTabBar } from '@/components/ui/pill-tab-bar';
 import {
   HOME_TAB_META,
   isStaffRole,
   STAFF_PRIMARY_TABS,
   type StaffTabKey,
 } from '@/constants/roles';
-import { colors, font } from '@/constants/theme';
 import { useUnreadCount } from '@/features/alerts/use-notifications';
 import { useSession } from '@/lib/auth/session';
 
@@ -33,7 +31,6 @@ function TabIcon({ name, color }: { name: keyof typeof Feather.glyphMap; color: 
 }
 
 export default function StaffTabsLayout() {
-  const insets = useSafeAreaInsets();
   const { user } = useSession();
   const unread = useUnreadCount().data;
 
@@ -43,21 +40,8 @@ export default function StaffTabsLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarButton: QuietTabButton,
-        animation: 'fade',
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarLabelStyle: { fontFamily: font.medium, fontSize: 11 },
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          height: 60 + insets.bottom,
-          paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 6),
-        },
-      }}
+      tabBar={(props) => <PillTabBar {...props} />}
+      screenOptions={{ headerShown: false, animation: 'fade' }}
     >
       {CONTENT_TABS.map((t) => {
         const title = t.key === 'home' ? homeMeta.title : t.title;
@@ -70,7 +54,6 @@ export default function StaffTabsLayout() {
               title,
               tabBarBadge: t.key === 'alerts' && unread ? (unread > 99 ? '99+' : unread) : undefined,
               // Hidden tabs stay routable (More opens them); href: null would make them unreachable.
-              tabBarButton: allowed.includes(t.key) ? QuietTabButton : () => null,
               tabBarItemStyle: allowed.includes(t.key) ? undefined : { display: 'none' },
               tabBarIcon: ({ color }) => <TabIcon name={icon} color={String(color)} />,
             }}

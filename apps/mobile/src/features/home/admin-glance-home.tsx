@@ -25,7 +25,6 @@ import {
   businessDate,
   businessMonth,
   formatTime,
-  timeAgo,
 } from '@/lib/format';
 
 type RangePreset = 'today' | '7d' | 'month';
@@ -43,8 +42,8 @@ const ATTENTION_META: {
   tone: Tone;
   icon: keyof typeof Feather.glyphMap;
 }[] = [
-  { key: 'stagnantLeads', label: 'Stagnant leads', tone: 'danger', icon: 'phone-missed' },
   { key: 'overdueComplaints', label: 'Overdue complaints', tone: 'orange', icon: 'alert-circle' },
+  { key: 'stagnantLeads', label: 'Stagnant leads', tone: 'danger', icon: 'phone-missed' },
   { key: 'unseenProposals', label: 'Unseen quotes', tone: 'warning', icon: 'eye-off' },
   { key: 'noActionProposals', label: 'No action quotes', tone: 'info', icon: 'file-text' },
   { key: 'overdueTodos', label: 'Overdue to-dos', tone: 'violet', icon: 'check-square' },
@@ -165,21 +164,10 @@ export function AdminGlanceHome() {
             </Card>
           ) : null}
 
-          {/* KPI ROW + TEAM (same order as the website dashboard) */}
+          {/* Summary */}
           {data.counters ? (
             <Reveal>
               <KpiRow counters={data.counters} staff={data.staff} />
-            </Reveal>
-          ) : null}
-
-          {data.people ? (
-            <Reveal index={1}>
-              <View style={{ gap: space[2] }}>
-                <Text variant="caption" muted style={styles.eyebrow}>
-                  TEAM · {rangeTitle.toUpperCase()}
-                </Text>
-                <TeamCard people={data.people} days={daysInRange(range)} offDay={data.staff?.offDay ?? false} />
-              </View>
             </Reveal>
           ) : null}
 
@@ -204,11 +192,7 @@ export function AdminGlanceHome() {
                   </Card>
                 ) : (
                   <Card style={{ gap: space[3] }}>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: space[2] }}
-                    >
+                    <View style={{ gap: space[2] }}>
                       {nonEmptyBuckets.map((b) => {
                         const block = attention[b.key];
                         const selected = b.key === activeBucketKey;
@@ -217,10 +201,10 @@ export function AdminGlanceHome() {
                           <PressableScale
                             key={b.key}
                             onPress={() => setSelectedBucket(b.key)}
-                            hitSlop={7}
+                            accessibilityRole="button"
                             accessibilityState={{ selected }}
                             style={[
-                              styles.bucketPill,
+                              styles.bucketRow,
                               {
                                 backgroundColor: selected ? colors.primary : tone[b.tone].bg,
                               },
@@ -241,7 +225,7 @@ export function AdminGlanceHome() {
                           </PressableScale>
                         );
                       })}
-                    </ScrollView>
+                    </View>
 
                     <View style={{ gap: space[2] }}>
                       {activeItems.map((item, idx) => {
@@ -257,8 +241,8 @@ export function AdminGlanceHome() {
                               <Text variant="label" numberOfLines={1}>
                                 {item.title}
                               </Text>
-                              <Text variant="caption" muted numberOfLines={1}>
-                                {item.detail} · since {timeAgo(item.since)}
+                              <Text variant="caption" muted numberOfLines={2}>
+                                {item.detail}
                               </Text>
                             </View>
                             {href ? (
@@ -282,6 +266,16 @@ export function AdminGlanceHome() {
                   COMPLAINTS · PENDING NOW
                 </Text>
                 <ComplaintsCard counts={data.counters.complaints} overdue={attention.overdueComplaints} />
+              </View>
+            </Reveal>
+          ) : null}
+          {data.people ? (
+            <Reveal index={1}>
+              <View style={{ gap: space[2] }}>
+                <Text variant="caption" muted style={styles.eyebrow}>
+                  TEAM · {rangeTitle.toUpperCase()}
+                </Text>
+                <TeamCard people={data.people} days={daysInRange(range)} offDay={data.staff?.offDay ?? false} />
               </View>
             </Reveal>
           ) : null}
@@ -324,13 +318,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bucketPill: {
+  bucketRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 34,
+    minHeight: 44,
     paddingHorizontal: 12,
-    borderRadius: radius.full,
+    borderRadius: radius.md,
   },
   attentionRow: {
     flexDirection: 'row',

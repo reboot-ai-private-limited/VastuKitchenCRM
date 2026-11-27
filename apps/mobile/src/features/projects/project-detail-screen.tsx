@@ -1,30 +1,35 @@
-import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, hit, space } from '@/constants/theme';
+import { colors, font, space } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
+import { formatDate } from '@/lib/format';
+import { softTick } from '@/lib/haptics';
 import { ChatSegment } from './chat-segment';
 import { InfoSheet, projectPermissions } from './info-sheet';
 import { PhotoViewer, type ViewerPhoto } from './photo-viewer';
-import { DESIGN_LABEL, DESIGN_TONE, STAGE_LABEL, STAGE_TONE } from './project-meta';
+import { DESIGN_SUB_LABEL, STAGE_LABEL, STAGE_TONE } from './project-meta';
 import { ComplaintsSegment, DocsSegment, TodosSegment } from './project-segments';
+import { SheetRow } from './sheet-row';
 import { useProjectDetail, useScreenActive, type FeedMode } from './use-projects';
 
 type Tab = 'chat' | 'todos' | 'complaints' | 'docs';
-const TAB_ICON: Record<Tab, React.ComponentProps<typeof Feather>['name']> = {
-  chat: 'message-circle',
-  todos: 'check-square',
-  complaints: 'life-buoy',
-  docs: 'folder',
-};
+const TAB_META = {
+  chat: { icon: 'message-circle', t: 'accent', caption: 'Updates, photos, files and replies' },
+  todos: { icon: 'check-square', t: 'violet', caption: 'Tasks on this project' },
+  complaints: { icon: 'life-buoy', t: 'danger', caption: 'Raised complaints and their status' },
+  docs: { icon: 'folder', t: 'info', caption: 'Documents and uploads' },
+} as const;
 
 export function ProjectDetailScreen() {
   const {
@@ -38,6 +43,8 @@ export function ProjectDetailScreen() {
     file?: string;
     tab?: string;
   }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const q = useProjectDetail(id);
   const { user } = useSession();
   const screenActive = useScreenActive();
@@ -58,43 +65,110 @@ export function ProjectDetailScreen() {
     (photos: ViewerPhoto[], index: number) => setViewer({ photos, index }),
     [],
   );
+
+  const handleBack = useCallback(() => {
+    if (tab !== 'chat') {
+      setTab('chat');
+      return;
+    }
+    router.back();
+  }, [tab, router]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (tab !== 'chat') {
+        setTab('chat');
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [tab]);
+
   const p = q.data;
 
-  const header = (
-    <Stack.Screen
-      options={{
-        headerShown: true,
-        title: p?.name ?? '',
-        headerShadowVisible: false,
-        headerTintColor: colors.primary,
-        headerRight: p
-          ? () => (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <PressableScale
-                  onPress={() => setInfoOpen(true)}
-                  accessibilityLabel="Project info"
-                  style={styles.headBtn}
-                >
-                  <Feather name="info" size={22} color={colors.primary} />
-                </PressableScale>
-                <PressableScale
-                  onPress={() => setMenuOpen(true)}
-                  accessibilityLabel="Project sections"
-                  style={styles.headBtn}
-                >
-                  <Feather name="more-vertical" size={22} color={colors.primary} />
-                </PressableScale>
-              </View>
-            )
-          : undefined,
-      }}
-    />
+  const stackScreen = <Stack.Screen options={{ headerShown: false }} />;
+
+  const topBar = (
+    <View style={[styles.headerBar, { paddingTop: insets.top + 6 }]}>
+      <StatusBar style="light" />
+      <View style={styles.titleRow}>
+        <PressableScale
+          onPress={handleBack}
+          accessibilityRole="button"
+          accessibilityLabel={tab !== 'chat' ? 'Back to chat' : 'Go back'}
+          hitSlop={8}
+          style={styles.navBtn}
+        >
+          <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
+        </PressableScale>
+        <Text
+          color={colors.primaryForeground}
+          numberOfLines={2}
+          style={styles.titleText}
+        >
+          {p?.name ?? ''}
+        </Text>
+        {p ? (
+          <View style={styles.headerActions}>
+            <PressableScale
+              onPress={() => {
+                softTick();
+                setInfoOpen(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Project info"
+              hitSlop={8}
+              style={styles.navBtn}
+            >
+              <Feather name="info" size={21} color={colors.primaryForeground} />
+            </PressableScale>
+            <PressableScale
+              onPress={() => {
+                softTick();
+                setMenuOpen(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Project menu"
+              hitSlop={8}
+              style={styles.navBtn}
+            >
+              <Feather name="more-vertical" size={21} color={colors.primaryForeground} />
+            </PressableScale>
+          </View>
+        ) : (
+          <View style={styles.navBtn} />
+        )}
+      </View>
+
+      {p ? (
+        <View style={styles.contextRow}>
+          <Text
+            variant="caption"
+            color="rgba(255, 255, 255, 0.85)"
+            numberOfLines={1}
+            style={styles.customerName}
+          >
+            {p.customer.name} · {formatDate(p.createdAt)}
+          </Text>
+          <View style={styles.stageWrap}>
+            <Badge label={STAGE_LABEL[p.stage]} t={STAGE_TONE[p.stage]} />
+            {p.stage === 'DESIGN' ? (
+              <Text variant="caption" color="rgba(255, 255, 255, 0.85)" numberOfLines={1}>
+                {DESIGN_SUB_LABEL[p.designStage]}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+    </View>
   );
 
   if (q.isPending) {
     return (
       <View style={styles.root}>
-        {header}
+        {stackScreen}
+        {topBar}
         <View style={{ padding: space[4], gap: space[3] }}>
           <Skeleton height={28} width="65%" />
           <Skeleton height={44} />
@@ -108,7 +182,8 @@ export function ProjectDetailScreen() {
       q.error instanceof ApiError && (q.error.status === 404 || q.error.status === 403);
     return (
       <View style={styles.root}>
-        {header}
+        {stackScreen}
+        {topBar}
         <View style={{ gap: space[3], alignItems: 'center', paddingVertical: space[8] }}>
           <Text muted>
             {notFound ? "This project isn't available." : "Couldn't load this project."}
@@ -131,73 +206,80 @@ export function ProjectDetailScreen() {
 
   return (
     <View style={styles.root}>
-      {header}
-      <View style={styles.sub}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-          <Text muted numberOfLines={1} style={{ flexShrink: 1 }}>
-            {p.customer.name}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: space[1], flexShrink: 0 }}>
-            <Badge label={STAGE_LABEL[p.stage]} t={STAGE_TONE[p.stage]} />
-            {p.stage === 'DESIGN' ? (
-              <Badge label={DESIGN_LABEL[p.designStage]} t={DESIGN_TONE[p.designStage]} />
-            ) : null}
-          </View>
-        </View>
-        {tab === 'chat' && perms.isStaff ? (
-          <PressableScale
-            onPress={() => {
-              setMode(mode === 'CLIENT' ? 'ALL' : 'CLIENT');
-              setFinalRequest(0);
-            }}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: mode === 'CLIENT' }}
-            accessibilityLabel="Client view"
-            hitSlop={8}
-            style={[
-              styles.clientToggle,
-              { backgroundColor: mode === 'CLIENT' ? colors.primary : colors.muted },
-            ]}
-          >
-            <Feather
-              name="eye"
-              size={14}
-              color={mode === 'CLIENT' ? colors.primaryForeground : colors.mutedForeground}
-            />
-          </PressableScale>
-        ) : null}
-      </View>
+      {stackScreen}
+      {topBar}
 
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="Project">
         {tabs.map((t) => (
-          <PressableScale
+          <SheetRow
             key={t.key}
+            icon={TAB_META[t.key].icon}
+            t={TAB_META[t.key].t}
+            label={t.label}
+            caption={TAB_META[t.key].caption}
+            selected={tab === t.key}
             onPress={() => {
+              softTick();
               setTab(t.key);
               setMenuOpen(false);
             }}
-            accessibilityRole="button"
-            accessibilityState={{ selected: tab === t.key }}
-            style={[styles.menuRow, tab === t.key && { backgroundColor: colors.primarySoft }]}
-          >
-            <Feather
-              name={TAB_ICON[t.key]}
-              size={20}
-              color={tab === t.key ? colors.primary : colors.mutedForeground}
-            />
-            <Text variant="label" color={tab === t.key ? colors.primary : colors.foreground}>
-              {t.label}
-            </Text>
-          </PressableScale>
+          />
         ))}
+
+        <View style={styles.menuDivider} />
+
+        <SheetRow
+          icon="info"
+          t="neutral"
+          label="Project info"
+          caption="Stage, design, team and location"
+          onPress={() => {
+            setMenuOpen(false);
+            setInfoOpen(true);
+          }}
+        />
+
+        {perms.isStaff ? (
+          <SheetRow
+            icon="eye"
+            t="neutral"
+            label={mode === 'CLIENT' ? 'Exit client preview' : 'Preview as client'}
+            caption={
+              mode === 'CLIENT' ? 'Return to full team timeline' : 'See only what the customer sees'
+            }
+            onPress={() => {
+              setMenuOpen(false);
+              setTab('chat');
+              setMode(mode === 'CLIENT' ? 'ALL' : 'CLIENT');
+              setFinalRequest(0);
+            }}
+          />
+        ) : null}
+
+        {perms.isStaff && p.stage !== 'CLOSED' ? (
+          <SheetRow
+            icon="check-circle"
+            label="Post final delivery"
+            caption="Complete project milestone with photos"
+            onPress={() => {
+              setMenuOpen(false);
+              setTab('chat');
+              setMode('ALL');
+              setFinalRequest((n) => n + 1);
+            }}
+          />
+        ) : null}
       </BottomSheet>
 
       <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>
         <ChatSegment
-          key={mode}
           project={p}
           userId={user?.id ?? ''}
           mode={mode}
+          onChangeMode={(next) => {
+            setMode(next);
+            setFinalRequest(0);
+          }}
           isStaff={perms.isStaff}
           active={screenActive && tab === 'chat'}
           {...(post ? { targetPostId: post } : {})}
@@ -240,22 +322,54 @@ export function ProjectDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  sub: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], gap: space[2] },
-  headBtn: { width: 40, height: hit, alignItems: 'center', justifyContent: 'center' },
-  menuRow: {
+  headerBar: {
+    backgroundColor: colors.primary,
+    paddingBottom: 12,
+    gap: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: space[1],
+  },
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[3],
-    minHeight: hit,
-    paddingHorizontal: space[3],
-    borderRadius: 12,
   },
-  clientToggle: {
-    flexDirection: 'row',
+  navBtn: {
+    width: 40,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  },
+  titleText: {
+    flex: 1,
+    fontSize: 17,
+    lineHeight: 22,
+    fontFamily: font.semibold,
+    paddingTop: 7,
+    paddingHorizontal: 2,
+  },
+  contextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingLeft: 46,
+    paddingRight: space[4],
+  },
+  customerName: {
+    fontSize: 13,
+    flexShrink: 1,
+  },
+  stageWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    flexShrink: 0,
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginVertical: space[2],
   },
 });

@@ -1,7 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import type { CommentDto, ImageDto, PostDto, PostVisibility } from '@vastu/contracts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +18,9 @@ import { Text } from '@/components/ui/text';
 import { colors, font, radius, space, tone } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { formatDate, formatTime } from '@/lib/format';
+import { softTick } from '@/lib/haptics';
 import { AUDIENCE_LABEL, AUDIENCE_TONE } from './project-meta';
+import { TimelineEntryRow } from './timeline-item';
 import { useApprovePost, useCreateComment, useDeletePost, useSaveToDocs } from './use-projects';
 
 export type OpenPhotos = (images: ImageDto[], index: number) => void;
@@ -142,10 +152,16 @@ type Props = {
   projectId: string;
   mine: boolean;
   highlighted?: boolean;
+  selected?: boolean;
+  pinned?: boolean;
   closed: boolean;
   onOpenPhotos: OpenPhotos;
   /** Opens the thread. Omitted inside the thread itself. */
   onReply?: () => void;
+  /** WhatsApp-style slide-to-reply: targets this post in the main bottom composer. */
+  onSwipeReply?: (post: PostDto) => void;
+  /** Long-press action menu (reply, copy, pin/unpin, delete). */
+  onLongPress?: (post: PostDto) => void;
   /** The inline reply box just opened: the list scrolls this post into view. */
   onReplyOpen?: () => void;
   /** Customer app: every message is already client-side, so the audience chip is noise. */
@@ -153,12 +169,72 @@ type Props = {
   onDeleted?: () => void;
 };
 
-export function PostCard({ post, projectId, mine, highlighted, closed, onOpenPhotos, onReply, onReplyOpen, hideAudience, onDeleted }: Props) {
+const SWIPE_THRESHOLD = 48;
+const SWIPE_MAX = 72;
+
+export function PostCard({ post, projectId, mine, highlighted, selected, pinned, closed, onOpenPhotos, onReply, onSwipeReply, onLongPress, onReplyOpen, hideAudience, onDeleted }: Props) {
   const del = useDeletePost(projectId);
   const approve = useApprovePost(projectId);
   const saveDocs = useSaveToDocs(projectId);
   const [replying, setReplying] = useState(false);
   const final = post.kind === 'FINAL_DELIVERY';
+  const canSwipeReply = Boolean((onSwipeReply || onReply) && !closed);
+
+  const dragX = useSharedValue(0);
+  const armed = useSharedValue(false);
+
+  const triggerReply = useCallback(() => {
+    if (onSwipeReply) {
+      onSwipeReply(post);
+    } else {
+      setReplying(true);
+      onReplyOpen?.();
+    }
+  }, [onSwipeReply, post, onReplyOpen]);
+
+  // Strict rightward-only pan: fails immediately on any vertical (±8px) or leftward (-8px) drift
+  // so vertical FlatList scrolling is never stalled.
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(canSwipeReply)
+        .activeOffsetX(20)
+        .failOffsetX(-8)
+        .failOffsetY([-8, 8])
+        .onUpdate((e) => {
+          const x = Math.max(0, Math.min(e.translationX * 0.85, SWIPE_MAX));
+          dragX.value = x;
+          if (x >= SWIPE_THRESHOLD && !armed.value) {
+            armed.value = true;
+            runOnJS(softTick)();
+          } else if (x < SWIPE_THRESHOLD && armed.value) {
+            armed.value = false;
+          }
+        })
+        .onEnd(() => {
+          if (armed.value) {
+            runOnJS(triggerReply)();
+          }
+        })
+        .onFinalize(() => {
+          armed.value = false;
+          dragX.value = withSpring(0, { damping: 24, stiffness: 280, mass: 0.85 });
+        }),
+    [canSwipeReply, dragX, armed, triggerReply],
+  );
+
+  const slideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: dragX.value }],
+  }));
+
+  const replyCueStyle = useAnimatedStyle(() => {
+    const progress = interpolate(dragX.value, [0, SWIPE_THRESHOLD], [0, 1], 'clamp');
+    const scale = interpolate(dragX.value, [0, SWIPE_THRESHOLD, SWIPE_MAX], [0.5, 1, 1.12], 'clamp');
+    return {
+      opacity: progress,
+      transform: [{ scale }],
+    };
+  });
 
   const confirmDelete = () => {
     Alert.alert('Delete this post?', 'This cannot be undone.', [
@@ -175,119 +251,264 @@ export function PostCard({ post, projectId, mine, highlighted, closed, onOpenPho
     ]);
   };
 
+  const authorLabel = mine ? 'You' : post.author.name;
+  const roleSuffix = post.author.isCustomer
+    ? 'Customer'
+    : post.author.designation ?? null;
+  const hasText = Boolean(post.text && post.text.trim().length > 0);
+
   return (
-    <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', gap: space[1] }}>
-      <PressableScale
-        disabled={!post.canDelete}
-        onLongPress={confirmDelete}
-        accessibilityHint={post.canDelete ? 'Long press to delete' : undefined}
-        style={[
-          styles.bubble,
-          mine ? styles.mine : styles.theirs,
-          post.visibility === 'TEAM' && styles.team,
-          final && styles.final,
-          highlighted && styles.highlight,
-        ]}
-      >
-        <Text variant="label" color={colors.primary} numberOfLines={1}>
-          {mine ? 'You' : post.author.name}
-          {post.author.isCustomer ? ' · Customer' : post.author.designation ? ` · ${post.author.designation}` : ''}
-        </Text>
-        <View style={{ flexDirection: 'row', gap: space[1], flexWrap: 'wrap' }}>
-          {hideAudience ? null : <AudienceChip v={post.visibility} />}
-          {final ? <Badge label="Final delivery" t="success" /> : null}
-        </View>
-        {post.images.length > 0 ? <PhotoGrid images={post.images} onOpen={onOpenPhotos} /> : null}
-        {post.images.length > 0 ? (
-          <PressableScale
-            disabled={saveDocs.isPending}
-            onPress={() =>
-              saveDocs.mutate(
-                { items: post.images.slice(0, 20).map((i) => ({ publicId: i.publicId })), visibility: post.visibility },
-                {
-                  onSuccess: (r) =>
-                    Alert.alert(
-                      r.every((x) => !x.created) ? 'Already in Docs' : 'Saved to Docs',
-                      r.every((x) => !x.created) ? undefined : `${r.filter((x) => x.created).length} file(s) added.`,
-                    ),
-                  onError: (e) => Alert.alert('Could not save', errorMessage(e)),
-                },
-              )
-            }
-            accessibilityLabel="Save photos to Docs"
-            hitSlop={6}
-            style={styles.saveDocs}
-          >
-            <Feather name="folder-plus" size={13} color={colors.mutedForeground} />
-            <Text variant="caption" muted>
-              {saveDocs.isPending ? 'Saving...' : 'Save to Docs'}
-            </Text>
-          </PressableScale>
-        ) : null}
-        {post.text ? <Text>{post.text}</Text> : null}
-        {post.approval ? (
-          <Badge label={`Approved by ${post.approval.by.name} · ${formatDate(post.approval.at)}`} t="success" />
-        ) : null}
-        <Text variant="caption" muted style={{ alignSelf: 'flex-end' }}>
-          {formatTime(post.createdAt)}
-        </Text>
-      </PressableScale>
+    <View style={styles.swipeWrap}>
+      {canSwipeReply ? (
+        <Animated.View pointerEvents="none" style={[styles.replyCue, replyCueStyle]}>
+          <Feather name="corner-up-left" size={15} color={colors.primary} />
+        </Animated.View>
+      ) : null}
+      <GestureDetector gesture={pan}>
+        <Animated.View style={slideStyle}>
+          <TimelineEntryRow authorName={post.author.name} accentAvatar={mine}>
+            <PressableScale
+              disabled={!onLongPress && !post.canDelete}
+              delayLongPress={280}
+              onLongPress={() => {
+                if (onLongPress) {
+                  softTick();
+                  onLongPress(post);
+                } else if (post.canDelete) {
+                  confirmDelete();
+                }
+              }}
+              accessibilityHint={
+                onLongPress
+                  ? 'Long press for message options'
+                  : post.canDelete
+                    ? 'Long press to delete'
+                    : undefined
+              }
+              style={[
+                styles.entryCard,
+                mine && styles.entryMine,
+                post.visibility === 'TEAM' && styles.team,
+                final && styles.final,
+                highlighted && styles.highlight,
+                selected && styles.entrySelected,
+              ]}
+            >
+              {/* Header: author name + role + timestamp (+ pin) */}
+              <View style={styles.headerRow}>
+                <View style={styles.authorWrap}>
+                  <Text variant="label" color={colors.inkDeep} numberOfLines={1} style={styles.authorName}>
+                    {authorLabel}
+                  </Text>
+                  {roleSuffix ? (
+                    <Text variant="caption" color={colors.inkMuted} numberOfLines={1}>
+                      · {roleSuffix}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={styles.timeWrap}>
+                  {pinned ? <Feather name="bookmark" size={11} color={colors.primary} /> : null}
+                  <Text variant="caption" muted style={styles.timeText}>
+                    {formatTime(post.createdAt)}
+                  </Text>
+                </View>
+              </View>
 
-      {post.canApprove ? (
-        <Button
-          title="Approve design"
-          size="sm"
-          loading={approve.isPending}
-          onPress={() =>
-            Alert.alert('Approve this design?', 'The team will be told you approved the design in this post.', [
-              { text: 'Not yet', style: 'cancel' },
-              {
-                text: 'Approve',
-                onPress: () =>
-                  approve.mutate(post.id, { onError: (e) => Alert.alert('Could not approve', errorMessage(e)) }),
-              },
-            ])
-          }
-        />
-      ) : null}
+              {/* Message body — omitted cleanly for photo-only posts */}
+              {hasText ? (
+                <Text color={colors.inkDeep} style={{ lineHeight: 21 }}>
+                  {post.text}
+                </Text>
+              ) : null}
 
-      {post.commentCount > post.recentComments.length && onReply ? (
-        <PressableScale onPress={onReply} style={styles.indent} hitSlop={8}>
-          <Text variant="caption" color={colors.primary}>
-            Show all {post.commentCount} comments
-          </Text>
-        </PressableScale>
-      ) : null}
-      {onReply
-        ? post.recentComments.map((c) => (
-            <View key={c.id} style={styles.indent}>
-              <CommentBubble comment={c} onOpen={onOpenPhotos} />
-            </View>
-          ))
-        : null}
-      {onReply && !closed ? (
-        replying ? (
-          <View style={[styles.indent, { alignSelf: 'stretch', marginRight: space[2] }]}>
-            <InlineReply projectId={projectId} postId={post.id} onDone={() => setReplying(false)} />
-          </View>
-        ) : (
-          <PressableScale onPress={() => {
-              setReplying(true);
-              onReplyOpen?.();
-            }}
-            accessibilityLabel="Reply" style={styles.indent} hitSlop={8}>
-            <Text variant="caption" color={colors.primary}>
-              Reply{post.commentCount > 0 ? ` · ${post.commentCount}` : ''}
-            </Text>
-          </PressableScale>
-        )
-      ) : null}
+              {/* Photo attachments */}
+              {post.images.length > 0 ? (
+                <View style={{ gap: 6 }}>
+                  <View style={styles.photoFrame}>
+                    <PhotoGrid images={post.images} onOpen={onOpenPhotos} />
+                  </View>
+                  <PressableScale
+                    disabled={saveDocs.isPending}
+                    onPress={() =>
+                      saveDocs.mutate(
+                        { items: post.images.slice(0, 20).map((i) => ({ publicId: i.publicId })), visibility: post.visibility },
+                        {
+                          onSuccess: (r) =>
+                            Alert.alert(
+                              r.every((x) => !x.created) ? 'Already in Docs' : 'Saved to Docs',
+                              r.every((x) => !x.created) ? undefined : `${r.filter((x) => x.created).length} file(s) added.`,
+                            ),
+                          onError: (e) => Alert.alert('Could not save', errorMessage(e)),
+                        },
+                      )
+                    }
+                    accessibilityLabel="Save photos to Docs"
+                    hitSlop={6}
+                    style={styles.saveDocs}
+                  >
+                    <Feather name="folder-plus" size={13} color={colors.inkMuted} />
+                    <Text variant="caption" color={colors.inkMuted}>
+                      {saveDocs.isPending ? 'Saving...' : 'Save to Docs'}
+                    </Text>
+                  </PressableScale>
+                </View>
+              ) : null}
+
+              {post.approval ? (
+                <Badge label={`Approved by ${post.approval.by.name} · ${formatDate(post.approval.at)}`} t="success" />
+              ) : null}
+
+              {/* Footer: explicit audience label, compact in-context thread link, and Reply action */}
+              {(!hideAudience || final || (onReply && post.commentCount > 0) || (onReply && !closed)) ? (
+                <View style={styles.footerRow}>
+                  <View style={styles.footerLeft}>
+                    {hideAudience ? null : <AudienceChip v={post.visibility} />}
+                    {final ? <Badge label="Final delivery" t="success" /> : null}
+                  </View>
+                  <View style={styles.footerRight}>
+                    {onReply && post.commentCount > 0 ? (
+                      <PressableScale onPress={onReply} hitSlop={8}>
+                        <Text variant="caption" color={colors.primary} style={{ fontFamily: font.medium }}>
+                          {post.commentCount} {post.commentCount === 1 ? 'reply' : 'replies'}
+                          {post.recentComments.length > 0
+                            ? ` · Last by ${post.recentComments[post.recentComments.length - 1]!.author.name.split(' ')[0]}`
+                            : ''}
+                        </Text>
+                      </PressableScale>
+                    ) : onReply && !closed ? (
+                      <PressableScale onPress={triggerReply} accessibilityLabel="Reply" hitSlop={8}>
+                        <Text variant="caption" color={colors.primary} style={{ fontFamily: font.semibold }}>
+                          Reply
+                        </Text>
+                      </PressableScale>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
+            </PressableScale>
+
+            {post.canApprove ? (
+              <View style={{ alignSelf: 'flex-start' }}>
+                <Button
+                  title="Approve design"
+                  size="sm"
+                  loading={approve.isPending}
+                  onPress={() =>
+                    Alert.alert('Approve this design?', 'The team will be told you approved the design in this post.', [
+                      { text: 'Not yet', style: 'cancel' },
+                      {
+                        text: 'Approve',
+                        onPress: () =>
+                          approve.mutate(post.id, { onError: (e) => Alert.alert('Could not approve', errorMessage(e)) }),
+                      },
+                    ])
+                  }
+                />
+              </View>
+            ) : null}
+
+            {onReply && !onSwipeReply
+              ? post.recentComments.map((c) => (
+                  <CommentBubble key={c.id} comment={c} onOpen={onOpenPhotos} />
+                ))
+              : null}
+            {onReply && !closed && !onSwipeReply && replying ? (
+              <InlineReply projectId={projectId} postId={post.id} onDone={() => setReplying(false)} />
+            ) : null}
+          </TimelineEntryRow>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
 
 
 const styles = StyleSheet.create({
+  swipeWrap: {
+    width: '100%',
+    justifyContent: 'center',
+  },
+  replyCue: {
+    position: 'absolute',
+    left: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  entryCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 14,
+    padding: space[3],
+    gap: space[2],
+  },
+  entryMine: {
+    backgroundColor: colors.card,
+    borderColor: colors.cardBorder,
+  },
+  entrySelected: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  photoFrame: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[2],
+  },
+  authorWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  authorName: {
+    fontFamily: font.semibold,
+    flexShrink: 1,
+  },
+  timeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  timeText: {
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[2],
+    paddingTop: 2,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[1],
+    flexWrap: 'wrap',
+    flexShrink: 1,
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    flexShrink: 0,
+  },
   bubble: {
     maxWidth: '88%',
     padding: space[2],
@@ -302,6 +523,8 @@ const styles = StyleSheet.create({
   highlight: { borderWidth: 2, borderColor: colors.primary },
   replyBubble: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
   indent: { marginLeft: space[5] },
+  metaLeft: { alignSelf: 'flex-start', paddingLeft: space[1] },
+  metaRight: { alignSelf: 'flex-end', paddingRight: space[1] },
   saveDocs: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
   inlineReply: { flexDirection: 'row', alignItems: 'flex-end', gap: space[1] },
   inlineInput: {

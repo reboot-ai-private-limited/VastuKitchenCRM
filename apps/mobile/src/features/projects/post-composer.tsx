@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -9,13 +9,25 @@ import {
   type CreatePostBodyDto,
   type PostVisibility,
 } from '@vastu/contracts';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space, tone } from '@/constants/theme';
 import { AUDIENCE_LABEL, AUDIENCE_TONE } from './project-meta';
 import { ApiError, NetworkError } from '@/lib/api/client';
+import { softTick } from '@/lib/haptics';
+import { SheetRow } from './sheet-row';
+import { SlidingSwitch } from './sliding-switch';
 import { usePhotoAttachments } from './use-photo-attachments';
+
+export type ReplyTarget = {
+  id: string;
+  authorName: string;
+  text: string | null;
+  thumbUrl?: string | null;
+  visibility: PostVisibility;
+};
 
 type Props = {
   projectId: string;
@@ -27,8 +39,15 @@ type Props = {
   allowFinalDelivery?: boolean;
   /** A customer posting: always visible to the customer side, so the audience chips are hidden. */
   fixedClient?: boolean;
+  /** Syncs the audience switch when the parent chat tab switches between Team and Client view. */
+  defaultVisibility?: PostVisibility;
+  /** Called when the user switches between Team only and Client can see. */
+  onVisibilityChange?: (next: PostVisibility) => void;
   /** Changing this number switches the composer into Final delivery mode (used by the Close flow). */
   finalDeliveryRequest?: number;
+  /** WhatsApp-style quoted reply target rendered above the main input. */
+  replyTo?: ReplyTarget | null;
+  onCancelReply?: () => void;
   /** Resolves when the server accepted it; the composer then clears itself. */
   onSubmit: (body: CreatePostBodyDto & CreateCommentBodyDto) => Promise<unknown>;
 };
@@ -39,26 +58,61 @@ function describe(e: unknown): string {
   return 'Something went wrong. Try again.';
 }
 
+const AUDIENCE_OPTIONS = [
+  { value: 'TEAM', label: AUDIENCE_LABEL.TEAM, icon: 'lock' },
+  { value: 'CLIENT', label: AUDIENCE_LABEL.CLIENT, icon: 'eye' },
+] as const;
+
+/** Sliding pill audience switch: smoothly glides between Team only and Client can see. */
+export function AudienceSwitch(props: {
+  value: PostVisibility;
+  onChange: (next: PostVisibility) => void;
+  disabled?: boolean;
+}) {
+  return <SlidingSwitch<PostVisibility> options={AUDIENCE_OPTIONS} {...props} />;
+}
+
 export function PostComposer({
   projectId,
   placeholder,
   kind,
   onSubmit,
   onCancel,
-  allowFinalDelivery,
+  allowFinalDelivery: _allowFinalDelivery,
   fixedClient,
+  defaultVisibility,
+  onVisibilityChange,
   finalDeliveryRequest,
+  replyTo,
+  onCancelReply,
 }: Props) {
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
   const photos = usePhotoAttachments(
     projectId,
-    kind === 'post' ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT,
+    kind === 'post' && !replyTo ? MAX_IMAGES_PER_POST : MAX_IMAGES_PER_COMMENT,
   );
   const [text, setText] = useState('');
-  const [pickedVisibility, setVisibility] = useState<PostVisibility>(fixedClient ? 'CLIENT' : 'TEAM');
+  const [pickedVisibility, setVisibility] = useState<PostVisibility>(
+    fixedClient ? 'CLIENT' : (defaultVisibility ?? 'TEAM'),
+  );
+  const [attachOpen, setAttachOpen] = useState(false);
   const [final, setFinal] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const visibility: PostVisibility = final ? 'CLIENT' : pickedVisibility;
+  const visibility: PostVisibility = replyTo ? replyTo.visibility : final ? 'CLIENT' : pickedVisibility;
+
+  useEffect(() => {
+    if (!fixedClient && defaultVisibility) {
+      setVisibility(defaultVisibility);
+    }
+  }, [defaultVisibility, fixedClient]);
+
+  useEffect(() => {
+    if (replyTo) {
+      setFinal(false);
+      setTimeout(() => inputRef.current?.focus(), 60);
+    }
+  }, [replyTo?.id]);
 
   const [seenRequest, setSeenRequest] = useState(finalDeliveryRequest ?? 0);
   if ((finalDeliveryRequest ?? 0) !== seenRequest) {
@@ -96,10 +150,9 @@ export function PostComposer({
   };
 
   const shownError = error ?? photos.problem;
-  const tinted = kind === 'post' && visibility === 'CLIENT' && !fixedClient;
 
   return (
-    <View style={[styles.wrap, tinted && styles.clientTint]}>
+    <View style={styles.wrap}>
       {photos.items.length > 0 ? (
         <ScrollView
           horizontal
@@ -142,69 +195,65 @@ export function PostComposer({
         </ScrollView>
       ) : null}
 
-      {kind === 'post' && !fixedClient ? (
-        <View style={styles.visibilityRow}>
-          {(['TEAM', 'CLIENT'] as const).map((v) => {
-            const active = visibility === v;
-            const t = tone[AUDIENCE_TONE[v]];
-            return (
-              <PressableScale
-                key={v}
-                disabled={final}
-                onPress={() => setVisibility(v)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: active ? t.bg : colors.muted,
-                    borderColor: active ? t.fg : 'transparent',
-                  },
-                ]}
-              >
-                <Feather
-                  name={v === 'TEAM' ? 'lock' : 'eye'}
-                  size={13}
-                  color={active ? t.fg : colors.mutedForeground}
-                />
-                <Text
-                  variant="caption"
-                  numberOfLines={1}
-                  color={active ? t.fg : colors.mutedForeground}
-                >
-                  {AUDIENCE_LABEL[v]}
-                </Text>
-              </PressableScale>
-            );
-          })}
-          {allowFinalDelivery ? (
-            <PressableScale
-              onPress={() => setFinal((f) => !f)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: final }}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: final ? tone.success.bg : colors.muted,
-                  borderColor: final ? tone.success.fg : 'transparent',
-                },
-              ]}
+      {kind === 'post' && replyTo ? (
+        <View
+          style={[
+            styles.replyPreview,
+            { borderLeftColor: replyTo.visibility === 'TEAM' ? tone.orange.fg : colors.primary },
+          ]}
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text
+              variant="caption"
+              color={replyTo.visibility === 'TEAM' ? tone.orange.fg : colors.primary}
+              numberOfLines={1}
+              style={{ fontFamily: font.semibold }}
             >
-              <Feather
-                name="check-circle"
-                size={13}
-                color={final ? tone.success.fg : colors.mutedForeground}
-              />
-              <Text
-                variant="caption"
-                numberOfLines={1}
-                color={final ? tone.success.fg : colors.mutedForeground}
-              >
-                Final delivery
-              </Text>
+              Replying to {replyTo.authorName}
+              {!fixedClient ? ` · ${AUDIENCE_LABEL[replyTo.visibility]}` : ''}
+            </Text>
+            <Text variant="caption" muted numberOfLines={1}>
+              {replyTo.text ?? (replyTo.thumbUrl ? 'Photo' : 'Message')}
+            </Text>
+          </View>
+          {replyTo.thumbUrl ? (
+            <Image source={{ uri: replyTo.thumbUrl }} style={styles.replyThumb} contentFit="cover" />
+          ) : null}
+          {onCancelReply ? (
+            <PressableScale
+              onPress={onCancelReply}
+              accessibilityLabel="Cancel reply"
+              hitSlop={8}
+              style={styles.replyClose}
+            >
+              <Feather name="x" size={16} color={colors.mutedForeground} />
             </PressableScale>
           ) : null}
         </View>
+      ) : kind === 'post' && !fixedClient ? (
+        final ? (
+          <View style={styles.finalBanner}>
+            <Feather name="check-circle" size={14} color={tone.success.fg} />
+            <Text variant="caption" color={tone.success.fg} style={{ flex: 1, fontFamily: font.semibold }}>
+              Final delivery · Visible to client (photo required)
+            </Text>
+            <PressableScale
+              onPress={() => setFinal(false)}
+              accessibilityLabel="Cancel final delivery mode"
+              hitSlop={8}
+            >
+              <Feather name="x" size={16} color={tone.success.fg} />
+            </PressableScale>
+          </View>
+        ) : (
+          <AudienceSwitch
+            value={visibility}
+            onChange={(next) => {
+              setVisibility(next);
+              onVisibilityChange?.(next);
+            }}
+          />
+        )
       ) : null}
 
       {shownError ? (
@@ -259,21 +308,27 @@ export function PostComposer({
         </>
       ) : (
         <View style={styles.row}>
-          <PressableScale onPress={() => void photos.takePhoto()} accessibilityLabel="Take a photo" style={styles.icon}>
-            <Feather name="camera" size={22} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale onPress={() => void photos.pickFromGallery()} accessibilityLabel="Attach photos" style={styles.icon}>
-            <Feather name="image" size={22} color={colors.mutedForeground} />
+          <PressableScale
+            onPress={() => {
+              softTick();
+              setAttachOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Add attachment"
+            style={styles.plusBtn}
+          >
+            <Feather name="plus" size={20} color={colors.inkDeep} />
           </PressableScale>
           <TextInput
+            ref={inputRef}
             value={text}
             onChangeText={setText}
             placeholder={
-              final
-                ? 'Add a photo to post'
-                : tinted
-                  ? 'Message customer'
-                  : placeholder
+              replyTo
+                ? `Reply to ${replyTo.authorName}…`
+                : final
+                  ? 'Add a photo for final delivery…'
+                  : 'Post an update…'
             }
             placeholderTextColor={colors.placeholder}
             multiline
@@ -289,11 +344,38 @@ export function PostComposer({
             {sending ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Feather name="send" size={20} color={colors.primaryForeground} />
+              <Feather name="send" size={19} color={colors.primaryForeground} />
             )}
           </PressableScale>
         </View>
       )}
+
+      <BottomSheet
+        visible={attachOpen}
+        onClose={() => setAttachOpen(false)}
+        title="Add attachment"
+      >
+        <View style={{ gap: space[2] }}>
+          <SheetRow
+            icon="camera"
+            label="Take photo"
+            caption="Use camera to capture site or design progress"
+            onPress={() => {
+              setAttachOpen(false);
+              void photos.takePhoto();
+            }}
+          />
+          <SheetRow
+            icon="image"
+            label="Choose from gallery"
+            caption="Attach one or more photos from your phone"
+            onPress={() => {
+              setAttachOpen(false);
+              void photos.pickFromGallery();
+            }}
+          />
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -301,9 +383,17 @@ export function PostComposer({
 const styles = StyleSheet.create({
   wrap: { gap: space[2] },
   clientTint: { backgroundColor: tone.success.bg, borderRadius: radius.lg, padding: space[2] },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: space[1] },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: space[2] },
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  plusBtn: {
+    width: 40,
+    height: 44,
+    borderRadius: radius.lg,
+    backgroundColor: colors.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sendBtn: {
     width: 44,
     height: 44,
@@ -345,21 +435,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  visibilityRow: {
+  finalBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[1],
+    gap: space[2],
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: radius.md,
+    backgroundColor: tone.success.bg,
+    borderWidth: 1,
+    borderColor: `${tone.success.fg}55`,
   },
-  chip: {
+  replyPreview: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingLeft: space[3],
+    paddingRight: space[2],
+    paddingVertical: space[2],
+    borderRadius: radius.md,
+    borderLeftWidth: 3,
+    backgroundColor: colors.muted,
+  },
+  replyThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.border,
+  },
+  replyClose: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    minHeight: 34,
-    paddingHorizontal: 8,
-    flexShrink: 1,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
   },
 });

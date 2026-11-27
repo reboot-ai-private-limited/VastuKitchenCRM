@@ -30,7 +30,12 @@ export function AppHeader({ options, back, navigation }: HeaderProps) {
           <View style={{ width: space[4] }} />
         )}
         {title ? (
-          <Text variant="section" color={colors.primary} numberOfLines={1} style={{ flex: 1 }}>
+          <Text
+            variant="section"
+            color={colors.inkDeep}
+            numberOfLines={2}
+            style={styles.title}
+          >
             {title}
           </Text>
         ) : null}
@@ -42,6 +47,13 @@ export function AppHeader({ options, back, navigation }: HeaderProps) {
 
 const styles = StyleSheet.create({
   bar: { backgroundColor: colors.background },
-  row: { height: 48, flexDirection: 'row', alignItems: 'center', paddingRight: space[4] },
+  row: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingRight: space[4],
+  },
+  title: { flex: 1, lineHeight: 21 },
   back: { width: hit, height: hit, alignItems: 'center', justifyContent: 'center' },
 });

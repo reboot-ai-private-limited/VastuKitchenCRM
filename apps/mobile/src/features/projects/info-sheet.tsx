@@ -1,20 +1,31 @@
 import type React from 'react';
-import { Alert, Linking, Share, View } from 'react-native';
+import { Alert, Linking, Share, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { DesignStage, ProjectDto, RoleName } from '@vastu/contracts';
+import { Avatar } from '@/components/ui/avatar';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Chip } from '@/components/ui/chip';
 import { Text } from '@/components/ui/text';
-import { space } from '@/constants/theme';
+import { colors, font, radius, space } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { formatDate, formatINR } from '@/lib/format';
 import { openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
-import { DESIGN_LABEL, STAGE_LABEL, STAGE_TONE } from './project-meta';
+import { DESIGN_LABEL, DESIGN_TONE, STAGE_LABEL, STAGE_TONE } from './project-meta';
+import { SheetRow } from './sheet-row';
+import { SlidingSwitch } from './sliding-switch';
 import { useChangeDesignStage, useChangeStage, useCloseProject, useInviteCustomer } from './use-projects';
 
 const DESIGN_ORDER: DesignStage[] = ['NOT_STARTED', 'IN_DESIGN', 'SHARED', 'APPROVED'];
+const DESIGN_ICON = {
+  NOT_STARTED: 'circle',
+  IN_DESIGN: 'edit-3',
+  SHARED: 'send',
+  APPROVED: 'check-circle',
+} as const;
+const STAGE_OPTIONS = [
+  { value: 'DESIGN', label: STAGE_LABEL.DESIGN, icon: 'pen-tool' },
+  { value: 'SITE', label: STAGE_LABEL.SITE, icon: 'tool' },
+] as const;
 
 /** What this viewer may do. The server decides in the end; this only hides what it would refuse. */
 export function projectPermissions(project: ProjectDto, user: { id: string; role: RoleName } | null) {
@@ -41,13 +52,27 @@ type Props = {
   onNeedFinalDelivery: () => void;
 };
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+/** A titled block, tagged like the chat's event cards. */
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <View style={{ gap: 2 }}>
-      <Text variant="caption" muted>
-        {label}
+    <View style={{ gap: space[2] }}>
+      <Text variant="caption" color={colors.inkMuted} style={{ fontFamily: font.semibold }}>
+        {label.toUpperCase()}
       </Text>
       {children}
+    </View>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detail}>
+      <Text variant="caption" color={colors.inkMuted}>
+        {label}
+      </Text>
+      <Text variant="label" color={colors.inkDeep}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -103,95 +128,118 @@ export function InfoSheet({ project, user, visible, onClose, onNeedFinalDelivery
   return (
     <BottomSheet visible={visible} onClose={onClose} title={project.name} subtitle={project.customer.name}>
       <View style={{ gap: space[4] }}>
-        <Row label="Stage">
+        <Section label="Stage">
           {perms.canChangeStage && !closed ? (
-            <View style={{ flexDirection: 'row', gap: space[1] }}>
-              {(['DESIGN', 'SITE'] as const).map((s) => (
-                <Chip
-                  key={s}
-                  label={STAGE_LABEL[s]}
-                  active={project.stage === s}
-                  onPress={() => project.stage !== s && stage.mutate(s, { onError: fail('Could not change the stage') })}
-                />
-              ))}
-            </View>
+            <SlidingSwitch
+              options={STAGE_OPTIONS}
+              value={project.stage === 'SITE' ? 'SITE' : 'DESIGN'}
+              disabled={stage.isPending}
+              onChange={(s) => stage.mutate(s, { onError: fail('Could not change the stage') })}
+            />
           ) : (
-            <Badge label={closed ? `Closed${project.closedAt ? ` ${formatDate(project.closedAt)}` : ''}` : STAGE_LABEL[project.stage]} t={STAGE_TONE[project.stage]} />
+            <Badge
+              label={closed ? `Closed${project.closedAt ? ` ${formatDate(project.closedAt)}` : ''}` : STAGE_LABEL[project.stage]}
+              t={STAGE_TONE[project.stage]}
+            />
           )}
-        </Row>
+        </Section>
 
         {!closed ? (
-          <Row label="Design stage">
+          <Section label="Design stage">
             {perms.canChangeDesignStage ? (
-              <View style={{ flexDirection: 'row', gap: space[1], flexWrap: 'wrap' }}>
-                {DESIGN_ORDER.map((d) => (
-                  <Chip
-                    key={d}
-                    label={DESIGN_LABEL[d]}
-                    active={project.designStage === d}
-                    onPress={() =>
-                      project.designStage !== d && design.mutate(d, { onError: fail('Could not change the design stage') })
+              DESIGN_ORDER.map((d) => (
+                <SheetRow
+                  key={d}
+                  icon={DESIGN_ICON[d]}
+                  t={DESIGN_TONE[d]}
+                  label={DESIGN_LABEL[d]}
+                  selected={project.designStage === d}
+                  disabled={design.isPending}
+                  onPress={() => {
+                    if (project.designStage !== d) {
+                      design.mutate(d, { onError: fail('Could not change the design stage') });
                     }
-                  />
-                ))}
-              </View>
+                  }}
+                />
+              ))
             ) : (
-              <Text>{DESIGN_LABEL[project.designStage]}</Text>
+              <Badge label={DESIGN_LABEL[project.designStage]} t={DESIGN_TONE[project.designStage]} />
             )}
-          </Row>
+          </Section>
         ) : null}
 
-        <Row label="Team">
+        <Section label="Team">
           {project.members.length === 0 ? (
             <Text muted>No team members yet</Text>
           ) : (
-            project.members.map((m) => (
-              <Text key={m.id}>
-                {m.name}
-                {m.designation ? ` · ${m.designation}` : ''}
-                {project.designer?.id === m.id ? '  (Designer)' : ''}
-              </Text>
-            ))
+            <View style={styles.card}>
+              {project.members.map((m) => {
+                const role = [m.designation, project.designer?.id === m.id ? 'Project designer' : null]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <View key={m.id} style={styles.member}>
+                    <Avatar name={m.name} size={32} accent={m.id === user?.id} />
+                    <View style={{ flex: 1 }}>
+                      <Text variant="label" color={colors.inkDeep}>
+                        {m.name}
+                      </Text>
+                      {role ? (
+                        <Text variant="caption" color={colors.inkMuted}>
+                          {role}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           )}
-        </Row>
+        </Section>
 
-        <Row label="Customer">
-          <Text>{project.customer.name}</Text>
-          <View style={{ flexDirection: 'row', gap: space[2] }}>
-            <Button title="Call" size="sm" variant="outline" onPress={() => void openLink(telUrl(project.customer.phone))} />
-            <Button
-              title="WhatsApp"
-              size="sm"
-              variant="outline"
-              onPress={() => void openLink(whatsappUrlFor(project.customer.phone))}
+        <Section label="Customer">
+          <SheetRow
+            icon="phone"
+            label={`Call ${project.customer.name}`}
+            caption={project.customer.phone}
+            onPress={() => void openLink(telUrl(project.customer.phone))}
+          />
+          <SheetRow
+            icon="message-circle"
+            t="success"
+            label="WhatsApp"
+            caption="Message the customer"
+            onPress={() => void openLink(whatsappUrlFor(project.customer.phone))}
+          />
+        </Section>
+
+        {mapsUrl ? (
+          <Section label="Location">
+            <SheetRow
+              icon="map-pin"
+              t="info"
+              label={project.siteAddress ?? ''}
+              caption="Open in Maps"
+              onPress={() => void Linking.openURL(mapsUrl).catch(() => undefined)}
             />
-          </View>
-        </Row>
+          </Section>
+        ) : null}
 
-        {project.siteAddress ? (
-          <Row label="Site address">
-            <Text>{project.siteAddress}</Text>
-            {mapsUrl ? (
-              <Button title="Open in Maps" size="sm" variant="outline" onPress={() => void Linking.openURL(mapsUrl).catch(() => undefined)} />
+        <Section label="Details">
+          <View style={styles.card}>
+            {project.value != null && !closed ? (
+              <Detail label="Value" value={formatINR(project.value)} />
             ) : null}
-          </Row>
-        ) : null}
-
-        {project.value != null && !closed ? (
-          <Row label="Value">
-            <Text>{formatINR(project.value)}</Text>
-          </Row>
-        ) : null}
-        <Row label="Created">
-          <Text>{formatDate(project.createdAt)}</Text>
-        </Row>
+            <Detail label="Created" value={formatDate(project.createdAt)} />
+          </View>
+        </Section>
 
         <View style={{ gap: space[2] }}>
           {perms.canSeeJourney && project.leadId ? (
-            <Button
-              title="Lead journey"
-              variant="outline"
-              fullWidth
+            <SheetRow
+              icon="git-branch"
+              label="Lead journey"
+              caption="See how this project started"
               onPress={() => {
                 onClose();
                 router.push({ pathname: '/leads/[id]', params: { id: project.leadId as string } });
@@ -199,32 +247,66 @@ export function InfoSheet({ project, user, visible, onClose, onNeedFinalDelivery
             />
           ) : null}
           {perms.canInvite ? (
-            <Button title="Invite customer" variant="outline" fullWidth loading={invite.isPending} onPress={sendInvite} />
+            <SheetRow
+              icon="user-plus"
+              label="Invite customer"
+              caption="Share a link to this project"
+              disabled={invite.isPending}
+              onPress={sendInvite}
+            />
+          ) : null}
+          {perms.isStaff && !closed ? (
+            <SheetRow
+              icon="check-circle"
+              label="Post final delivery"
+              caption="Complete project milestone with photos"
+              onPress={() => {
+                onClose();
+                onNeedFinalDelivery();
+              }}
+            />
           ) : null}
           {perms.canClose && !closed ? (
-            <Button title="Close project" variant="destructive" fullWidth loading={close.isPending} onPress={confirmClose} />
+            <SheetRow
+              icon="archive"
+              t="danger"
+              label="Close project"
+              caption="The customer and team will be told"
+              disabled={close.isPending}
+              onPress={confirmClose}
+            />
           ) : null}
-          {perms.canChangeStage && closed ? (
-            <>
-              <Button
-                title="Reopen as Design"
-                variant="outline"
-                fullWidth
-                loading={stage.isPending}
-                onPress={() => stage.mutate('DESIGN', { onError: fail('Could not reopen') })}
-              />
-              <Button
-                title="Reopen as Site"
-                variant="outline"
-                fullWidth
-                loading={stage.isPending}
-                onPress={() => stage.mutate('SITE', { onError: fail('Could not reopen') })}
-              />
-            </>
-          ) : null}
+          {perms.canChangeStage && closed
+            ? STAGE_OPTIONS.map((o) => (
+                <SheetRow
+                  key={o.value}
+                  icon="rotate-ccw"
+                  label={`Reopen as ${o.value === 'SITE' ? 'Site' : 'Design'}`}
+                  disabled={stage.isPending}
+                  onPress={() => stage.mutate(o.value, { onError: fail('Could not reopen') })}
+                />
+              ))
+            : null}
         </View>
       </View>
     </BottomSheet>
   );
 }
 
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[3],
+    paddingVertical: space[1],
+  },
+  member: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[2] },
+  detail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: space[2],
+  },
+});

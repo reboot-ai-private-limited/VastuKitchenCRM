@@ -1,9 +1,14 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Roboto } from 'next/font/google';
 import { Providers } from './providers';
 import './globals.css';
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', display: 'swap' });
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-roboto',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: { default: 'Vaastu Kitchen', template: '%s · Vaastu Kitchen' },
@@ -15,7 +20,7 @@ export const viewport: Viewport = { themeColor: '#0e8f78', width: 'device-width'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={jakarta.variable}>
+    <html lang="en" className={roboto.variable}>
       <body>
         <Providers>{children}</Providers>
       </body>

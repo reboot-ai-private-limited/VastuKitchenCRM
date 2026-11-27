@@ -52,10 +52,10 @@ export const shadow = {
 } as const;
 
 export const font = {
-  regular: 'PlusJakartaSans_400Regular',
-  medium: 'PlusJakartaSans_500Medium',
-  semibold: 'PlusJakartaSans_600SemiBold',
-  bold: 'PlusJakartaSans_700Bold',
+  regular: 'Roboto_400Regular',
+  medium: 'Roboto_500Medium',
+  semibold: 'Roboto_600SemiBold',
+  bold: 'Roboto_700Bold',
 } as const;
 
 export const type = {

@@ -6,7 +6,7 @@
 
 /* Tailwind utilities read these CSS variables. Never hardcode hex in components: use tokens. */
 @theme inline {
-  --font-sans: var(--font-jakarta), 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-roboto), 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), ui-serif, Georgia, serif;
 
   --color-background: var(--background);

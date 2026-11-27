@@ -18,7 +18,7 @@ import { Text } from '@/components/ui/text';
 import { colors, font, radius, space, tone, type Tone } from '@/constants/theme';
 import { routeFor } from '@/features/alerts/route-for';
 import { CheckInCard } from '@/features/attendance/check-in-card';
-import { ComplaintsCard, KpiRow, TeamCard } from './admin-dashboard-parts';
+import { KpiRow, TeamCard } from './admin-dashboard-parts';
 import { NetworkError } from '@/lib/api/client';
 import { getDashboard } from '@/lib/api/endpoints/dashboard';
 import { useSession } from '@/lib/auth/session';
@@ -282,17 +282,6 @@ export function AdminGlanceHome() {
             </Reveal>
           ) : null}
 
-          {/* COMPLAINTS */}
-          {data.counters && attention ? (
-            <Reveal index={1}>
-              <View style={{ gap: space[2] }}>
-                <Text variant="caption" muted style={styles.eyebrow}>
-                  COMPLAINTS · PENDING NOW
-                </Text>
-                <ComplaintsCard counts={data.counters.complaints} overdue={attention.overdueComplaints} />
-              </View>
-            </Reveal>
-          ) : null}
           {data.people ? (
             <Reveal index={1}>
               <View style={{ gap: space[2] }}>

@@ -86,7 +86,6 @@ export function RaiseComplaintScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
       behavior="padding"
-      keyboardVerticalOffset={88}
     >
       <Stack.Screen
         options={{

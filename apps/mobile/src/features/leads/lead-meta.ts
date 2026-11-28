@@ -30,10 +30,16 @@ export const STATUS_TONE: Record<LeadStatus, Tone> = {
   PROPOSAL_SENT: 'orange',
   FOLLOW_UP: 'warning',
   WON: 'success',
-  LOST: 'danger',
+  LOST: 'neutral',
 };
 
 export const STATUS_ORDER = Object.keys(STATUS_LABEL) as LeadStatus[];
+
+export function daysInStage(statusChangedAt: string): number | null {
+  const ms = Date.parse(statusChangedAt);
+  if (Number.isNaN(ms)) return null;
+  return Math.max(0, Math.floor((Date.now() - ms) / 86_400_000));
+}
 
 export const OUTCOME_LABEL: Record<string, string> = {
   INTERESTED: 'Interested',

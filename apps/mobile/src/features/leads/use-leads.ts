@@ -30,11 +30,11 @@ export function usePendingForLead(id: string, ...types: string[]): OutboxItem[] 
   return usePendingOutbox((i) => i.entityKey === leadKey(id) && (types.length === 0 || types.includes(i.type)));
 }
 
-export const useLeadsList = (search: string, status?: LeadDto['status']) =>
+export const useLeadsList = (search: string, status?: LeadDto['status'], stuck?: boolean) =>
   useInfiniteQuery({
-    queryKey: ['leads', 'list', { search, status }],
+    queryKey: ['leads', 'list', { search, status, stuck }],
     queryFn: ({ pageParam, signal }) =>
-      listLeads({ page: pageParam, search: search || undefined, status }, signal),
+      listLeads({ page: pageParam, search: search || undefined, status, stuck }, signal),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {

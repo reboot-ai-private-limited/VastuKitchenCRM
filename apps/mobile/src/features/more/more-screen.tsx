@@ -3,7 +3,7 @@ import { MoreMenuContent } from './more-sheet';
 
 export function MoreScreen() {
   return (
-    <Screen title="More" subtitle="Tools, directories and account settings">
+    <Screen title="More">
       <MoreMenuContent />
     </Screen>
   );

@@ -16,10 +16,16 @@ export type StaffTabKey =
 export type MoreItem = {
   key: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   icon: keyof typeof Feather.glyphMap;
   tone: Tone;
   href: Href;
+};
+
+export type MoreGroup = {
+  key: string;
+  title: string;
+  items: MoreItem[];
 };
 
 export const ROLE_LABEL: Record<RoleName, string> = {
@@ -64,106 +70,91 @@ const ITEM_CATALOG = {
   proposals: {
     key: 'proposals',
     title: 'Proposals',
-    subtitle: 'Sent quotes, seen tracking and links',
     icon: 'file-text',
-    tone: 'info',
+    tone: 'neutral',
     href: '/proposals' as Href,
   },
   customers: {
     key: 'customers',
     title: 'Customers',
-    subtitle: 'Accounts, projects and invites',
     icon: 'users',
-    tone: 'accent',
+    tone: 'neutral',
     href: '/customers' as Href,
   },
   projects: {
     key: 'projects',
     title: 'Projects',
-    subtitle: 'Active kitchen workspaces',
     icon: 'layers',
-    tone: 'violet',
+    tone: 'neutral',
     href: '/projects' as Href,
   },
   leads: {
     key: 'leads',
     title: 'Leads',
-    subtitle: 'Leads ready for design and estimate',
     icon: 'phone-call',
-    tone: 'accent',
+    tone: 'neutral',
     href: '/leads' as Href,
   },
   todos: {
     key: 'todos',
     title: 'To-dos',
-    subtitle: 'My tasks grouped by due date',
     icon: 'check-square',
-    tone: 'warning',
+    tone: 'neutral',
     href: '/todos' as Href,
   },
   complaints: {
     key: 'complaints',
     title: 'Complaints',
-    subtitle: 'Service tickets and resolutions',
     icon: 'alert-circle',
-    tone: 'orange',
+    tone: 'neutral',
     href: '/complaints' as Href,
   },
   attendanceBoard: {
     key: 'attendance-board',
     title: 'Attendance board',
-    subtitle: 'Who is present, absent or missing check-out',
+    subtitle: 'Team check-ins and absences',
     icon: 'calendar',
-    tone: 'success',
+    tone: 'neutral',
     href: '/attendance/board' as Href,
   },
   myAttendance: {
     key: 'my-attendance',
     title: 'My attendance',
-    subtitle: 'Check-in status and monthly calendar',
+    subtitle: 'Your check-ins and monthly log',
     icon: 'map-pin',
-    tone: 'success',
+    tone: 'neutral',
     href: '/attendance' as Href,
   },
   team: {
     key: 'team',
     title: 'Team',
-    subtitle: 'Staff directory with tap to call',
     icon: 'briefcase',
-    tone: 'info',
-    href: '/team' as Href,
-  },
-  profile: {
-    key: 'profile',
-    title: 'Profile & account',
-    subtitle: 'Password, language and account settings',
-    icon: 'user',
     tone: 'neutral',
-    href: '/profile' as Href,
+    href: '/team' as Href,
   },
 } satisfies Record<string, MoreItem>;
 
-/** Exact "In More" list per staff persona (01-personas-and-navigation.md §1). */
-export function moreItemsForUser(user: UserDto | null): MoreItem[] {
+/** Grouped "In More" destinations per staff persona (profile is accessed via the top account card). */
+export function moreGroupsForUser(user: UserDto | null): MoreGroup[] {
   if (!user || !isStaffRole(user.role)) return [];
   const hasAttendance = user.attendanceType !== null;
-  const out: MoreItem[] = [];
+  const work: MoreItem[] = [];
+  const people: MoreItem[] = [];
 
   switch (user.role) {
     case 'ADMIN':
-      out.push(
+      work.push(
         ITEM_CATALOG.proposals,
         ITEM_CATALOG.customers,
         ITEM_CATALOG.todos,
         ITEM_CATALOG.complaints,
-        ITEM_CATALOG.attendanceBoard,
-        ITEM_CATALOG.team,
       );
+      people.push(ITEM_CATALOG.attendanceBoard, ITEM_CATALOG.team);
       break;
     case 'HR':
       break;
     case 'SALES':
-      out.push(
+      work.push(
         ITEM_CATALOG.proposals,
         ITEM_CATALOG.customers,
         ITEM_CATALOG.todos,
@@ -171,19 +162,26 @@ export function moreItemsForUser(user: UserDto | null): MoreItem[] {
       );
       break;
     case 'DESIGNER':
-      out.push(ITEM_CATALOG.leads, ITEM_CATALOG.complaints);
+      work.push(ITEM_CATALOG.leads, ITEM_CATALOG.complaints);
       break;
     case 'TECHNICIAN':
-      out.push(ITEM_CATALOG.todos);
+      work.push(ITEM_CATALOG.todos);
       break;
     case 'OFFICE':
-      out.push(ITEM_CATALOG.projects, ITEM_CATALOG.todos, ITEM_CATALOG.complaints);
+      work.push(ITEM_CATALOG.projects, ITEM_CATALOG.todos, ITEM_CATALOG.complaints);
       break;
   }
 
   if (hasAttendance) {
-    out.push(ITEM_CATALOG.myAttendance);
+    people.push(ITEM_CATALOG.myAttendance);
   }
-  out.push(ITEM_CATALOG.profile);
-  return out;
+
+  const groups: MoreGroup[] = [];
+  if (work.length > 0) groups.push({ key: 'work', title: 'Work', items: work });
+  if (people.length > 0) groups.push({ key: 'people', title: 'People', items: people });
+  return groups;
+}
+
+export function moreItemsForUser(user: UserDto | null): MoreItem[] {
+  return moreGroupsForUser(user).flatMap((g) => g.items);
 }

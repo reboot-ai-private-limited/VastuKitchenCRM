@@ -1,14 +1,14 @@
 import { StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Card } from '@/components/ui/card';
 import { ListRow } from '@/components/ui/list-row';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
-import { moreItemsForUser, ROLE_LABEL } from '@/constants/roles';
-import { colors, space } from '@/constants/theme';
+import { moreGroupsForUser, ROLE_LABEL } from '@/constants/roles';
+import { colors, font, radius, space } from '@/constants/theme';
 import { useConfirmSignOut } from '@/lib/auth/sign-out';
 import { useSession } from '@/lib/auth/session';
 import { formatPhone } from '@/lib/format';
@@ -18,7 +18,7 @@ export function MoreMenuContent({ onNavigate }: { onNavigate?: () => void }) {
   const confirmSignOut = useConfirmSignOut();
   const { user } = useSession();
   const router = useRouter();
-  const items = moreItemsForUser(user);
+  const groups = moreGroupsForUser(user);
 
   const go = (href: Href) => {
     onNavigate?.();
@@ -27,46 +27,57 @@ export function MoreMenuContent({ onNavigate }: { onNavigate?: () => void }) {
 
   if (!user) return null;
 
+  const roleLabel = user.designation ?? ROLE_LABEL[user.role];
+
   return (
-    <View style={{ gap: space[3] }}>
-      <PressableScale onPress={() => go('/profile' as Href)}>
-        <Card style={styles.userCard}>
-          <Avatar name={user.name} size={40} accent />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="section" numberOfLines={1}>
-              {user.name}
-            </Text>
-            <Text variant="caption" muted style={{ fontVariant: ['tabular-nums'] }}>
-              {formatPhone(user.phone)}
-            </Text>
-          </View>
-          <Badge label={user.designation ?? ROLE_LABEL[user.role]} t="accent" />
-        </Card>
+    <View style={styles.container}>
+      <PressableScale
+        onPress={() => go('/profile' as Href)}
+        accessibilityRole="button"
+        accessibilityLabel={`${user.name}, ${roleLabel}, open account settings`}
+        style={styles.accountCard}
+      >
+        <Avatar name={user.name} size={40} accent />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text color={colors.inkDeep} numberOfLines={1} style={styles.accountName}>
+            {user.name}
+          </Text>
+          <Text variant="caption" color={colors.inkMuted} style={styles.tabular}>
+            {formatPhone(user.phone)}
+          </Text>
+        </View>
+        <Badge label={roleLabel} t="neutral" />
+        <Feather name="chevron-right" size={16} color={colors.inkMuted} />
       </PressableScale>
 
-      <Card style={{ paddingVertical: space[1] }}>
-        {items.map((item, idx) => (
-          <ListRow
-            key={item.key}
-            icon={item.icon}
-            iconTone={item.tone}
-            title={item.title}
-            subtitle={item.subtitle}
-            divider={idx < items.length - 1}
-            onPress={() => go(item.href)}
-          />
-        ))}
-      </Card>
+      {groups.map((group) => (
+        <View key={group.key} style={styles.section}>
+          <Text variant="caption" color={colors.inkMuted} style={styles.sectionTitle}>
+            {group.title}
+          </Text>
+          <View style={styles.group}>
+            {group.items.map((item, idx) => (
+              <ListRow
+                key={item.key}
+                icon={item.icon}
+                title={item.title}
+                subtitle={item.subtitle}
+                divider={idx < group.items.length - 1}
+                onPress={() => go(item.href)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
 
-      <Card style={{ paddingVertical: space[1] }}>
+      <View style={[styles.group, styles.signOutGroup]}>
         <ListRow
           icon="log-out"
           title="Sign out"
-          subtitle="Sign out of Vastu Kitchen on this phone"
           destructive
           onPress={() => confirmSignOut(onNavigate)}
         />
-      </Card>
+      </View>
     </View>
   );
 }
@@ -81,10 +92,43 @@ export function MoreSheet() {
 }
 
 const styles = StyleSheet.create({
-  userCard: {
+  container: {
+    gap: space[4],
+  },
+  accountCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[3],
-    backgroundColor: colors.muted,
+    paddingHorizontal: space[3],
+    paddingVertical: space[3],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.pageSoft,
+  },
+  accountName: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontFamily: font.semibold,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
+  },
+  section: {
+    gap: space[1],
+  },
+  sectionTitle: {
+    fontFamily: font.semibold,
+    paddingHorizontal: 2,
+  },
+  group: {
+    backgroundColor: colors.pageSoft,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[3],
+  },
+  signOutGroup: {
+    marginTop: space[1],
   },
 });

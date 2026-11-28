@@ -1,9 +1,13 @@
 import * as Haptics from 'expo-haptics';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SetDayBodyDto } from '@vastu/contracts';
 import {
   getAttendanceBoard,
+  getAttendanceRange,
   getMyAttendanceMonth,
   getUserAttendanceMonth,
+  removeAttendanceDay,
+  setAttendanceDay,
 } from '@/lib/api/endpoints/attendance';
 import { session } from '@/lib/auth/session';
 import { businessMonth } from '@/lib/format';
@@ -28,7 +32,39 @@ export const useAttendanceBoard = (date: string) =>
   useQuery({
     queryKey: ['attendance', 'board', date],
     queryFn: ({ signal }) => getAttendanceBoard(date, signal),
+    refetchInterval: 60_000,
   });
+
+export const useAttendanceRange = (from: string, to: string, enabled = true) =>
+  useQuery({
+    queryKey: ['attendance', 'range', from, to],
+    queryFn: ({ signal }) => getAttendanceRange(from, to, signal),
+    enabled: enabled && !!from && !!to && from <= to,
+  });
+
+export function useSetAttendanceDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, date, ...body }: SetDayBodyDto & { userId: string; date: string }) =>
+      setAttendanceDay(userId, date, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['attendance'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useRemoveAttendanceDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, date }: { userId: string; date: string }) =>
+      removeAttendanceDay(userId, date),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['attendance'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
 
 export type PunchInput = { kind: 'in' | 'out'; manual?: boolean };
 

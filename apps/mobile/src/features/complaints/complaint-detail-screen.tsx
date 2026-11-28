@@ -22,6 +22,7 @@ import { CommentCard } from '@/features/projects/comment-card';
 import { DetailHeader, headerMutedText } from '@/features/projects/detail-header';
 import { MessageBar } from '@/features/projects/message-bar';
 import { SheetRow } from '@/features/projects/sheet-row';
+import { useDocUpload } from '@/features/projects/use-doc-upload';
 import { SlidingSwitch } from '@/features/projects/sliding-switch';
 import {
   DaySeparator,
@@ -111,6 +112,7 @@ export function ComplaintDetailScreen() {
   const delComment = useDeleteComplaintComment(id);
   const [assignOpen, setAssignOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
   const [pickedMode, setMode] = useState<ComplaintAction>('comment');
   const [text, setText] = useState('');
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -125,7 +127,14 @@ export function ComplaintDetailScreen() {
     [mode, id],
   );
   const photos = useSignedAttachments(sign, 5);
+  const docUpload = useDocUpload(c?.projectId, 'CLIENT');
   const canAttach = mode === 'comment' || mode === 'resolve';
+
+  const pickDocs = async () => {
+    setDocError(null);
+    const problem = await docUpload.pickAndUpload();
+    if (problem) setDocError(problem);
+  };
 
   const staffQ = useQuery({
     queryKey: ['users', 'assignees'],
@@ -318,11 +327,16 @@ export function ComplaintDetailScreen() {
                 hideActions
               />
             ) : null}
+            {docUpload.progress ? (
+              <Text variant="caption" color={colors.primaryPressed}>
+                {docUpload.progress}
+              </Text>
+            ) : null}
             <MessageBar
               value={text}
               onChangeText={setText}
               placeholder={ACTION_HINT[mode]}
-              error={errorText}
+              error={docError ?? errorText}
               {...(canAttach ? { onAttach: () => setAttachOpen(true) } : {})}
               {...(mode === 'comment'
                 ? { onSend: submit, canSend: canSubmit && photos.uploadsDone, sending: act.isPending }
@@ -361,6 +375,18 @@ export function ComplaintDetailScreen() {
               void photos.pickFromGallery();
             }}
           />
+          {c?.projectId ? (
+            <SheetRow
+              icon="file-text"
+              label="Upload document"
+              caption="PDF, Word, Excel, CAD · saved to project Docs"
+              divider
+              onPress={() => {
+                setAttachOpen(false);
+                void pickDocs();
+              }}
+            />
+          ) : null}
         </View>
       </BottomSheet>
 

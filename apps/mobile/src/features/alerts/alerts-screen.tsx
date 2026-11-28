@@ -10,51 +10,100 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, hit, radius, space } from '@/constants/theme';
+import { SlidingSwitch } from '@/features/projects/sliding-switch';
 import { NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { timeAgo } from '@/lib/format';
 import { routeFor } from './route-for';
-import { useMarkAllRead, useMarkRead, useNotifications } from './use-notifications';
+import {
+  useMarkAllRead,
+  useMarkRead,
+  useNotifications,
+  useUnreadCount,
+} from './use-notifications';
+
+/** Phrase older stage-age alerts in past tense so they never look like current stage age. */
+function formatAlertBody(n: NotificationDto): string {
+  const ageMs = Date.now() - Date.parse(n.createdAt);
+  if (!Number.isNaN(ageMs) && ageMs >= 86_400_000) {
+    const match = n.body.match(/^(.*?) has been in (.+?) for ([^.]+)\.?$/i);
+    if (match) {
+      return `${match[1]} had been in ${match[2]} for ${match[3]} when this alert was sent.`;
+    }
+  }
+  return n.body;
+}
 
 function AlertRow({ n, role }: { n: NotificationDto; role?: RoleName }) {
   const router = useRouter();
   const markRead = useMarkRead();
   const unread = n.readAt === null;
   const [reason, setReason] = useState<string | null>(null);
+  const [readError, setReadError] = useState<string | null>(null);
+  const body = formatAlertBody(n);
+
+  const retryMarkRead = () => {
+    setReadError(null);
+    markRead.mutate(n.id, {
+      onError: () => setReadError('Could not mark as read.'),
+    });
+  };
 
   return (
     <PressableScale
       onPress={() => {
-        if (unread) markRead.mutate(n.id);
         const href = routeFor(n.ref, role);
-        if (href) router.push(href);
-        else setReason(n.ref ? 'Your role cannot open this item.' : 'This alert has nothing to open.');
+        if (!href) {
+          setReason(n.ref ? 'Your role cannot open this item.' : 'This alert has nothing to open.');
+          return;
+        }
+        setReason(null);
+        setReadError(null);
+        if (unread) {
+          markRead.mutate(n.id, {
+            onError: () => setReadError('Could not mark as read.'),
+          });
+        }
+        router.push(href);
       }}
       scaleTo={0.99}
       accessibilityRole="button"
+      accessibilityLabel={`${unread ? 'Unread: ' : ''}${n.title}. ${body}`}
       style={[styles.flatRow, unread && styles.unreadRow]}
     >
       <View style={[styles.dot, unread && styles.dotUnread]} />
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={{ flex: 1, gap: 3 }}>
         <View style={styles.titleRow}>
           <Text
             color={colors.inkDeep}
-            style={[styles.title, unread && { fontFamily: font.semibold }]}
-            numberOfLines={2}
+            style={[styles.title, unread && styles.titleUnread]}
+            numberOfLines={1}
           >
             {n.title}
           </Text>
-          <Text variant="caption" color={colors.inkMuted} style={{ flexShrink: 0 }}>
+          <Text variant="caption" color={colors.inkMuted} style={styles.time}>
             {timeAgo(n.createdAt)}
           </Text>
         </View>
-        <Text color={colors.inkMuted} style={styles.bodyText}>
-          {n.body}
+        <Text color={unread ? colors.inkDeep : colors.inkMuted} style={styles.bodyText} numberOfLines={2}>
+          {body}
         </Text>
         {reason ? (
           <Text variant="caption" color={colors.destructive} accessibilityLiveRegion="polite">
             {reason}
           </Text>
+        ) : null}
+        {readError ? (
+          <View style={styles.retryRow} accessibilityLiveRegion="polite">
+            <Text variant="caption" color={colors.destructive}>
+              {readError}
+            </Text>
+            <PressableScale onPress={retryMarkRead} hitSlop={8}>
+              <Text variant="caption" color={colors.primaryPressed} style={{ fontFamily: font.semibold }}>
+                Retry
+              </Text>
+            </PressableScale>
+          </View>
         ) : null}
       </View>
     </PressableScale>
@@ -64,9 +113,19 @@ function AlertRow({ n, role }: { n: NotificationDto; role?: RoleName }) {
 export function AlertsScreen({ standalone = false }: { standalone?: boolean }) {
   const insets = useSafeAreaInsets();
   const { user } = useSession();
-  const q = useNotifications();
+  const [view, setView] = useState<'all' | 'read' | 'unread'>('all');
+  const q = useNotifications(view);
+  const unreadQ = useUnreadCount();
   const markAll = useMarkAllRead();
-  const hasUnread = q.data?.some((n) => n.readAt === null) ?? false;
+  const unreadCount = unreadQ.data ?? 0;
+  const hasUnread = unreadCount > 0 || (q.data?.some((n) => n.readAt === null) ?? false);
+
+  const unreadLabel = unreadCount > 0 ? `Unread (${unreadCount})` : 'Unread';
+  const viewOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'read', label: 'Read' },
+    { value: 'unread', label: unreadLabel },
+  ] as const;
 
   let body: React.ReactElement | undefined;
   if (q.isPending) {
@@ -92,45 +151,64 @@ export function AlertsScreen({ standalone = false }: { standalone?: boolean }) {
       </View>
     );
   } else if (q.data.length === 0) {
-    body = <EmptyState icon="bell" message="You are all caught up." />;
+    body = (
+      <EmptyState
+        icon="bell"
+        message={
+          view === 'unread'
+            ? 'No unread alerts.'
+            : view === 'read'
+              ? 'No read alerts yet.'
+              : 'You are all caught up.'
+        }
+      />
+    );
   }
 
   return (
     <View style={styles.root}>
       {standalone ? (
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: 'Notifications',
-            headerShadowVisible: false,
-            headerTintColor: colors.primary,
-            headerRight: hasUnread
-              ? () => (
-                  <Button
-                    title="Mark all read"
-                    variant="ghost"
-                    size="sm"
-                    loading={markAll.isPending}
-                    onPress={() => markAll.mutate()}
-                  />
-                )
-              : undefined,
-          }}
-        />
+        <>
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              title: 'Notifications',
+              headerShadowVisible: false,
+              headerTintColor: colors.primary,
+              headerRight: hasUnread
+                ? () => (
+                    <Button
+                      title="Mark all read"
+                      variant="ghost"
+                      size="sm"
+                      loading={markAll.isPending}
+                      onPress={() => markAll.mutate()}
+                    />
+                  )
+                : undefined,
+            }}
+          />
+          <View style={styles.standaloneBar}>
+            <SlidingSwitch options={viewOptions} value={view} onChange={setView} />
+          </View>
+        </>
       ) : (
         <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
-          <Text variant="title" color={colors.inkDeep}>
-            Alerts
-          </Text>
-          {hasUnread ? (
-            <Button
-              title="Mark all read"
-              variant="ghost"
-              size="sm"
-              loading={markAll.isPending}
-              onPress={() => markAll.mutate()}
-            />
-          ) : null}
+          <View style={styles.headerRow}>
+            <Text variant="title" color={colors.inkDeep}>
+              Alerts
+            </Text>
+            {hasUnread ? (
+              <Button
+                title="Mark all read"
+                variant="ghost"
+                size="sm"
+                loading={markAll.isPending}
+                onPress={() => markAll.mutate()}
+              />
+            ) : null}
+          </View>
+          <SlidingSwitch options={viewOptions} value={view} onChange={setView} />
         </View>
       )}
 
@@ -142,18 +220,36 @@ export function AlertsScreen({ standalone = false }: { standalone?: boolean }) {
         ListEmptyComponent={body}
         ListFooterComponent={
           q.isFetchingNextPage ? (
-            <View style={{ padding: space[4] }}>
+            <View style={styles.footer}>
               <Skeleton height={56} />
             </View>
+          ) : q.isFetchNextPageError ? (
+            <PressableScale
+              onPress={() => void q.fetchNextPage()}
+              accessibilityRole="button"
+              style={styles.loadMoreError}
+            >
+              <Text variant="caption" color={colors.inkMuted}>
+                Couldn’t load more
+              </Text>
+              <Text variant="caption" color={colors.primaryPressed} style={{ fontFamily: font.semibold }}>
+                · Retry
+              </Text>
+            </PressableScale>
           ) : undefined
         }
         contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + space[8] }}
-        onEndReached={() => q.hasNextPage && !q.isFetchingNextPage && void q.fetchNextPage()}
+        onEndReached={() =>
+          q.hasNextPage && !q.isFetchingNextPage && !q.isFetchNextPageError && void q.fetchNextPage()
+        }
         onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
             refreshing={q.isRefetching && !q.isFetchingNextPage}
-            onRefresh={() => void q.refetch()}
+            onRefresh={() => {
+              void q.refetch();
+              void unreadQ.refetch();
+            }}
             tintColor={colors.primary}
           />
         }
@@ -165,14 +261,25 @@ export function AlertsScreen({ standalone = false }: { standalone?: boolean }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.card },
   stickyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.card,
     paddingHorizontal: space[4],
     paddingBottom: space[3],
+    gap: space[3],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  standaloneBar: {
+    backgroundColor: colors.card,
+    paddingHorizontal: space[4],
+    paddingTop: space[1],
+    paddingBottom: space[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   flatRow: {
     flexDirection: 'row',
@@ -197,7 +304,7 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: space[2],
   },
@@ -207,9 +314,22 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: font.medium,
   },
+  titleUnread: {
+    fontFamily: font.semibold,
+  },
+  time: {
+    flexShrink: 0,
+    fontVariant: ['tabular-nums'],
+  },
   bodyText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  retryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    marginTop: 2,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
@@ -228,6 +348,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[3],
     paddingVertical: space[8],
+    paddingHorizontal: space[4],
+  },
+  footer: {
+    padding: space[4],
+  },
+  loadMoreError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: hit,
     paddingHorizontal: space[4],
   },
 });

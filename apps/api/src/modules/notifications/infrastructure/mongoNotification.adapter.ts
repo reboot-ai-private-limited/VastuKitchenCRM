@@ -42,6 +42,7 @@ export class MongoNotificationRepository implements NotificationRepositoryPort {
     if (!isValidObjectId(userId)) return { items: [], total: 0 };
     const query: Record<string, unknown> = { userId };
     if (filter.unreadOnly) query['readAt'] = null;
+    else if (filter.readOnly) query['readAt'] = { $ne: null };
     const [docs, total] = await Promise.all([
       NotificationModel.find(query)
         .sort({ createdAt: -1, _id: -1 })

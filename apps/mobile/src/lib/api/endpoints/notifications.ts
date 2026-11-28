@@ -7,10 +7,19 @@ import type {
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
-export const listNotifications = (page: number, signal?: AbortSignal) =>
-  request<PaginatedDto<NotificationDto>>('GET', `/notifications?page=${page}&pageSize=20`, undefined, {
-    signal,
-  });
+export type NotificationFilter = 'unread' | 'read' | 'all';
+
+export const listNotifications = (
+  page: number,
+  filter: NotificationFilter = 'all',
+  signal?: AbortSignal,
+) =>
+  request<PaginatedDto<NotificationDto>>(
+    'GET',
+    `/notifications?page=${page}&pageSize=20${filter === 'unread' ? '&unread=true' : filter === 'read' ? '&unread=false' : ''}`,
+    undefined,
+    { signal },
+  );
 
 export const getUnreadCount = (signal?: AbortSignal) =>
   request<UnreadCountDto>('GET', '/notifications/unread-count', undefined, { signal });

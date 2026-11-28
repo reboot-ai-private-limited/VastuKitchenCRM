@@ -41,6 +41,7 @@ export class ListNotificationsUseCase {
       page: query.page,
       pageSize: query.pageSize,
       unreadOnly: query.unread === true,
+      readOnly: query.unread === false,
     });
   }
 }

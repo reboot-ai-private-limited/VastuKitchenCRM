@@ -1,10 +1,16 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getUnreadCount, listNotifications, markAllRead, markRead } from '@/lib/api/endpoints/notifications';
+import {
+  getUnreadCount,
+  listNotifications,
+  markAllRead,
+  markRead,
+  type NotificationFilter,
+} from '@/lib/api/endpoints/notifications';
 
-export const useNotifications = () =>
+export const useNotifications = (filter: NotificationFilter = 'all') =>
   useInfiniteQuery({
-    queryKey: ['notifications', 'list'],
-    queryFn: ({ pageParam, signal }) => listNotifications(pageParam, signal),
+    queryKey: ['notifications', 'list', { filter }],
+    queryFn: ({ pageParam, signal }) => listNotifications(pageParam, filter, signal),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {

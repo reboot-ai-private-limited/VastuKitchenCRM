@@ -19,4 +19,5 @@ export interface NotificationListFilter {
   page: number;
   pageSize: number;
   unreadOnly: boolean;
+  readOnly?: boolean;
 }

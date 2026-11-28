@@ -30,7 +30,10 @@ class FakeRepo implements NotificationRepositoryPort {
   }
   async list(userId: string, f: NotificationListFilter) {
     const items = this.rows.filter(
-      (r) => r.userId === userId && (!f.unreadOnly || r.readAt === null),
+      (r) =>
+        r.userId === userId &&
+        (!f.unreadOnly || r.readAt === null) &&
+        (!f.readOnly || r.readAt !== null),
     );
     return { items, total: items.length };
   }

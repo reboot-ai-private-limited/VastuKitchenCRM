@@ -101,7 +101,7 @@ export function PostComposer({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const visibility: PostVisibility = replyTo ? replyTo.visibility : final ? 'CLIENT' : pickedVisibility;
-  const canAttachDoc = kind === 'post' && !final && !replyTo;
+  const canAttachDoc = !!projectId;
   const docUpload = useDocUpload(projectId, fixedClient ? 'CLIENT' : visibility);
 
   const pickDocs = async () => {

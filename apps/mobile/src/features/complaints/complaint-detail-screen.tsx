@@ -190,6 +190,8 @@ export function ComplaintDetailScreen() {
             icon="user-plus"
             label={c.assignedTo ? 'Reassign' : 'Assign'}
             caption={c.assignedTo ? `Assigned to ${c.assignedTo.name}` : 'Not assigned yet'}
+            surface
+            showChevron
             onPress={() => setAssignOpen(true)}
           />
         ) : null}
@@ -341,24 +343,25 @@ export function ComplaintDetailScreen() {
       </KeyboardAvoidingView>
 
       <BottomSheet visible={attachOpen} onClose={() => setAttachOpen(false)} title="Add attachment">
-        <SheetRow
-          icon="camera"
-          label="Take photo"
-          caption="Use the camera"
-          onPress={() => {
-            setAttachOpen(false);
-            void photos.takePhoto();
-          }}
-        />
-        <SheetRow
-          icon="image"
-          label="Choose from gallery"
-          caption="Attach photos from your phone"
-          onPress={() => {
-            setAttachOpen(false);
-            void photos.pickFromGallery();
-          }}
-        />
+        <View>
+          <SheetRow
+            icon="camera"
+            label="Take photo"
+            onPress={() => {
+              setAttachOpen(false);
+              void photos.takePhoto();
+            }}
+          />
+          <SheetRow
+            icon="image"
+            label="Choose from gallery"
+            divider
+            onPress={() => {
+              setAttachOpen(false);
+              void photos.pickFromGallery();
+            }}
+          />
+        </View>
       </BottomSheet>
 
       <BottomSheet

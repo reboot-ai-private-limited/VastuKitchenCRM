@@ -8,7 +8,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, font, space, tone } from '@/constants/theme';
+import { colors, space } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { softTick } from '@/lib/haptics';
@@ -23,10 +23,10 @@ import { useProjectDetail, useScreenActive, type FeedMode } from './use-projects
 
 type Tab = 'chat' | 'todos' | 'complaints' | 'docs';
 const TAB_META = {
-  chat: { label: 'Chat', icon: 'message-circle', t: 'accent', caption: 'Updates, photos, files and replies' },
-  todos: { label: 'To-dos', icon: 'check-square', t: 'violet', caption: 'Tasks on this project' },
-  complaints: { label: 'Complaints', icon: 'life-buoy', t: 'danger', caption: 'Raised complaints and their status' },
-  docs: { label: 'Docs', icon: 'folder', t: 'info', caption: 'Documents and uploads' },
+  chat: { label: 'Chat', icon: 'message-circle' },
+  todos: { label: 'To-dos', icon: 'check-square' },
+  complaints: { label: 'Complaints', icon: 'life-buoy' },
+  docs: { label: 'Docs', icon: 'folder' },
 } as const;
 
 export function ProjectDetailScreen() {
@@ -188,91 +188,64 @@ export function ProjectDetailScreen() {
       {topBar}
 
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="Project">
-        {tabs.map((key) => (
-          <SheetRow
-            key={key}
-            icon={TAB_META[key].icon}
-            t={TAB_META[key].t}
-            label={TAB_META[key].label}
-            caption={TAB_META[key].caption}
-            selected={tab === key}
-            onPress={() => {
-              softTick();
-              setTab(key);
-              setMenuOpen(false);
-            }}
-          />
-        ))}
+        <View style={{ gap: 2 }}>
+          {tabs.map((key) => (
+            <SheetRow
+              key={key}
+              icon={TAB_META[key].icon}
+              label={TAB_META[key].label}
+              selected={tab === key}
+              onPress={() => {
+                softTick();
+                setTab(key);
+                setMenuOpen(false);
+              }}
+            />
+          ))}
+        </View>
 
         <View style={styles.menuDivider} />
 
-        <SheetRow
-          icon="info"
-          t="neutral"
-          label="Project info"
-          caption="Stage, design, team and location"
-          onPress={() => {
-            setMenuOpen(false);
-            setInfoOpen(true);
-          }}
-        />
-
-        {perms.isStaff ? (
+        <View style={{ gap: 2 }}>
           <SheetRow
-            icon="eye"
-            t="neutral"
-            label={mode === 'CLIENT' ? 'Exit client preview' : 'Preview as client'}
-            caption={
-              mode === 'CLIENT' ? 'Return to full team timeline' : 'See only what the customer sees'
-            }
+            icon="info"
+            label="Project info"
+            showChevron
             onPress={() => {
               setMenuOpen(false);
-              setTab('chat');
-              setMode(mode === 'CLIENT' ? 'ALL' : 'CLIENT');
-              setFinalRequest(0);
+              setInfoOpen(true);
             }}
           />
-        ) : null}
 
-        {perms.isStaff && p.stage !== 'CLOSED' ? (
-          <SheetRow
-            icon="check-circle"
-            label="Post final delivery"
-            caption="Complete project milestone with photos"
-            onPress={() => {
-              setMenuOpen(false);
-              setTab('chat');
-              setMode('ALL');
-              setFinalRequest((n) => n + 1);
-            }}
-          />
-        ) : null}
+          {perms.isStaff ? (
+            <SheetRow
+              icon="eye"
+              label={mode === 'CLIENT' ? 'Exit client preview' : 'Preview as client'}
+              onPress={() => {
+                setMenuOpen(false);
+                setTab('chat');
+                setMode(mode === 'CLIENT' ? 'ALL' : 'CLIENT');
+                setFinalRequest(0);
+              }}
+            />
+          ) : null}
+
+          {perms.isStaff && p.stage !== 'CLOSED' ? (
+            <SheetRow
+              icon="check-circle"
+              label="Post final delivery"
+              onPress={() => {
+                setMenuOpen(false);
+                setTab('chat');
+                setMode('ALL');
+                setFinalRequest((n) => n + 1);
+              }}
+            />
+          ) : null}
+        </View>
       </BottomSheet>
 
       <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>
-        {perms.isStaff && mode === 'CLIENT' ? (
-          // The feed is filtered: say so, and offer the way back.
-          <View style={styles.previewBar}>
-            <Feather name="eye" size={14} color={tone.success.fg} />
-            <Text variant="caption" color={tone.success.fg} style={{ flex: 1 }}>
-              Showing only what the customer sees
-            </Text>
-            <PressableScale
-              onPress={() => {
-                softTick();
-                setMode('ALL');
-                setFinalRequest(0);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Show the full timeline"
-              hitSlop={12}
-            >
-              <Text variant="caption" color={tone.success.fg} style={{ fontFamily: font.semibold }}>
-                Show all
-              </Text>
-            </PressableScale>
-          </View>
-        ) : null}
         <ChatSegment
           project={p}
           userId={user?.id ?? ''}
@@ -326,14 +299,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  previewBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[2],
-    paddingHorizontal: space[4],
-    paddingVertical: space[2],
-    backgroundColor: tone.success.bg,
   },
   customerName: {
     fontSize: 13,

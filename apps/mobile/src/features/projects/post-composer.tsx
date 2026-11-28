@@ -374,11 +374,10 @@ export function PostComposer({
         onClose={() => setAttachOpen(false)}
         title="Add attachment"
       >
-        <View style={{ gap: space[2] }}>
+        <View>
           <SheetRow
             icon="camera"
             label="Take photo"
-            caption="Use camera to capture site or design progress"
             onPress={() => {
               setAttachOpen(false);
               void photos.takePhoto();
@@ -387,7 +386,7 @@ export function PostComposer({
           <SheetRow
             icon="image"
             label="Choose from gallery"
-            caption="Attach one or more photos from your phone"
+            divider
             onPress={() => {
               setAttachOpen(false);
               void photos.pickFromGallery();
@@ -399,9 +398,10 @@ export function PostComposer({
               label="Upload document"
               caption={
                 fixedClient
-                  ? 'PDF, Word, Excel, CAD — saved to project Docs'
+                  ? 'PDF, Word, Excel, CAD'
                   : `PDF, Word, Excel, CAD · ${AUDIENCE_LABEL[visibility]}`
               }
+              divider
               onPress={() => {
                 setAttachOpen(false);
                 void pickDocs();

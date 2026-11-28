@@ -1,17 +1,21 @@
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
-import { colors, hit, radius, space, tone, type Tone } from '@/constants/theme';
+import { colors, font, hit, radius, space, type Tone } from '@/constants/theme';
 
-/** The chat's sheet row: a bordered card with a tinted icon tile, a label and an optional caption. */
+/** Native-style action/choice row for bottom sheets and inline links. */
 export function SheetRow({
   icon,
   label,
   caption,
-  t = 'accent',
+  t = 'neutral',
   selected,
   disabled = false,
+  divider = false,
+  surface = false,
+  showChevron = false,
   onPress,
 }: {
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -21,21 +25,47 @@ export function SheetRow({
   /** Set for rows that are a choice: shows the chosen state and a tick. */
   selected?: boolean;
   disabled?: boolean;
+  divider?: boolean;
+  /** Render inside a bordered surface when placed inline on a screen instead of a sheet. */
+  surface?: boolean;
+  showChevron?: boolean;
   onPress: () => void;
 }) {
+  const destructive = t === 'danger' && !selected;
+  const iconColor = selected
+    ? colors.primary
+    : destructive
+      ? colors.destructive
+      : colors.inkMuted;
+  const labelColor = selected
+    ? colors.primaryPressed
+    : destructive
+      ? colors.destructive
+      : colors.inkDeep;
+
   return (
     <PressableScale
       disabled={disabled}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ disabled, ...(selected === undefined ? {} : { selected }) }}
-      style={[styles.row, selected && styles.selected, disabled && { opacity: 0.5 }]}
+      style={[
+        styles.row,
+        surface && styles.surface,
+        divider && styles.divider,
+        selected && styles.selected,
+        disabled && { opacity: 0.5 },
+      ]}
     >
-      <View style={[styles.icon, { backgroundColor: selected ? colors.card : tone[t].bg }]}>
-        <Feather name={icon} size={17} color={tone[t].fg} />
+      <View style={styles.iconSlot}>
+        <Feather name={icon} size={19} color={iconColor} />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text variant="label" color={t === 'danger' && !selected ? tone.danger.fg : colors.inkDeep}>
+      <View style={styles.body}>
+        <Text
+          variant="label"
+          color={labelColor}
+          style={selected ? { fontFamily: font.semibold } : undefined}
+        >
           {label}
         </Text>
         {caption ? (
@@ -44,7 +74,11 @@ export function SheetRow({
           </Text>
         ) : null}
       </View>
-      {selected ? <Feather name="check" size={18} color={colors.primary} /> : null}
+      {selected ? (
+        <Feather name="check" size={18} color={colors.primary} />
+      ) : showChevron ? (
+        <Feather name="chevron-right" size={16} color={colors.inkMuted} />
+      ) : null}
     </PressableScale>
   );
 }
@@ -58,16 +92,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[3],
     paddingVertical: space[2],
     borderRadius: radius.lg,
+  },
+  surface: {
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
   },
-  selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  icon: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.md,
+  divider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    borderRadius: 0,
+  },
+  selected: {
+    backgroundColor: colors.primarySoft,
+  },
+  iconSlot: {
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  body: {
+    flex: 1,
+    gap: 1,
   },
 });

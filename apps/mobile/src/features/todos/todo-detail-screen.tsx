@@ -119,7 +119,8 @@ export function TodoDetailScreen() {
         <SheetRow
           icon="layers"
           label="Open project"
-          caption="Chat, to-dos, complaints and docs"
+          surface
+          showChevron
           onPress={() =>
             router.push({ pathname: '/projects/[id]', params: { id: todo.projectId } } as Href)
           }

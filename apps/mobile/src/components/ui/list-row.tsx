@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, radius, space, tone, type Tone } from '@/constants/theme';
+import { colors, hit, space, type Tone } from '@/constants/theme';
 import { PressableScale } from './pressable-scale';
 import { Text } from './text';
 
 type Props = {
   icon?: keyof typeof Feather.glyphMap;
+  /** Kept for caller compatibility; icons stay neutral unless destructive. */
   iconTone?: Tone;
   leading?: ReactNode;
   title: string;
@@ -20,7 +21,6 @@ type Props = {
 
 export function ListRow({
   icon,
-  iconTone = 'neutral',
   leading,
   title,
   subtitle,
@@ -30,16 +30,15 @@ export function ListRow({
   divider = false,
   onPress,
 }: Props) {
-  const fg = destructive ? colors.destructive : colors.foreground;
-  const iconBg = destructive ? colors.destructiveSoft : tone[iconTone].bg;
-  const iconFg = destructive ? colors.destructive : tone[iconTone].fg;
+  const fg = destructive ? colors.destructive : colors.inkDeep;
+  const iconFg = destructive ? colors.destructive : colors.inkMuted;
 
   const content = (
     <View style={[styles.row, divider && styles.divider]}>
       {leading ??
         (icon ? (
-          <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-            <Feather name={icon} size={18} color={iconFg} />
+          <View style={styles.iconSlot}>
+            <Feather name={icon} size={19} color={iconFg} />
           </View>
         ) : null)}
       <View style={styles.body}>
@@ -47,14 +46,14 @@ export function ListRow({
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="caption" muted numberOfLines={2}>
+          <Text variant="caption" color={colors.inkMuted} numberOfLines={2}>
             {subtitle}
           </Text>
         ) : null}
       </View>
       {trailing}
       {onPress && showChevron && !destructive ? (
-        <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+        <Feather name="chevron-right" size={16} color={colors.inkMuted} />
       ) : null}
     </View>
   );
@@ -70,25 +69,23 @@ export function ListRow({
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 56,
+    minHeight: hit,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[3],
     paddingVertical: space[2],
   },
   divider: {
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.lg,
+  iconSlot: {
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
 });

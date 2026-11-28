@@ -408,11 +408,11 @@ export function DesignsSection({ leadId, canComplete }: { leadId: string; canCom
         <BottomSheet
           visible={open}
           onClose={() => setOpen(false)}
-          title="Upload design & mark completed"
+          title="Upload design"
           subtitle="Moves open leads to Design estimate scheduled"
           footer={
             <Button
-              title="Submit design"
+              title="Upload & schedule estimate"
               size="lg"
               loading={complete.isPending}
               onPress={submit}
@@ -514,6 +514,8 @@ export function TimelineSection({ leadId }: { leadId: string }) {
         <View style={styles.group}>
           {q.data.map((a, i) => {
             const { title, detail } = describeActivity(a);
+            const hasActor = a.by?.name && (title.includes(a.by.name) || detail?.includes(a.by.name));
+            const sub = [!hasActor && a.by?.name ? `By ${a.by.name}` : null, detail].filter(Boolean).join(' · ');
             return (
               <View key={a.id} style={[styles.item, i > 0 && styles.divider]}>
                 <View style={styles.timelineTop}>
@@ -521,12 +523,12 @@ export function TimelineSection({ leadId }: { leadId: string }) {
                     {title}
                   </Text>
                   <Text variant="caption" color={colors.inkMuted} style={styles.tabular}>
-                    {formatDate(a.at)}
+                    {formatDate(a.at)} · {formatTime(a.at)}
                   </Text>
                 </View>
-                {detail ? (
+                {sub ? (
                   <Text variant="caption" color={colors.inkMuted}>
-                    {detail}
+                    {sub}
                   </Text>
                 ) : null}
               </View>

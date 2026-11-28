@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { crm, font, hit, radius, space, stageTone } from '@/constants/theme';
+import { crm, font, hit, radius, space, stageTone, tone as themeTone } from '@/constants/theme';
 import { SheetRow } from '@/features/projects/sheet-row';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NetworkError } from '@/lib/api/client';
@@ -92,13 +92,13 @@ function LeadRow({ lead }: { lead: LeadDto }) {
         </Text>
       ) : null}
 
-      <View style={[styles.line, styles.metaLine]}>
+      <View style={styles.metaLine}>
         <View style={[styles.stage, { backgroundColor: tone.bg }]}>
-          <Text numberOfLines={1} color={tone.fg} style={styles.stageText}>
+          <Text color={tone.fg} style={styles.stageText}>
             {STATUS_LABEL[lead.status]}
           </Text>
         </View>
-        <Text numberOfLines={1} color={crm.muted} style={styles.meta}>
+        <Text color={lead.assignedTo ? crm.muted : themeTone.warning.fg} style={styles.meta}>
           {[owner, age].filter(Boolean).join(' \u00b7 ')}
         </Text>
       </View>
@@ -135,17 +135,25 @@ export function LeadsScreen() {
   const debounced = useDebouncedValue(search.trim(), 350);
   // Lost leads are hidden unless asked for; choosing a stage overrides that.
   const excludeLost = !showLost && !status ? true : undefined;
+  const countExcludeLost = showLost ? undefined : true;
   const q = useLeadsList(debounced, status, stuckOnly ? true : undefined, product, excludeLost, source);
-  const total = useLeadCount({ excludeLost: showLost ? undefined : true });
-  const stuckTotal = useLeadCount({ stuck: true });
+  const total = useLeadCount({ excludeLost: countExcludeLost });
+  const stuckTotal = useLeadCount({ stuck: true, excludeLost: countExcludeLost });
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'SALES' || user?.role === 'OFFICE';
   const isDesigner = user?.role === 'DESIGNER';
   const stageOptions = isDesigner ? DESIGN_VISIBLE_LEAD_STATUSES : STATUS_ORDER;
   const extraFilters = [product, source, showLost || undefined].filter(Boolean).length;
   const filtered = Boolean(debounced || stuckOnly || status || extraFilters);
+  const totalWord = showLost
+    ? total.data === 1
+      ? 'lead'
+      : 'leads'
+    : total.data === 1
+      ? 'active lead'
+      : 'active leads';
   const summary = [
-    total.data != null ? `${total.data} ${total.data === 1 ? 'lead' : 'leads'}` : null,
+    total.data != null ? `${total.data} ${totalWord}` : null,
     stuckTotal.data ? `${stuckTotal.data} stuck` : null,
   ]
     .filter(Boolean)
@@ -391,6 +399,58 @@ export function LeadsScreen() {
           </View>
         }
       >
+        {extraFilters > 0 ? (
+          <View style={styles.activeFilterRow}>
+            {product ? (
+              <PressableScale
+                onPress={() => {
+                  softTick();
+                  setProduct(undefined);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Clear product filter: ${PRODUCT_LABEL[product]}`}
+                style={styles.activeFilterChip}
+              >
+                <Text color={crm.primaryDark} style={styles.activeFilterText}>
+                  {PRODUCT_LABEL[product]}
+                </Text>
+                <Feather name="x" size={14} color={crm.primaryDark} />
+              </PressableScale>
+            ) : null}
+            {source ? (
+              <PressableScale
+                onPress={() => {
+                  softTick();
+                  setSource(undefined);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Clear source filter: ${SOURCE_LABEL[source]}`}
+                style={styles.activeFilterChip}
+              >
+                <Text color={crm.primaryDark} style={styles.activeFilterText}>
+                  {SOURCE_LABEL[source]}
+                </Text>
+                <Feather name="x" size={14} color={crm.primaryDark} />
+              </PressableScale>
+            ) : null}
+            {showLost ? (
+              <PressableScale
+                onPress={() => {
+                  softTick();
+                  setShowLost(false);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Hide lost leads"
+                style={styles.activeFilterChip}
+              >
+                <Text color={crm.primaryDark} style={styles.activeFilterText}>
+                  Showing lost
+                </Text>
+                <Feather name="x" size={14} color={crm.primaryDark} />
+              </PressableScale>
+            ) : null}
+          </View>
+        ) : null}
         {!isDesigner ? (
           <SheetRow
             icon="eye"
@@ -509,13 +569,18 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontFamily: font.semibold, fontSize: 16, lineHeight: 22 },
   contact: { fontFamily: font.medium, fontSize: 14, lineHeight: 20, fontVariant: ['tabular-nums'] },
   products: { fontFamily: font.regular, fontSize: 12, lineHeight: 18 },
-  metaLine: { marginTop: space[2] },
-  stage: { flexShrink: 1, paddingHorizontal: space[2], paddingVertical: 2, borderRadius: radius.sm },
+  metaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    columnGap: space[2],
+    rowGap: 4,
+    marginTop: space[2],
+  },
+  stage: { paddingHorizontal: space[2], paddingVertical: 2, borderRadius: radius.sm },
   stageText: { fontFamily: font.semibold, fontSize: 12, lineHeight: 16 },
   meta: {
-    flex: 1,
-    minWidth: 80,
-    textAlign: 'right',
+    flexShrink: 1,
     fontFamily: font.regular,
     fontSize: 12,
     lineHeight: 16,
@@ -547,4 +612,22 @@ const styles = StyleSheet.create({
   },
   sheetActions: { flexDirection: 'row', gap: space[2] },
   sheetAction: { flex: 1 },
+  activeFilterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space[2],
+    paddingBottom: space[2],
+  },
+  activeFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: space[2],
+    paddingVertical: 5,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: crm.primary,
+    backgroundColor: crm.surface,
+  },
+  activeFilterText: { fontFamily: font.medium, fontSize: 12, lineHeight: 16 },
 });

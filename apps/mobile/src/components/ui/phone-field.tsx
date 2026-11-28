@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ComponentRef, type RefObject } from 'react';
 import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import {
@@ -18,6 +18,7 @@ export interface PhoneFieldProps {
   onChangeText: (value: string) => void;
   accessibilityLabel?: string;
   autoFocus?: boolean;
+  inputRef?: RefObject<ComponentRef<typeof TextInput> | null>;
 }
 
 /** Numeric mobile input with a leading country selector (India, Bhutan, Nepal). */
@@ -26,6 +27,7 @@ export function PhoneField({
   onChangeText,
   accessibilityLabel = 'Mobile number',
   autoFocus,
+  inputRef,
 }: PhoneFieldProps) {
   const parsed = splitPhone(value);
   const [chosenDial, setDial] = useState<PhoneDialCode>(parsed.dial);
@@ -66,6 +68,7 @@ export function PhoneField({
           <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
         </PressableScale>
         <TextInput
+          ref={inputRef}
           value={local}
           onChangeText={handleLocalChange}
           accessibilityLabel={accessibilityLabel}

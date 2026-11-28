@@ -19,7 +19,7 @@ import { formatPhone } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
 import { PendingSyncBadge } from '@/offline';
 import { useCallLogger } from './call-logger';
-import { daysInStage, PRODUCT_LABEL, STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
+import { daysInStage, PRODUCT_LABEL, SOURCE_LABEL, STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
 import { CallsSection, DesignsSection, ProposalsSection, TimelineSection } from './lead-sections';
 import { AssignSheet, EditLeadSheet, StatusSheet } from './lead-sheets';
 import { leadKey, useChangeLeadStatus, useLeadDetail } from './use-leads';
@@ -96,8 +96,7 @@ export function LeadDetailScreen() {
       ...(lead.productsOfInterest.length > 0
         ? [{ label: 'Interest', value: lead.productsOfInterest.map((p) => PRODUCT_LABEL[p]).join(', ') }]
         : []),
-      { label: 'Source', value: lead.source.replace(/_/g, ' ').toLowerCase() },
-      { label: 'Assigned', value: lead.assignedTo?.name ?? 'Unassigned' },
+      { label: 'Source', value: SOURCE_LABEL[lead.source] },
       ...(lead.lostReason ? [{ label: 'Lost reason', value: lead.lostReason }] : []),
     ];
 
@@ -231,6 +230,35 @@ export function LeadDetailScreen() {
               </Text>
             </View>
           ))}
+          <View style={[styles.metaRow, styles.rowDivider]}>
+            <Text variant="caption" color={colors.inkMuted}>
+              Assigned
+            </Text>
+            <View style={styles.assignedWrap}>
+              <Text
+                variant="label"
+                color={lead.assignedTo ? colors.inkDeep : tone.warning.fg}
+                style={lead.assignedTo ? undefined : { fontFamily: font.semibold }}
+              >
+                {lead.assignedTo?.name ?? 'Unassigned'}
+              </Text>
+              {isAdmin ? (
+                <PressableScale
+                  onPress={() => {
+                    softTick();
+                    setAssignOpen(true);
+                  }}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  style={styles.assignPill}
+                >
+                  <Text variant="caption" color={colors.primaryPressed} style={{ fontFamily: font.semibold }}>
+                    {lead.assignedTo ? 'Reassign' : 'Assign'}
+                  </Text>
+                </PressableScale>
+              ) : null}
+            </View>
+          </View>
           {lead.notes ? (
             <View style={[styles.notesRow, styles.rowDivider]}>
               <Text variant="caption" color={colors.inkMuted}>
@@ -239,32 +267,18 @@ export function LeadDetailScreen() {
               <Text color={colors.inkDeep}>{lead.notes}</Text>
             </View>
           ) : null}
-          {canWork || isAdmin ? (
+          {canWork ? (
             <View style={[styles.inlineActions, styles.rowDivider]}>
-              {canWork ? (
-                <PressableScale
-                  onPress={() => setEditOpen(true)}
-                  accessibilityRole="button"
-                  style={styles.inlineActionBtn}
-                >
-                  <Feather name="edit-2" size={14} color={colors.inkMuted} />
-                  <Text variant="caption" color={colors.inkDeep} style={{ fontFamily: font.semibold }}>
-                    Edit details
-                  </Text>
-                </PressableScale>
-              ) : null}
-              {isAdmin ? (
-                <PressableScale
-                  onPress={() => setAssignOpen(true)}
-                  accessibilityRole="button"
-                  style={styles.inlineActionBtn}
-                >
-                  <Feather name="user-plus" size={14} color={colors.inkMuted} />
-                  <Text variant="caption" color={colors.inkDeep} style={{ fontFamily: font.semibold }}>
-                    {lead.assignedTo ? 'Reassign' : 'Assign'}
-                  </Text>
-                </PressableScale>
-              ) : null}
+              <PressableScale
+                onPress={() => setEditOpen(true)}
+                accessibilityRole="button"
+                style={styles.inlineActionBtn}
+              >
+                <Feather name="edit-2" size={14} color={colors.inkMuted} />
+                <Text variant="caption" color={colors.inkDeep} style={{ fontFamily: font.semibold }}>
+                  Edit details
+                </Text>
+              </PressableScale>
             </View>
           ) : null}
         </View>
@@ -293,6 +307,7 @@ export function LeadDetailScreen() {
                 key={s}
                 icon={s === 'WON' ? 'check-circle' : s === 'LOST' ? 'x-circle' : 'circle'}
                 label={STATUS_LABEL[s]}
+                caption={s === lead.status ? 'Current stage' : undefined}
                 selected={s === lead.status}
                 onPress={() => {
                   setStagePickerOpen(false);
@@ -441,6 +456,20 @@ const styles = StyleSheet.create({
   metaValue: {
     flex: 1,
     textAlign: 'right',
+  },
+  assignedWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: space[2],
+    flexWrap: 'wrap',
+  },
+  assignPill: {
+    paddingHorizontal: space[2],
+    paddingVertical: 3,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
   },
   tabular: {
     fontVariant: ['tabular-nums'],

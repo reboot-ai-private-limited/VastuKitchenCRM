@@ -1,5 +1,5 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useState, type ComponentProps } from 'react';
+import { useRef, useState, type ComponentProps, type ComponentRef } from 'react';
 import {
   Keyboard,
   ScrollView,
@@ -48,6 +48,9 @@ export function AddLeadScreen() {
   const { user } = useSession();
   const create = useCreateLead();
 
+  const nameRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const phoneRef = useRef<ComponentRef<typeof TextInput>>(null);
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   // Office staff only record walk-ins here; everyone else has to say where the lead came from.
@@ -57,8 +60,16 @@ export function AddLeadScreen() {
   const [pickingProducts, setPickingProducts] = useState(false);
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; source?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
+
+  const productsSummary =
+    products.length === 0
+      ? 'Select products (optional)'
+      : products.length <= 2
+        ? products.map((p) => PRODUCT_LABEL[p]).join(', ')
+        : `${PRODUCT_LABEL[products[0]]}, ${PRODUCT_LABEL[products[1]]} +${products.length - 2} more`;
 
   const submit = () => {
     const parsed = createLeadBodySchema.safeParse({
@@ -70,22 +81,31 @@ export function AddLeadScreen() {
       notes: notes.trim() || undefined,
     });
     if (!parsed.success) {
-      const issue = parsed.error.issues[0];
-      const field = issue?.path[0];
-      if (field === 'phone') {
-        const country = PHONE_COUNTRIES.find((c) => c.dial === splitPhone(phone).dial) ?? PHONE_COUNTRIES[0];
-        setError(
-          phone
+      const next: { name?: string; phone?: string; source?: string } = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path[0];
+        if (field === 'name' && !next.name) {
+          next.name = 'Enter the customer name';
+        } else if (field === 'phone' && !next.phone) {
+          const country = PHONE_COUNTRIES.find((c) => c.dial === splitPhone(phone).dial) ?? PHONE_COUNTRIES[0];
+          next.phone = phone
             ? `Enter a valid ${country.digits}-digit mobile number for ${country.name}`
-            : 'Enter the mobile number',
-        );
-      } else if (field === 'source') {
-        setError('Choose a lead source');
-      } else {
-        setError(issue?.message ?? 'Enter valid lead details');
+            : 'Enter the mobile number';
+        } else if (field === 'source' && !next.source) {
+          next.source = 'Choose a lead source';
+        }
+      }
+      setFieldErrors(next);
+      setError(!next.name && !next.phone && !next.source ? (parsed.error.issues[0]?.message ?? 'Enter valid lead details') : null);
+      if (next.name) nameRef.current?.focus();
+      else if (next.phone) phoneRef.current?.focus();
+      else if (next.source) {
+        Keyboard.dismiss();
+        setPickingSource(true);
       }
       return;
     }
+    setFieldErrors({});
     setError(null);
     setExistingId(null);
     create.mutate(parsed.data, {
@@ -139,20 +159,43 @@ export function AddLeadScreen() {
             Customer name *
           </Text>
           <TextInput
+            ref={nameRef}
             value={name}
-            onChangeText={setName}
+            onChangeText={(v) => {
+              setName(v);
+              if (fieldErrors.name) setFieldErrors((cur) => ({ ...cur, name: undefined }));
+            }}
             placeholder="e.g. Priya Verma"
             placeholderTextColor={colors.placeholder}
             autoFocus
-            style={styles.input}
+            style={[styles.input, fieldErrors.name && styles.inputError]}
           />
+          {fieldErrors.name ? (
+            <Text variant="caption" color={colors.destructive}>
+              {fieldErrors.name}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.field}>
           <Text variant="caption" muted>
             Mobile number *
           </Text>
-          <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="Mobile number" />
+          <PhoneField
+            inputRef={phoneRef}
+            value={phone}
+            onChangeText={(v) => {
+              setPhone(v);
+              if (fieldErrors.phone) setFieldErrors((cur) => ({ ...cur, phone: undefined }));
+              if (existingId) setExistingId(null);
+            }}
+            accessibilityLabel="Mobile number"
+          />
+          {fieldErrors.phone ? (
+            <Text variant="caption" color={colors.destructive}>
+              {fieldErrors.phone}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.field}>
@@ -166,13 +209,18 @@ export function AddLeadScreen() {
             }}
             accessibilityRole="button"
             accessibilityLabel={`Lead source, ${source ? SOURCE_LABEL[source] : 'not chosen'}`}
-            style={[styles.input, styles.select]}
+            style={[styles.input, styles.select, fieldErrors.source && styles.inputError]}
           >
             <Text style={styles.selectText} color={source ? colors.foreground : colors.mutedForeground}>
               {source ? SOURCE_LABEL[source] : 'Choose source'}
             </Text>
             <Feather name="chevron-down" size={18} color={colors.mutedForeground} />
           </PressableScale>
+          {fieldErrors.source ? (
+            <Text variant="caption" color={colors.destructive}>
+              {fieldErrors.source}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.field}>
@@ -197,9 +245,7 @@ export function AddLeadScreen() {
               style={[styles.selectText, { flex: 1 }]}
               color={products.length > 0 ? colors.foreground : colors.mutedForeground}
             >
-              {products.length > 0
-                ? products.map((p) => PRODUCT_LABEL[p]).join(', ')
-                : 'Select products (optional)'}
+              {productsSummary}
             </Text>
             <Feather name="chevron-down" size={18} color={colors.mutedForeground} />
           </PressableScale>
@@ -259,6 +305,7 @@ export function AddLeadScreen() {
             selected={s === source}
             onPress={() => {
               setSource(s);
+              if (fieldErrors.source) setFieldErrors((cur) => ({ ...cur, source: undefined }));
               setError(null);
               setPickingSource(false);
             }}
@@ -316,4 +363,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   selectText: { fontSize: 16 },
+  inputError: { borderColor: colors.destructive },
 });

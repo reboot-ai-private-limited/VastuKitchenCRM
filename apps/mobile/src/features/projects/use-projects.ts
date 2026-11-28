@@ -5,13 +5,32 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import type {
   ComplaintDto,
   CreateCommentBodyDto,
+  CreateFolderBodyDto,
   CreatePostBodyDto,
+  CreateProjectBodyDto,
+  CreateTodoBodyDto,
   DesignStage,
   ProjectStage,
+  SetMembersBodyDto,
   TimelineItemDto,
+  UpdateFileBodyDto,
+  UpdateFolderBodyDto,
+  UpdateProjectBodyDto,
+  UpdateTodoBodyDto,
+  UpdateTodoListBodyDto,
 } from '@vastu/contracts';
 import { listComplaints } from '@/lib/api/endpoints/complaints';
-import { listProjectFiles, saveFromPhotos } from '@/lib/api/endpoints/docs';
+import {
+  createProjectFolder,
+  deleteFile,
+  deleteFolder,
+  listProjectFiles,
+  listProjectFolders,
+  saveFromPhotos,
+  updateFile,
+  updateFolder,
+  type ProjectFilesQuery,
+} from '@/lib/api/endpoints/docs';
 import {
   approvePost,
   changeDesignStage,
@@ -19,27 +38,54 @@ import {
   closeProject,
   createComment,
   createPost,
+  createProject,
   deleteComment,
   deletePost,
   getProject,
+  getProjectJourney,
   getTimeline,
   inviteCustomer,
   listComments,
   listPosts,
   listProjects,
   listProjectTodos,
+  setProjectMembers,
+  updateProject,
 } from '@/lib/api/endpoints/projects';
+import {
+  createTodo,
+  createTodoList,
+  deleteTodo,
+  listProjectTodoLists,
+  updateTodo,
+  updateTodoList,
+} from '@/lib/api/endpoints/todos';
 
 /** The list asks for the server maximum (100) per page; the screen pages further on demand. */
 const LIST_PAGE_SIZE = 100;
 export const FEED_POLL_MS = 15_000;
 export const COMPLAINTS_POLL_MS = 45_000;
 
-export const useProjectsList = (search: string, stage?: ProjectStage) =>
+export const useProjectsList = (
+  search: string,
+  stage?: ProjectStage,
+  designStage?: DesignStage,
+  designerId?: string,
+) =>
   useInfiniteQuery({
-    queryKey: ['projects', 'list', { search, stage }],
+    queryKey: ['projects', 'list', { search, stage, designStage, designerId }],
     queryFn: ({ pageParam, signal }) =>
-      listProjects({ page: pageParam, pageSize: LIST_PAGE_SIZE, search: search || undefined, stage }, signal),
+      listProjects(
+        {
+          page: pageParam,
+          pageSize: LIST_PAGE_SIZE,
+          search: search || undefined,
+          stage,
+          designStage,
+          designerId,
+        },
+        signal,
+      ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {
@@ -50,6 +96,14 @@ export const useProjectsList = (search: string, stage?: ProjectStage) =>
 
 export const useProjectDetail = (id: string) =>
   useQuery({ queryKey: ['projects', 'detail', id], queryFn: ({ signal }) => getProject(id, signal) });
+
+export const useProjectJourney = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['projects', 'journey', id],
+    queryFn: ({ signal }) => getProjectJourney(id, signal),
+    enabled,
+    retry: false,
+  });
 
 /** True while the screen is focused and the app is in the foreground: the only time we poll. */
 export function useScreenActive(): boolean {
@@ -81,11 +135,6 @@ async function fetchFeedPage(id: string, mode: FeedMode, before: string | undefi
   };
 }
 
-/**
- * The chat feed, newest first. `ALL` = timeline (posts + team activity), `CLIENT` = what the customer sees.
- * Older pages are loaded with the `before` cursor; page 1 is re-read every 15 s while the screen is active
- * and merged in by id, so polling never disturbs the older pages.
- */
 export function useChatFeed(id: string, mode: FeedMode, active: boolean) {
   const base = ['projects', 'posts', id, mode] as const;
   const pages = useInfiniteQuery({
@@ -122,7 +171,6 @@ export function useChatFeed(id: string, mode: FeedMode, active: boolean) {
   };
 }
 
-/** Complaint cards for the chat. Page size 100, following pages while some remain (cap 5 pages). */
 export const useProjectComplaints = (id: string, active: boolean) =>
   useQuery({
     queryKey: ['projects', 'complaints', id],
@@ -138,14 +186,132 @@ export const useProjectComplaints = (id: string, active: boolean) =>
     refetchInterval: active ? COMPLAINTS_POLL_MS : false,
   });
 
-export const useProjectTodos = (id: string, status: 'open' | 'done' | 'all') =>
+/* ── Project To-dos ─────────────────────────────────────────────────────────── */
+
+export const useProjectTodoLists = (id: string) =>
   useQuery({
-    queryKey: ['projects', 'todos', id, status],
-    queryFn: ({ signal }) => listProjectTodos(id, status, signal),
+    queryKey: ['projects', 'todo-lists', id],
+    queryFn: ({ signal }) => listProjectTodoLists(id, signal),
   });
 
-export const useProjectFiles = (id: string) =>
-  useQuery({ queryKey: ['projects', 'files', id], queryFn: ({ signal }) => listProjectFiles(id, {}, signal) });
+export const useProjectTodos = (id: string, status: 'open' | 'done' | 'all', assignedToMe = false) =>
+  useQuery({
+    queryKey: ['projects', 'todos', id, status, assignedToMe ? 'me' : 'all'],
+    queryFn: ({ signal }) => listProjectTodos(id, status, signal, assignedToMe ? 'me' : undefined),
+  });
+
+function useInvalidateTodos(projectId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['projects', 'todos', projectId] });
+    void qc.invalidateQueries({ queryKey: ['projects', 'todo-lists', projectId] });
+    void qc.invalidateQueries({ queryKey: ['projects', 'posts', projectId] });
+    void qc.invalidateQueries({ queryKey: ['todos'] });
+  };
+}
+
+export function useCreateTodoList(projectId: string) {
+  const inv = useInvalidateTodos(projectId);
+  return useMutation({ mutationFn: (name: string) => createTodoList(projectId, name), onSuccess: inv });
+}
+
+export function useUpdateTodoList(projectId: string) {
+  const inv = useInvalidateTodos(projectId);
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateTodoListBodyDto & { id: string }) => updateTodoList(id, body),
+    onSuccess: inv,
+  });
+}
+
+export function useCreateTodo(projectId: string) {
+  const inv = useInvalidateTodos(projectId);
+  return useMutation({
+    mutationFn: ({ listId, ...body }: Partial<CreateTodoBodyDto> & { listId: string; title: string }) =>
+      createTodo(listId, body),
+    onSuccess: inv,
+  });
+}
+
+export function useUpdateTodo(projectId: string) {
+  const inv = useInvalidateTodos(projectId);
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateTodoBodyDto & { id: string }) => updateTodo(id, body),
+    onSuccess: inv,
+  });
+}
+
+export function useDeleteTodo(projectId: string) {
+  const inv = useInvalidateTodos(projectId);
+  return useMutation({ mutationFn: (todoId: string) => deleteTodo(todoId), onSuccess: inv });
+}
+
+/* ── Project Docs ───────────────────────────────────────────────────────────── */
+
+export const useProjectFolders = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: ['projects', 'folders', id],
+    queryFn: ({ signal }) => listProjectFolders(id, signal),
+    enabled,
+  });
+
+export const useProjectFiles = (id: string, q: ProjectFilesQuery = {}) =>
+  useQuery({
+    queryKey: ['projects', 'files', id, q.folderId ?? null, q.search ?? '', q.shared ?? false],
+    queryFn: ({ signal }) => listProjectFiles(id, q, signal),
+  });
+
+function useInvalidateDocs(projectId: string) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['projects', 'files', projectId] });
+    void qc.invalidateQueries({ queryKey: ['projects', 'folders', projectId] });
+    void qc.invalidateQueries({ queryKey: ['projects', 'posts', projectId] });
+  };
+}
+
+export function useCreateFolder(projectId: string) {
+  const inv = useInvalidateDocs(projectId);
+  return useMutation({
+    mutationFn: (body: CreateFolderBodyDto) => createProjectFolder(projectId, body),
+    onSuccess: inv,
+  });
+}
+
+export function useUpdateFolder(projectId: string) {
+  const inv = useInvalidateDocs(projectId);
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateFolderBodyDto & { id: string }) => updateFolder(id, body),
+    onSuccess: inv,
+  });
+}
+
+export function useDeleteFolder(projectId: string) {
+  const inv = useInvalidateDocs(projectId);
+  return useMutation({ mutationFn: (folderId: string) => deleteFolder(folderId), onSuccess: inv });
+}
+
+export function useUpdateFile(projectId: string) {
+  const inv = useInvalidateDocs(projectId);
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateFileBodyDto & { id: string }) => updateFile(id, body),
+    onSuccess: inv,
+  });
+}
+
+export function useDeleteFile(projectId: string) {
+  const inv = useInvalidateDocs(projectId);
+  return useMutation({ mutationFn: (fileId: string) => deleteFile(fileId), onSuccess: inv });
+}
+
+export function useSaveToDocs(projectId: string) {
+  const inv = useInvalidateDocs(projectId);
+  return useMutation({
+    mutationFn: (body: Parameters<typeof saveFromPhotos>[1]) => saveFromPhotos(projectId, body),
+    onSuccess: inv,
+  });
+}
+
+/* ── Posts & Comments ───────────────────────────────────────────────────────── */
 
 export const usePostComments = (projectId: string, postId: string | null) =>
   useQuery({
@@ -162,14 +328,9 @@ function useInvalidateFeed(projectId: string) {
   }, [qc, projectId]);
 }
 
-/**
- * Sends one post straight to the API. This is the single entry point for sending a post:
- * the offline agent can replace the body with an outbox enqueue without touching any screen.
- */
 export function useCreatePost(projectId: string) {
   const invalidate = useInvalidateFeed(projectId);
   return useMutation({
-    // TODO(outbox): enqueue the post (with its uploaded images) instead of sending directly.
     mutationFn: (body: CreatePostBodyDto) => createPost(projectId, body),
     onSuccess: invalidate,
   });
@@ -178,17 +339,8 @@ export function useCreatePost(projectId: string) {
 export function useCreateComment(projectId: string, postId: string) {
   const invalidate = useInvalidateFeed(projectId);
   return useMutation({
-    // TODO(outbox): enqueue the reply instead of sending directly.
     mutationFn: (body: CreateCommentBodyDto) => createComment(projectId, postId, body),
     onSuccess: invalidate,
-  });
-}
-
-export function useSaveToDocs(projectId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: Parameters<typeof saveFromPhotos>[1]) => saveFromPhotos(projectId, body),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['projects', 'files', projectId] }),
   });
 }
 
@@ -210,6 +362,19 @@ export function useApprovePost(projectId: string) {
   return useMutation({ mutationFn: (postId: string) => approvePost(projectId, postId), onSuccess: invalidate });
 }
 
+/* ── Project Mutations ──────────────────────────────────────────────────────── */
+
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateProjectBodyDto) => createProject(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['projects'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
 function useProjectChange<V>(projectId: string, fn: (v: V) => Promise<unknown>) {
   const qc = useQueryClient();
   return useMutation({
@@ -222,9 +387,12 @@ function useProjectChange<V>(projectId: string, fn: (v: V) => Promise<unknown>) 
   });
 }
 
+export const useUpdateProject = (id: string) =>
+  useProjectChange(id, (body: UpdateProjectBodyDto) => updateProject(id, body));
+export const useSetMembers = (id: string) =>
+  useProjectChange(id, (body: SetMembersBodyDto) => setProjectMembers(id, body));
 export const useChangeStage = (id: string) => useProjectChange(id, (s: 'DESIGN' | 'SITE') => changeStage(id, s));
 export const useChangeDesignStage = (id: string) =>
   useProjectChange(id, (s: DesignStage) => changeDesignStage(id, s));
 export const useCloseProject = (id: string) => useProjectChange(id, () => closeProject(id));
 export const useInviteCustomer = () => useMutation({ mutationFn: (customerId: string) => inviteCustomer(customerId) });
-

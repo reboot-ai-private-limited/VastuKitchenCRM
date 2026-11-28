@@ -107,38 +107,41 @@ function ProposalsList() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Proposals',
-          headerShadowVisible: false,
-          headerTintColor: colors.primary,
-          headerRight: () => (
-            <Button
-              title="New"
-              variant="ghost"
-              onPress={() =>
-                router.push({
-                  pathname: '/proposals/new',
-                  params: leadId ? { leadId } : {},
-                } as unknown as Href)
-              }
-            />
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.stickyBar}>
-        <SlidingSwitch
-          options={[
-            { value: 'ALL', label: 'All' },
-            { value: 'SENT', label: 'Sent' },
-            { value: 'DRAFT', label: 'Drafts' },
-          ]}
-          value={status ?? 'ALL'}
-          onChange={(next) => setStatus(next === 'ALL' ? undefined : next)}
-          style={{ flex: 1, maxWidth: 280 }}
-        />
+      <View style={[styles.stickyBar, { paddingTop: insets.top + space[4] }]}>
+        <Text variant="title" color={colors.inkDeep} style={styles.heading}>
+          Proposals
+        </Text>
+        <View style={styles.barRow}>
+          <SlidingSwitch
+            options={[
+              { value: 'ALL', label: 'All' },
+              { value: 'SENT', label: 'Sent' },
+              { value: 'DRAFT', label: 'Drafts' },
+            ]}
+            value={status ?? 'ALL'}
+            onChange={(next) => setStatus(next === 'ALL' ? undefined : next)}
+            style={{ flex: 1 }}
+          />
+          <PressableScale
+            onPress={() =>
+              router.push({
+                pathname: '/proposals/new',
+                params: leadId ? { leadId } : {},
+              } as unknown as Href)
+            }
+            accessibilityRole="button"
+            accessibilityLabel="New proposal"
+            hitSlop={6}
+            style={styles.newBtn}
+          >
+            <Feather name="plus" size={15} color={colors.primaryForeground} />
+            <Text variant="caption" color={colors.primaryForeground} style={{ fontFamily: font.semibold }}>
+              New
+            </Text>
+          </PressableScale>
+        </View>
         {leadId ? (
           <PressableScale
             onPress={() => {
@@ -187,17 +190,30 @@ function ProposalsList() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.card },
-  stickyBar: {
+  newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: space[2],
+    gap: 4,
+    height: 36,
+    paddingHorizontal: space[3],
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
+  },
+  stickyBar: {
+    gap: space[3],
     paddingHorizontal: space[4],
-    paddingTop: space[1],
     paddingBottom: space[3],
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  heading: {
+    textAlign: 'center',
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
   },
   segmentedBar: {
     flexDirection: 'row',

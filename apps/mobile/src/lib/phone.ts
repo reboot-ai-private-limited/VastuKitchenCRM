@@ -12,9 +12,11 @@ export const telUrl = (phone: string): string | null => {
   return n ? `tel:${toE164Phone(n)}` : null;
 };
 
-export const whatsappUrlFor = (phone: string): string | null => {
+export const whatsappUrlFor = (phone: string, text?: string): string | null => {
   const n = normalizePhone(phone);
-  return n ? `https://wa.me/${toWaDigits(n)}` : null;
+  if (!n) return null;
+  const base = `https://wa.me/${toWaDigits(n)}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 };
 
 /** Open a tel:/wa.me link; never throws (no dialer, bad number). Returns false when nothing opened. */

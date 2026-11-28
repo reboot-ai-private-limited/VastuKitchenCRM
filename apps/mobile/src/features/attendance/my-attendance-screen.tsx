@@ -189,17 +189,15 @@ export function MyAttendanceScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'My attendance',
-          headerShadowVisible: false,
-          headerTintColor: colors.primary,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: space[4], paddingBottom: insets.bottom + space[8] }}
+        contentContainerStyle={{
+          paddingTop: insets.top + space[4],
+          paddingHorizontal: space[4],
+          paddingBottom: insets.bottom + space[8],
+          gap: space[4],
+        }}
         refreshControl={
           <RefreshControl
             refreshing={q.isRefetching}
@@ -208,6 +206,9 @@ export function MyAttendanceScreen() {
           />
         }
       >
+        <Text variant="title" color={colors.inkDeep} style={{ textAlign: 'center' }}>
+          My attendance
+        </Text>
         <MonthBody
           month={month}
           onPrev={() => setMonth((m) => addMonths(m, -1))}

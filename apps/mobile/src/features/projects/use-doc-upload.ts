@@ -10,7 +10,11 @@ export const MAX_DOC_BYTES = 25 * 1024 * 1024;
 const extOf = (name: string) => (name.split('.').pop() ?? '').toLowerCase();
 
 /** Picks documents from the phone and uploads them to a project's Docs, one at a time. */
-export function useDocUpload(projectId: string | undefined, visibility: 'TEAM' | 'CLIENT') {
+export function useDocUpload(
+  projectId: string | undefined,
+  visibility: 'TEAM' | 'CLIENT',
+  folderId?: string | null,
+) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -50,6 +54,7 @@ export function useDocUpload(projectId: string | undefined, visibility: 'TEAM' |
             bytes: r.bytes ?? a.size ?? 1,
             ...(r.resource_type === 'image' || r.resource_type === 'raw' ? { resourceType: r.resource_type } : {}),
             visibility,
+            ...(folderId ? { folderId } : {}),
           });
         } catch (e) {
           problems.push(`${a.name}: ${e instanceof Error ? e.message : 'upload failed.'}`);
@@ -63,7 +68,7 @@ export function useDocUpload(projectId: string | undefined, visibility: 'TEAM' |
       void qc.invalidateQueries({ queryKey: ['projects', 'posts', projectId] });
     }
     return problems.length ? problems.join('\n') : null;
-  }, [projectId, visibility, qc]);
+  }, [projectId, visibility, folderId, qc]);
 
   return { pickAndUpload, busy, progress };
 }

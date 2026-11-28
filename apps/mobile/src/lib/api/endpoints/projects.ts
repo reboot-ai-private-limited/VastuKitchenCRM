@@ -2,15 +2,19 @@ import type {
   CommentDto,
   CreateCommentBodyDto,
   CreatePostBodyDto,
+  CreateProjectBodyDto,
   DesignStage,
+  LeadActivityDto,
   PaginatedDto,
   PostDto,
   PostPageDto,
   PostVisibility,
   ProjectDto,
   ProjectStage,
+  SetMembersBodyDto,
   TimelinePageDto,
   TodoDto,
+  UpdateProjectBodyDto,
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
@@ -49,6 +53,18 @@ export const listProjects = (q: ProjectsQuery, signal?: AbortSignal) =>
 
 export const getProject = (id: string, signal?: AbortSignal) =>
   request<ProjectDto>('GET', `/projects/${encodeURIComponent(id)}`, undefined, { signal });
+
+export const createProject = (body: CreateProjectBodyDto) =>
+  request<ProjectDto>('POST', '/projects', body);
+
+export const updateProject = (id: string, body: UpdateProjectBodyDto) =>
+  request<ProjectDto>('PATCH', `/projects/${encodeURIComponent(id)}`, body);
+
+export const setProjectMembers = (id: string, body: SetMembersBodyDto) =>
+  request<ProjectDto>('PUT', `/projects/${encodeURIComponent(id)}/members`, body);
+
+export const getProjectJourney = (id: string, signal?: AbortSignal) =>
+  request<LeadActivityDto[]>('GET', `/projects/${encodeURIComponent(id)}/journey`, undefined, { signal });
 
 export const listPosts = (
   id: string,
@@ -126,10 +142,11 @@ export const listProjectTodos = (
   projectId: string,
   status: 'open' | 'done' | 'all' = 'open',
   signal?: AbortSignal,
+  assignee?: 'me',
 ) =>
   request<TodoDto[]>(
     'GET',
-    `/projects/${encodeURIComponent(projectId)}/todos${qs({ status })}`,
+    `/projects/${encodeURIComponent(projectId)}/todos${qs({ status, assignee })}`,
     undefined,
     { signal },
   );

@@ -167,38 +167,14 @@ export function AlertsScreen({ standalone = false }: { standalone?: boolean }) {
 
   return (
     <View style={styles.root}>
-      {standalone ? (
-        <>
-          <Stack.Screen
-            options={{
-              headerShown: true,
-              title: 'Notifications',
-              headerShadowVisible: false,
-              headerTintColor: colors.primary,
-              headerRight: hasUnread
-                ? () => (
-                    <Button
-                      title="Mark all read"
-                      variant="ghost"
-                      size="sm"
-                      loading={markAll.isPending}
-                      onPress={() => markAll.mutate()}
-                    />
-                  )
-                : undefined,
-            }}
-          />
-          <View style={styles.standaloneBar}>
-            <SlidingSwitch options={viewOptions} value={view} onChange={setView} />
-          </View>
-        </>
-      ) : (
-        <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
-          <View style={styles.headerRow}>
-            <Text variant="title" color={colors.inkDeep}>
-              Alerts
-            </Text>
-            {hasUnread ? (
+      {standalone ? <Stack.Screen options={{ headerShown: false }} /> : null}
+      <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
+        <View style={styles.headerRow}>
+          <Text variant="title" color={colors.inkDeep} style={styles.heading}>
+            {standalone ? 'Notifications' : 'Alerts'}
+          </Text>
+          {hasUnread ? (
+            <View style={styles.headerRight}>
               <Button
                 title="Mark all read"
                 variant="ghost"
@@ -206,11 +182,11 @@ export function AlertsScreen({ standalone = false }: { standalone?: boolean }) {
                 loading={markAll.isPending}
                 onPress={() => markAll.mutate()}
               />
-            ) : null}
-          </View>
-          <SlidingSwitch options={viewOptions} value={view} onChange={setView} />
+            </View>
+          ) : null}
         </View>
-      )}
+        <SlidingSwitch options={viewOptions} value={view} onChange={setView} />
+      </View>
 
       <FlatList
         data={q.data ?? []}
@@ -277,9 +253,16 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerRow: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    minHeight: 32,
+  },
+  heading: {
+    textAlign: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    right: 0,
   },
   flatRow: {
     flexDirection: 'row',

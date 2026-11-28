@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   RefreshControl,
@@ -33,7 +34,7 @@ import { AudienceChip, PhotoGrid, PostCard, type OpenPhotos } from './post-card'
 import { PostComposer, type ReplyTarget } from './post-composer';
 import { DaySeparator, TimelineEntryHeader, TimelineEntryRow, TimelineFileRows } from './timeline-item';
 import { usePostSender, type PendingPost } from './use-post-sender';
-import { useChatFeed, useCreateComment, useProjectComplaints, type FeedMode } from './use-projects';
+import { useChatFeed, useCreateComment, useProjectComplaints, useSaveToDocs, type FeedMode } from './use-projects';
 
 type Props = {
   project: ProjectDto;
@@ -373,6 +374,7 @@ export function ChatSegment({
   };
 
   const [threadPostId, setThreadPostId] = useState<string | null>(null);
+  const saveToDocsMut = useSaveToDocs(project.id);
   const savedScrollRef = useRef<{ offset: number; postId: string } | null>(null);
   const openThread = useCallback((postId: string) => {
     savedScrollRef.current = { offset: offsetY.current, postId };
@@ -904,6 +906,40 @@ export function ChatSegment({
                 <Text variant="label" color={colors.primary}>
                   {pinnedPostId === holdItem.post.id ? 'Unpin' : 'Pin'}
                 </Text>
+              </PressableScale>
+            ) : null}
+
+            {holdItem.kind === 'post' &&
+            holdItem.post.images.length > 0 &&
+            !isCustomer &&
+            !closed ? (
+              <PressableScale
+                onPress={() => {
+                  const post = holdItem.post;
+                  setHoldItem(null);
+                  saveToDocsMut.mutate(
+                    {
+                      items: post.images.map((img) => ({ publicId: img.publicId })),
+                      visibility: post.visibility,
+                    },
+                    {
+                      onSuccess: (res) => {
+                        const created = res.filter((r) => r.created).length;
+                        showToast(
+                          created > 0
+                            ? `Saved ${created} ${created === 1 ? 'photo' : 'photos'} to Docs`
+                            : 'Already saved in Docs',
+                        );
+                      },
+                      onError: () =>
+                        Alert.alert('Could not save photos', 'Try again in a moment.'),
+                    },
+                  );
+                }}
+                style={styles.holdRow}
+              >
+                <Feather name="folder-plus" size={19} color={colors.foreground} />
+                <Text variant="label">Save photos to Docs</Text>
               </PressableScale>
             ) : null}
           </View>

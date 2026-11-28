@@ -15,9 +15,15 @@ export function Screen({ title, subtitle, children }: { title: string; subtitle?
       contentInsetAdjustmentBehavior="never"
     >
       <Reveal>
-        <View style={{ gap: space[1] }}>
-          <Text variant="title">{title}</Text>
-          {subtitle ? <Text muted>{subtitle}</Text> : null}
+        <View style={{ gap: space[1], alignItems: 'center' }}>
+          <Text variant="title" style={{ textAlign: 'center' }}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text muted style={{ textAlign: 'center' }}>
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
       </Reveal>
       {children}

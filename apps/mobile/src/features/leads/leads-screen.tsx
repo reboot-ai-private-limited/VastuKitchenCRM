@@ -280,6 +280,32 @@ export function LeadsScreen() {
                 {summary || ' '}
               </Text>
             </View>
+          </View>
+
+          <View style={styles.searchRow}>
+            <View style={styles.search}>
+              <Feather name="search" size={18} color={crm.muted} />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search name or phone..."
+                placeholderTextColor={crm.muted}
+                returnKeyType="search"
+                autoCorrect={false}
+                accessibilityLabel="Search leads by name or phone"
+                style={styles.searchInput}
+              />
+              {search.length > 0 ? (
+                <PressableScale
+                  onPress={() => setSearch('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                  style={styles.clear}
+                >
+                  <Feather name="x" size={18} color={crm.muted} />
+                </PressableScale>
+              ) : null}
+            </View>
             {canCreate ? (
               <PressableScale
                 onPress={() => router.push('/leads/new' as Href)}
@@ -292,30 +318,6 @@ export function LeadsScreen() {
                 <Text color={crm.surface} style={styles.addText}>
                   {user?.role === 'OFFICE' ? 'Walk-in' : 'Add lead'}
                 </Text>
-              </PressableScale>
-            ) : null}
-          </View>
-
-          <View style={styles.search}>
-            <Feather name="search" size={18} color={crm.muted} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Search leads by name or phone..."
-              placeholderTextColor={crm.muted}
-              returnKeyType="search"
-              autoCorrect={false}
-              accessibilityLabel="Search leads by name or phone"
-              style={styles.searchInput}
-            />
-            {search.length > 0 ? (
-              <PressableScale
-                onPress={() => setSearch('')}
-                accessibilityRole="button"
-                accessibilityLabel="Clear search"
-                style={styles.clear}
-              >
-                <Feather name="x" size={18} color={crm.muted} />
               </PressableScale>
             ) : null}
           </View>
@@ -565,12 +567,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: crm.border,
   },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  titleBlock: { flex: 1 },
-  title: { fontFamily: font.semibold, fontSize: 24, lineHeight: 30 },
-  summary: { fontFamily: font.regular, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'] },
+  titleRow: { justifyContent: 'center', alignItems: 'center', minHeight: 40 },
+  titleBlock: { alignItems: 'center' },
+  title: { fontFamily: font.semibold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  summary: { fontFamily: font.regular, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], textAlign: 'center' },
   add: {
-    height: 40,
+    height: hit,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[1],
@@ -579,12 +581,18 @@ const styles = StyleSheet.create({
     backgroundColor: crm.primary,
   },
   addText: { fontFamily: font.semibold, fontSize: 14, lineHeight: 20 },
-  search: {
-    height: hit,
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
     marginTop: space[3],
+  },
+  search: {
+    flex: 1,
+    height: hit,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
     paddingLeft: space[3],
     borderRadius: radius.md,
     borderWidth: 1,

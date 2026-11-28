@@ -109,15 +109,17 @@ export function ComplaintsScreen() {
     <View style={styles.root}>
       <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
         <View style={styles.headerRow}>
-          <Text variant="title" color={colors.inkDeep}>
+          <Text variant="title" color={colors.inkDeep} style={styles.heading}>
             Complaints
           </Text>
           {canRaise ? (
-            <Button
-              title="+ Raise"
-              size="sm"
-              onPress={() => router.push('/complaints/new' as Href)}
-            />
+            <View style={styles.headerRight}>
+              <Button
+                title="+ Raise"
+                size="sm"
+                onPress={() => router.push('/complaints/new' as Href)}
+              />
+            </View>
           ) : null}
         </View>
         <ScrollView
@@ -189,7 +191,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerRow: { justifyContent: 'center', alignItems: 'center', minHeight: 36 },
+  heading: { textAlign: 'center' },
+  headerRight: { position: 'absolute', right: 0 },
   filterTrack: { gap: space[2] },
   pill: {
     minHeight: 34,

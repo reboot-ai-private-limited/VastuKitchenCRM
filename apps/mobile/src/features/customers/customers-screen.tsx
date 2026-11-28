@@ -160,33 +160,44 @@ function CustomersList() {
   return (
     <View style={styles.root}>
       <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
-        <View style={styles.headerRow}>
-          <Text variant="title" color={colors.inkDeep}>
-            Customers
-          </Text>
-          <Button title="+ Add" size="sm" onPress={() => setAddOpen(true)} />
-        </View>
-        <View style={styles.search}>
-          <Feather name="search" size={17} color={colors.inkMuted} />
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search customer or phone"
-            placeholderTextColor={colors.placeholder}
-            returnKeyType="search"
-            accessibilityLabel="Search customers"
-            style={styles.searchInput}
-          />
-          {search.length > 0 ? (
-            <PressableScale
-              onPress={() => setSearch('')}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              hitSlop={10}
-            >
-              <Feather name="x" size={16} color={colors.inkMuted} />
-            </PressableScale>
-          ) : null}
+        <Text variant="title" color={colors.inkDeep} style={styles.heading}>
+          Customers
+        </Text>
+        <View style={styles.searchRow}>
+          <View style={styles.search}>
+            <Feather name="search" size={17} color={colors.inkMuted} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search customer or phone"
+              placeholderTextColor={colors.placeholder}
+              returnKeyType="search"
+              accessibilityLabel="Search customers"
+              style={styles.searchInput}
+            />
+            {search.length > 0 ? (
+              <PressableScale
+                onPress={() => setSearch('')}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                hitSlop={10}
+              >
+                <Feather name="x" size={16} color={colors.inkMuted} />
+              </PressableScale>
+            ) : null}
+          </View>
+          <PressableScale
+            onPress={() => setAddOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add customer"
+            hitSlop={4}
+            style={styles.addBtn}
+          >
+            <Feather name="plus" size={16} color={colors.primaryForeground} />
+            <Text variant="caption" color={colors.primaryForeground} style={{ fontFamily: font.semibold }}>
+              Add
+            </Text>
+          </PressableScale>
         </View>
       </View>
 
@@ -285,10 +296,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  headerRow: {
+  heading: {
+    textAlign: 'center',
+  },
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: space[2],
+  },
+  addBtn: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: space[3],
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
   },
   flatRow: {
     backgroundColor: colors.card,
@@ -318,6 +341,7 @@ const styles = StyleSheet.create({
     paddingLeft: 44,
   },
   search: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],

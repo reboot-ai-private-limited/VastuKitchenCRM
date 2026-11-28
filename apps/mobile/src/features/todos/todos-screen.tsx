@@ -195,7 +195,7 @@ export function TodosScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
-        <Text variant="title" color={colors.inkDeep}>
+        <Text variant="title" color={colors.inkDeep} style={{ textAlign: 'center' }}>
           To-dos
         </Text>
         <SlidingSwitch

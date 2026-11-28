@@ -85,7 +85,9 @@ function TeamList() {
 
   const header = (
     <View style={{ gap: space[3], paddingBottom: space[2] }}>
-      <Text variant="title">Team</Text>
+      <Text variant="title" style={{ textAlign: 'center' }}>
+        Team
+      </Text>
       <View style={styles.search}>
         <Feather name="search" size={18} color={colors.mutedForeground} />
         <TextInput

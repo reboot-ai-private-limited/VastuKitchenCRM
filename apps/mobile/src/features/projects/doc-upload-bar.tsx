@@ -7,9 +7,21 @@ import { AudienceSwitch } from './post-composer';
 import { useDocUpload } from './use-doc-upload';
 
 /** "Upload documents" button. Staff choose whether the client can see the files; customers' files are always shared. */
-export function DocUploadBar({ projectId, isCustomer }: { projectId: string | undefined; isCustomer?: boolean }) {
+export function DocUploadBar({
+  projectId,
+  isCustomer,
+  folderId,
+}: {
+  projectId: string | undefined;
+  isCustomer?: boolean;
+  folderId?: string | null;
+}) {
   const [visibility, setVisibility] = useState<PostVisibility>('TEAM');
-  const { pickAndUpload, busy, progress } = useDocUpload(projectId, isCustomer ? 'CLIENT' : visibility);
+  const { pickAndUpload, busy, progress } = useDocUpload(
+    projectId,
+    isCustomer ? 'CLIENT' : visibility,
+    folderId,
+  );
 
   const run = () => {
     void pickAndUpload().then((msg) => {

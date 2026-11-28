@@ -15,11 +15,11 @@ import { colors, font, hit, radius, space, tone } from '@/constants/theme';
 import { SheetRow } from '@/features/projects/sheet-row';
 import { ApiError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
-import { formatPhone } from '@/lib/format';
+import { formatPhone, timeAgo } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
 import { PendingSyncBadge } from '@/offline';
 import { useCallLogger } from './call-logger';
-import { daysInStage, PRODUCT_LABEL, SOURCE_LABEL, STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
+import { daysInStage, followUpDue, PRODUCT_LABEL, SOURCE_LABEL, STATUS_LABEL, STATUS_ORDER, STATUS_TONE } from './lead-meta';
 import { CallsSection, DesignsSection, ProposalsSection, TimelineSection } from './lead-sections';
 import { AssignSheet, EditLeadSheet, StatusSheet } from './lead-sheets';
 import { leadKey, useChangeLeadStatus, useLeadDetail } from './use-leads';
@@ -97,6 +97,11 @@ export function LeadDetailScreen() {
         ? [{ label: 'Interest', value: lead.productsOfInterest.map((p) => PRODUCT_LABEL[p]).join(', ') }]
         : []),
       { label: 'Source', value: SOURCE_LABEL[lead.source] },
+      ...(lead.lastContactedAt ? [{ label: 'Last contact', value: timeAgo(lead.lastContactedAt) }] : []),
+      ...(lead.nextFollowUpAt
+        ? [{ label: 'Follow-up', value: followUpDue(lead.nextFollowUpAt).label }]
+        : []),
+      ...(lead.nextAction ? [{ label: 'Next action', value: lead.nextAction }] : []),
       ...(lead.lostReason ? [{ label: 'Lost reason', value: lead.lostReason }] : []),
     ];
 
@@ -194,12 +199,12 @@ export function LeadDetailScreen() {
               setStagePickerOpen(true);
             }}
             accessibilityRole="button"
-            accessibilityLabel={`Stage: ${STATUS_LABEL[lead.status]}. Tap to change`}
+            accessibilityLabel={`Status: ${STATUS_LABEL[lead.status]}. Tap to change`}
             style={styles.stageControl}
           >
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="caption" color={colors.inkMuted}>
-                Stage
+                Status
               </Text>
               <Text variant="label" color={colors.inkDeep} style={{ fontFamily: font.semibold }}>
                 {STATUS_LABEL[lead.status]}
@@ -249,10 +254,19 @@ export function LeadDetailScreen() {
                     setAssignOpen(true);
                   }}
                   accessibilityRole="button"
-                  hitSlop={8}
-                  style={styles.assignPill}
+                  hitSlop={6}
+                  style={[styles.assignBtn, !lead.assignedTo && styles.assignBtnPrimary]}
                 >
-                  <Text variant="caption" color={colors.primaryPressed} style={{ fontFamily: font.semibold }}>
+                  <Feather
+                    name="user-plus"
+                    size={13}
+                    color={lead.assignedTo ? colors.primaryPressed : colors.primaryForeground}
+                  />
+                  <Text
+                    variant="caption"
+                    color={lead.assignedTo ? colors.primaryPressed : colors.primaryForeground}
+                    style={{ fontFamily: font.semibold }}
+                  >
                     {lead.assignedTo ? 'Reassign' : 'Assign'}
                   </Text>
                 </PressableScale>
@@ -299,7 +313,7 @@ export function LeadDetailScreen() {
         <BottomSheet
           visible={stagePickerOpen}
           onClose={() => setStagePickerOpen(false)}
-          title="Move stage"
+          title="Change status"
         >
           <View style={{ gap: 2 }}>
             {STATUS_ORDER.map((s) => (
@@ -307,7 +321,7 @@ export function LeadDetailScreen() {
                 key={s}
                 icon={s === 'WON' ? 'check-circle' : s === 'LOST' ? 'x-circle' : 'circle'}
                 label={STATUS_LABEL[s]}
-                caption={s === lead.status ? 'Current stage' : undefined}
+                caption={s === lead.status ? 'Current status' : undefined}
                 selected={s === lead.status}
                 onPress={() => {
                   setStagePickerOpen(false);
@@ -465,11 +479,20 @@ const styles = StyleSheet.create({
     gap: space[2],
     flexWrap: 'wrap',
   },
-  assignPill: {
-    paddingHorizontal: space[2],
-    paddingVertical: 3,
+  assignBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    minHeight: 34,
+    paddingHorizontal: space[3],
     borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+  },
+  assignBtnPrimary: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   tabular: {
     fontVariant: ['tabular-nums'],

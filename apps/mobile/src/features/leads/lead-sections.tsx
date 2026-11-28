@@ -5,6 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, type Href } from 'expo-router';
 import { MAX_MEDIA_PER_VISIT, type DesignMediaInputDto } from '@vastu/contracts';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
+import { useSession } from '@/lib/auth/session';
 import { signDesignMedia } from '@/lib/api/endpoints/leads';
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, postToTicket } from '@/lib/api/upload';
 import { formatDate, formatINR, formatTime, timeAgo } from '@/lib/format';
@@ -496,13 +498,14 @@ export function DesignsSection({ leadId, canComplete }: { leadId: string; canCom
 }
 
 export function TimelineSection({ leadId }: { leadId: string }) {
+  const { user } = useSession();
   const q = useLeadTimeline(leadId);
   return (
     <View style={{ gap: space[2] }}>
-      <SectionHead title="Activity" />
+      <SectionHead title="Timeline" />
       {q.isPending ? (
         <Text variant="caption" muted>
-          Loading activity...
+          Loading timeline...
         </Text>
       ) : q.isError ? (
         <Failed what="the timeline" onRetry={() => void q.refetch()} />
@@ -511,26 +514,36 @@ export function TimelineSection({ leadId }: { leadId: string }) {
           Nothing has happened on this lead yet.
         </Text>
       ) : (
-        <View style={styles.group}>
+        <View>
           {q.data.map((a, i) => {
             const { title, detail } = describeActivity(a);
-            const hasActor = a.by?.name && (title.includes(a.by.name) || detail?.includes(a.by.name));
-            const sub = [!hasActor && a.by?.name ? `By ${a.by.name}` : null, detail].filter(Boolean).join(' · ');
+            const actor = a.by?.name ?? 'System';
+            const cleanedDetail = detail
+              ? detail
+                  .split(' · ')
+                  .filter((part) => !a.by?.name || part !== `By ${a.by.name}`)
+                  .join(' · ')
+              : '';
+            const isLast = i === q.data.length - 1;
             return (
-              <View key={a.id} style={[styles.item, i > 0 && styles.divider]}>
-                <View style={styles.timelineTop}>
-                  <Text variant="label" color={colors.inkDeep} style={{ flex: 1, fontFamily: font.medium }}>
+              <View key={a.id} style={styles.timelineRow}>
+                <View style={styles.timelineRail}>
+                  <Avatar name={actor} size={32} accent={a.by?.id === user?.id} />
+                  {!isLast ? <View style={styles.timelineBar} /> : null}
+                </View>
+                <View style={[styles.timelineBody, !isLast && styles.timelineBodyGap]}>
+                  <Text variant="label" color={colors.inkDeep} style={{ fontFamily: font.medium }}>
                     {title}
                   </Text>
                   <Text variant="caption" color={colors.inkMuted} style={styles.tabular}>
-                    {formatDate(a.at)} · {formatTime(a.at)}
+                    {actor} · {formatDate(a.at)} · {formatTime(a.at)}
                   </Text>
+                  {cleanedDetail ? (
+                    <Text variant="caption" color={colors.inkDeep}>
+                      {cleanedDetail}
+                    </Text>
+                  ) : null}
                 </View>
-                {sub ? (
-                  <Text variant="caption" color={colors.inkMuted}>
-                    {sub}
-                  </Text>
-                ) : null}
               </View>
             );
           })}
@@ -566,11 +579,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[2],
   },
-  timelineTop: {
+  timelineRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: space[2],
+    alignItems: 'stretch',
+    gap: space[3],
+  },
+  timelineRail: {
+    width: 32,
+    alignItems: 'center',
+  },
+  timelineBar: {
+    flex: 1,
+    width: 2,
+    minHeight: 16,
+    marginVertical: 4,
+    borderRadius: 1,
+    backgroundColor: colors.border,
+  },
+  timelineBody: {
+    flex: 1,
+    gap: 2,
+    paddingTop: 2,
+  },
+  timelineBodyGap: {
+    paddingBottom: space[4],
   },
   tabular: {
     fontVariant: ['tabular-nums'],

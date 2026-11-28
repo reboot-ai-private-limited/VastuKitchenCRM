@@ -13,6 +13,7 @@ import { RoleGate } from '@/components/ui/role-gate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, hit, radius, space, type Tone } from '@/constants/theme';
+import { SlidingSwitch } from '@/features/projects/sliding-switch';
 import { NetworkError } from '@/lib/api/client';
 import { formatINR, timeAgo } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
@@ -128,32 +129,16 @@ function ProposalsList() {
       />
 
       <View style={styles.stickyBar}>
-        <View style={styles.segmentedBar} accessibilityRole="tablist">
-          {([undefined, 'SENT', 'DRAFT'] as const).map((s) => {
-            const active = s === status;
-            const label = s === 'SENT' ? 'Sent' : s === 'DRAFT' ? 'Drafts' : 'All';
-            return (
-              <PressableScale
-                key={s ?? 'all'}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => {
-                  if (!active) softTick();
-                  setStatus(s);
-                }}
-                style={[styles.segment, active && styles.segmentActive]}
-              >
-                <Text
-                  variant="caption"
-                  color={active ? colors.primaryForeground : colors.inkMuted}
-                  style={active ? styles.segmentTextActive : styles.segmentText}
-                >
-                  {label}
-                </Text>
-              </PressableScale>
-            );
-          })}
-        </View>
+        <SlidingSwitch
+          options={[
+            { value: 'ALL', label: 'All' },
+            { value: 'SENT', label: 'Sent' },
+            { value: 'DRAFT', label: 'Drafts' },
+          ]}
+          value={status ?? 'ALL'}
+          onChange={(next) => setStatus(next === 'ALL' ? undefined : next)}
+          style={{ flex: 1, maxWidth: 280 }}
+        />
         {leadId ? (
           <PressableScale
             onPress={() => {

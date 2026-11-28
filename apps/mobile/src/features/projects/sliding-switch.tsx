@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -21,11 +21,13 @@ export function SlidingSwitch<T extends string>({
   value,
   onChange,
   disabled = false,
+  style,
 }: {
   options: readonly SwitchOption<T>[];
   value: T;
   onChange: (next: T) => void;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const count = options.length;
   const index = Math.max(
@@ -50,7 +52,7 @@ export function SlidingSwitch<T extends string>({
 
   return (
     <View
-      style={[styles.bar, disabled && { opacity: 0.6 }]}
+      style={[styles.bar, style, disabled && { opacity: 0.6 }]}
       accessibilityRole="tablist"
       onLayout={(e) => {
         const innerW = e.nativeEvent.layout.width - 2 - PAD * 2;

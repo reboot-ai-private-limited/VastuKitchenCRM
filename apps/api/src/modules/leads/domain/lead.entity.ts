@@ -29,13 +29,22 @@ export interface Lead {
    */
   newProjectRequested: boolean;
   createdById: string | null;
+  /** Start of the latest answered call; an unanswered attempt is not contact. */
+  lastContactedAt: Date | null;
+  nextFollowUpAt: Date | null;
+  nextAction: string | null;
   createdAt: Date;
 }
 
-export type NewLead = Omit<Lead, 'id' | 'createdAt' | 'newProjectRequested' | 'productsOfInterest'> & {
-  newProjectRequested?: boolean;
-  productsOfInterest?: LeadProductOfInterest[];
-};
+/** Fields a new lead may leave out; the repository fills in the empty value. */
+type DefaultedLeadKeys =
+  | 'newProjectRequested'
+  | 'productsOfInterest'
+  | 'lastContactedAt'
+  | 'nextFollowUpAt'
+  | 'nextAction';
+export type NewLead = Omit<Lead, 'id' | 'createdAt' | DefaultedLeadKeys> &
+  Partial<Pick<Lead, DefaultedLeadKeys>>;
 export type LeadPatch = Partial<Omit<Lead, 'id' | 'createdAt'>>;
 
 /** Not finished (Won/Lost) and unchanged for longer than `days`. */
@@ -55,8 +64,8 @@ export interface LeadListFilter {
   status?: LeadStatus | undefined;
   /** Restrict to a set of statuses (e.g. Designer team sees measurement-done onwards). */
   statuses?: readonly LeadStatus[] | undefined;
-  source?: LeadSource | undefined;
-  product?: LeadProductOfInterest | undefined;
+  source?: LeadSource | readonly LeadSource[] | undefined;
+  product?: LeadProductOfInterest | readonly LeadProductOfInterest[] | undefined;
   /** `undefined` = any assignee, `null` = unassigned, string = that user. */
   assignedToId?: string | null | undefined;
   /** Only leads that have a customer account (the Customers list). */
@@ -65,4 +74,6 @@ export interface LeadListFilter {
   stuckBefore?: Date | undefined;
   /** Hide LOST leads unless explicitly requested. */
   excludeLost?: boolean | undefined;
+  /** Only open leads with a follow-up before this moment, soonest first. */
+  followUpBefore?: Date | undefined;
 }

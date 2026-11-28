@@ -26,10 +26,11 @@ export type LeadsQuery = {
   pageSize?: number;
   search?: string;
   status?: LeadStatus;
-  product?: LeadProductOfInterest;
+  product?: LeadProductOfInterest | readonly LeadProductOfInterest[];
   stuck?: boolean;
   excludeLost?: boolean;
-  source?: LeadSource;
+  source?: LeadSource | readonly LeadSource[];
+  followUpDue?: boolean;
   assignedTo?: string;
 };
 
@@ -48,10 +49,25 @@ export const listLeads = (q: LeadsQuery, signal?: AbortSignal) =>
       pageSize: q.pageSize ?? LEADS_PAGE_SIZE,
       search: q.search,
       status: q.status,
-      product: q.product,
+      product:
+        q.product === undefined
+          ? undefined
+          : typeof q.product === 'string'
+            ? q.product
+            : q.product.length > 0
+              ? q.product.join(',')
+              : undefined,
       stuck: q.stuck === undefined ? undefined : String(q.stuck),
       excludeLost: q.excludeLost === undefined ? undefined : String(q.excludeLost),
-      source: q.source,
+      source:
+        q.source === undefined
+          ? undefined
+          : typeof q.source === 'string'
+            ? q.source
+            : q.source.length > 0
+              ? q.source.join(',')
+              : undefined,
+      followUpDue: q.followUpDue === undefined ? undefined : String(q.followUpDue),
       assignedTo: q.assignedTo,
     })}`,
     undefined,

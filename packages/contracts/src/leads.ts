@@ -111,6 +111,10 @@ export const leadSchema = z.object({
   lostReason: z.string().nullable(),
   /** Set when the lead is won: the CUSTOMER account created for them. */
   customerId: z.string().nullable(),
+  /** Start of the latest answered call. */
+  lastContactedAt: z.string().nullable().default(null),
+  nextFollowUpAt: z.string().nullable().default(null),
+  nextAction: z.string().nullable().default(null),
   createdAt: z.string(),
 });
 export type LeadDto = z.infer<typeof leadSchema>;
@@ -140,6 +144,8 @@ export const updateLeadBodySchema = z
     notes: z.string().trim().min(1).max(2000).nullable(),
     productsOfInterest: productsOfInterestField,
     source: leadSourceSchema,
+    nextFollowUpAt: z.coerce.date().nullable(),
+    nextAction: z.string().trim().min(1).max(200).nullable(),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to update');
@@ -163,13 +169,22 @@ export const changeLeadStatusBodySchema = z
   });
 export type ChangeLeadStatusBodyDto = z.infer<typeof changeLeadStatusBodySchema>;
 
+const csvEnum = <T extends z.ZodTypeAny>(item: T) =>
+  z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) =>
+      (Array.isArray(v) ? v : v.split(',')).map((s) => s.trim()).filter(Boolean),
+    )
+    .pipe(z.array(item).min(1))
+    .optional();
+
 export const listLeadsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().trim().min(1).optional(),
   status: leadStatusSchema.optional(),
-  source: leadSourceSchema.optional(),
-  product: leadProductOfInterestSchema.optional(),
+  source: csvEnum(leadSourceSchema),
+  product: csvEnum(leadProductOfInterestSchema),
   /** `me`, `unassigned`, or a user id. Sales users are always limited to their own leads. */
   assignedTo: z.string().min(1).optional(),
   stuck: z
@@ -177,6 +192,11 @@ export const listLeadsQuerySchema = z.object({
     .transform((v) => v === 'true')
     .optional(),
   excludeLost: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
+  /** Open leads whose follow-up is due today (business timezone) or overdue, oldest first. */
+  followUpDue: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),

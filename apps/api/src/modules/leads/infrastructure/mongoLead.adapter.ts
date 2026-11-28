@@ -26,6 +26,10 @@ function toEntity(doc: HydratedDocument<LeadDoc>): Lead {
     customerId: idOrNull(doc.customerId),
     newProjectRequested: doc.newProjectRequested ?? false,
     createdById: idOrNull(doc.createdById),
+    // Leads saved before these fields existed have none of them.
+    lastContactedAt: doc.lastContactedAt ?? null,
+    nextFollowUpAt: doc.nextFollowUpAt ?? null,
+    nextAction: doc.nextAction ?? null,
     createdAt: doc.createdAt,
   };
 }
@@ -94,8 +98,14 @@ export class MongoLeadRepository implements LeadRepositoryPort {
     if (filter.status) query['status'] = filter.status;
     else if (filter.statuses) query['status'] = { $in: filter.statuses };
     else if (filter.excludeLost) query['status'] = { $ne: 'LOST' };
-    if (filter.source) query['source'] = filter.source;
-    if (filter.product) query['productsOfInterest'] = filter.product;
+    if (filter.source) {
+      query['source'] = Array.isArray(filter.source) ? { $in: filter.source } : filter.source;
+    }
+    if (filter.product) {
+      query['productsOfInterest'] = Array.isArray(filter.product)
+        ? { $in: filter.product }
+        : filter.product;
+    }
     if (filter.customersOnly) query['customerId'] = { $ne: null };
 
     if (filter.assignedToId !== undefined) {
@@ -106,11 +116,17 @@ export class MongoLeadRepository implements LeadRepositoryPort {
       query['assignedToId'] = filter.assignedToId;
     }
 
-    if (filter.stuckBefore) {
-      query['statusChangedAt'] = { $lt: filter.stuckBefore };
-      // Stuck never applies to finished leads, whatever status filter was also given.
+    if (filter.stuckBefore) query['statusChangedAt'] = { $lt: filter.stuckBefore };
+    // `$lt` on a date never matches null, so leads with no follow-up drop out.
+    if (filter.followUpBefore) query['nextFollowUpAt'] = { $lt: filter.followUpBefore };
+
+    // Stuck and follow-up due never apply to finished leads, whatever status filter was also given.
+    if (filter.stuckBefore || filter.followUpBefore) {
       if (filter.status) {
         if (CLOSED_LEAD_STATUSES.includes(filter.status)) return { items: [], total: 0 };
+      } else if (filter.statuses) {
+        // Keep the caller's visibility limit (designers) while dropping finished stages.
+        query['status'] = { $in: filter.statuses.filter((s) => !CLOSED_LEAD_STATUSES.includes(s)) };
       } else {
         query['status'] = { $nin: CLOSED_LEAD_STATUSES };
       }
@@ -123,7 +139,13 @@ export class MongoLeadRepository implements LeadRepositoryPort {
 
     const [docs, total] = await Promise.all([
       LeadModel.find(query)
-        .sort(filter.customersOnly ? { statusChangedAt: -1 } : { createdAt: -1 })
+        .sort(
+          filter.followUpBefore
+            ? { nextFollowUpAt: 1 }
+            : filter.customersOnly
+              ? { statusChangedAt: -1 }
+              : { createdAt: -1 },
+        )
         .skip((filter.page - 1) * filter.pageSize)
         .limit(filter.pageSize),
       LeadModel.countDocuments(query),

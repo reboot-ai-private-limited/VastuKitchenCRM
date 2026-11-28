@@ -53,6 +53,9 @@ export class FakeLeads implements LeadRepositoryPort {
       ...lead,
       productsOfInterest: lead.productsOfInterest ?? [],
       newProjectRequested: lead.newProjectRequested ?? false,
+      lastContactedAt: lead.lastContactedAt ?? null,
+      nextFollowUpAt: lead.nextFollowUpAt ?? null,
+      nextAction: lead.nextAction ?? null,
       id: `l${++this.seq}`,
       createdAt: new Date(),
     };
@@ -72,7 +75,14 @@ export class FakeLeads implements LeadRepositoryPort {
       (l) =>
         (filter.assignedToId === undefined || l.assignedToId === filter.assignedToId) &&
         (!filter.customersOnly || l.customerId !== null) &&
-        (!filter.product || l.productsOfInterest.includes(filter.product)) &&
+        (!filter.source ||
+          (typeof filter.source === 'string'
+            ? l.source === filter.source
+            : filter.source.includes(l.source))) &&
+        (!filter.product ||
+          (typeof filter.product === 'string'
+            ? l.productsOfInterest.includes(filter.product)
+            : filter.product.some((p) => l.productsOfInterest.includes(p)))) &&
         (!filter.statuses || filter.statuses.includes(l.status)) &&
         (!filter.excludeLost || l.status !== 'LOST'),
     );

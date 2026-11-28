@@ -39,14 +39,18 @@ export const useLeadsList = (
   search: string,
   status?: LeadDto['status'],
   stuck?: boolean,
-  product?: LeadProductOfInterest,
+  product?: LeadProductOfInterest | readonly LeadProductOfInterest[],
   excludeLost?: boolean,
-  source?: LeadSource,
+  source?: LeadSource | readonly LeadSource[],
+  followUpDue?: boolean,
 ) =>
   useInfiniteQuery({
-    queryKey: ['leads', 'list', { search, status, stuck, product, excludeLost, source }],
+    queryKey: ['leads', 'list', { search, status, stuck, product, excludeLost, source, followUpDue }],
     queryFn: ({ pageParam, signal }) =>
-      listLeads({ page: pageParam, search: search || undefined, status, stuck, product, excludeLost, source }, signal),
+      listLeads(
+        { page: pageParam, search: search || undefined, status, stuck, product, excludeLost, source, followUpDue },
+        signal,
+      ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {
@@ -57,7 +61,7 @@ export const useLeadsList = (
   });
 
 /** Header totals, independent of the search and filters (except whether lost leads are shown). */
-export const useLeadCount = (query: { stuck?: boolean; excludeLost?: boolean }) =>
+export const useLeadCount = (query: { stuck?: boolean; followUpDue?: boolean; excludeLost?: boolean }) =>
   useQuery({
     queryKey: ['leads', 'count', query],
     queryFn: ({ signal }) => listLeads({ page: 1, pageSize: 1, ...query }, signal),
@@ -182,6 +186,7 @@ function useLeadWrite<V>(id: string, fn: (v: V) => Promise<LeadDto>) {
     onSuccess: (lead) => {
       qc.setQueryData(['leads', 'detail', id], lead);
       void qc.invalidateQueries({ queryKey: ['leads', 'list'] });
+      void qc.invalidateQueries({ queryKey: ['leads', 'count'] });
       void qc.invalidateQueries({ queryKey: ['leads', 'timeline', id] });
     },
   });

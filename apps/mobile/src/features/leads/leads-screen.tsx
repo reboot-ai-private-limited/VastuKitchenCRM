@@ -1,10 +1,11 @@
 import type React from 'react';
 import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  CLOSED_LEAD_STATUSES,
   DESIGN_VISIBLE_LEAD_STATUSES,
   LEAD_PRODUCTS_OF_INTEREST,
   LEAD_SOURCES,
@@ -20,14 +21,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { crm, font, hit, radius, space, stageTone, tone as themeTone } from '@/constants/theme';
 import { SheetRow } from '@/features/projects/sheet-row';
+import { SlidingSwitch } from '@/features/projects/sliding-switch';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
-import { formatPhone } from '@/lib/format';
+import { formatPhone, timeAgo } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
 import { PendingSyncBadge } from '@/offline';
 import {
   daysInStage,
+  followUpDue,
   PRODUCT_LABEL,
   SOURCE_LABEL,
   STAGE_TONE,
@@ -51,6 +54,13 @@ function LeadRow({ lead }: { lead: LeadDto }) {
   const stuck = lead.isStuck ? (days ? `Stuck ${days}d` : 'Stuck') : null;
   const age = !lead.isStuck && days != null ? (days === 0 ? 'Moved today' : `${days}d in stage`) : null;
 
+  const open = !CLOSED_LEAD_STATUSES.includes(lead.status);
+  const due = open && lead.nextFollowUpAt ? followUpDue(lead.nextFollowUpAt) : null;
+  const next = open && (due || lead.nextAction) ? (lead.nextAction ?? 'Follow up') : null;
+  const contacted = lead.lastContactedAt ? `Last contact ${timeAgo(lead.lastContactedAt)}` : null;
+  const dueColor =
+    due?.state === 'overdue' ? crm.danger : due?.state === 'today' ? themeTone.warning.fg : crm.muted;
+
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/leads/[id]', params: { id: lead.id } } as Href)}
@@ -62,6 +72,9 @@ function LeadRow({ lead }: { lead: LeadDto }) {
         lead.isStuck ? `stuck${days ? `, ${days} days in stage` : ''}` : null,
         owner,
         products,
+        next,
+        due?.label,
+        contacted,
       ]
         .filter(Boolean)
         .join(', ')}
@@ -102,6 +115,23 @@ function LeadRow({ lead }: { lead: LeadDto }) {
           {[owner, age].filter(Boolean).join(' \u00b7 ')}
         </Text>
       </View>
+      {next ? (
+        <View style={styles.followUp}>
+          <Text numberOfLines={1} color={crm.heading} style={styles.nextAction}>
+            {next}
+          </Text>
+          {due ? (
+            <Text color={dueColor} style={styles.dueText}>
+              {due.label}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      {contacted ? (
+        <Text color={crm.muted} style={styles.products}>
+          {contacted}
+        </Text>
+      ) : null}
       <PendingSyncBadge filter={(i) => i.entityKey === leadKey(lead.id)} />
     </Pressable>
   );
@@ -126,25 +156,34 @@ export function LeadsScreen() {
   const router = useRouter();
   const { user } = useSession();
   const [search, setSearch] = useState('');
-  const [stuckOnly, setStuckOnly] = useState(false);
+  const [view, setView] = useState<'all' | 'stuck' | 'due'>('all');
   const [status, setStatus] = useState<LeadStatus | undefined>();
-  const [source, setSource] = useState<LeadSource | undefined>();
-  const [product, setProduct] = useState<LeadProductOfInterest | undefined>();
+  const [sources, setSources] = useState<LeadSource[]>([]);
+  const [products, setProducts] = useState<LeadProductOfInterest[]>([]);
   const [showLost, setShowLost] = useState(false);
   const [sheet, setSheet] = useState<'stage' | 'filters' | null>(null);
   const debounced = useDebouncedValue(search.trim(), 350);
   // Lost leads are hidden unless asked for; choosing a stage overrides that.
   const excludeLost = !showLost && !status ? true : undefined;
   const countExcludeLost = showLost ? undefined : true;
-  const q = useLeadsList(debounced, status, stuckOnly ? true : undefined, product, excludeLost, source);
+  const q = useLeadsList(
+    debounced,
+    status,
+    view === 'stuck' ? true : undefined,
+    products.length > 0 ? products : undefined,
+    excludeLost,
+    sources.length > 0 ? sources : undefined,
+    view === 'due' ? true : undefined,
+  );
   const total = useLeadCount({ excludeLost: countExcludeLost });
   const stuckTotal = useLeadCount({ stuck: true, excludeLost: countExcludeLost });
+  const dueTotal = useLeadCount({ followUpDue: true });
 
   const canCreate = user?.role === 'ADMIN' || user?.role === 'SALES' || user?.role === 'OFFICE';
   const isDesigner = user?.role === 'DESIGNER';
   const stageOptions = isDesigner ? DESIGN_VISIBLE_LEAD_STATUSES : STATUS_ORDER;
-  const extraFilters = [product, source, showLost || undefined].filter(Boolean).length;
-  const filtered = Boolean(debounced || stuckOnly || status || extraFilters);
+  const extraFilters = products.length + sources.length + (showLost ? 1 : 0);
+  const filtered = Boolean(debounced || view !== 'all' || status || extraFilters);
   const totalWord = showLost
     ? total.data === 1
       ? 'lead'
@@ -155,6 +194,7 @@ export function LeadsScreen() {
   const summary = [
     total.data != null ? `${total.data} ${totalWord}` : null,
     stuckTotal.data ? `${stuckTotal.data} stuck` : null,
+    dueTotal.data ? `${dueTotal.data} due` : null,
   ]
     .filter(Boolean)
     .join(' \u00b7 ');
@@ -163,17 +203,18 @@ export function LeadsScreen() {
     void q.refetch();
     void total.refetch();
     void stuckTotal.refetch();
+    void dueTotal.refetch();
   };
 
   const clearExtraFilters = () => {
-    setProduct(undefined);
-    setSource(undefined);
+    setProducts([]);
+    setSources([]);
     setShowLost(false);
   };
 
   const clearFilters = () => {
     setSearch('');
-    setStuckOnly(false);
+    setView('all');
     setStatus(undefined);
     clearExtraFilters();
   };
@@ -225,25 +266,6 @@ export function LeadsScreen() {
       />
     );
   }
-
-  const tab = (label: string, value: boolean) => {
-    const active = stuckOnly === value;
-    return (
-      <Pressable
-        onPress={() => {
-          if (!active) softTick();
-          setStuckOnly(value);
-        }}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: active }}
-        style={[styles.tab, active && styles.tabActive]}
-      >
-        <Text color={active ? crm.heading : crm.muted} style={active ? styles.tabTextActive : styles.tabText}>
-          {label}
-        </Text>
-      </Pressable>
-    );
-  };
 
   return (
     <View style={styles.root}>
@@ -298,12 +320,17 @@ export function LeadsScreen() {
             ) : null}
           </View>
 
+          <SlidingSwitch
+            options={[
+              { value: 'all', label: 'All leads' },
+              { value: 'stuck', label: 'Stuck' },
+              { value: 'due', label: 'Follow-up due' },
+            ]}
+            value={view}
+            onChange={setView}
+            style={styles.viewSwitch}
+          />
           <View style={styles.filters}>
-            <View style={styles.tabs} accessibilityRole="tablist">
-              {tab('All leads', false)}
-              {tab('Stuck', true)}
-            </View>
-            <View style={styles.spacer} />
             <PressableScale
               onPress={() => setSheet('stage')}
               accessibilityRole="button"
@@ -399,100 +426,131 @@ export function LeadsScreen() {
           </View>
         }
       >
-        {extraFilters > 0 ? (
-          <View style={styles.activeFilterRow}>
-            {product ? (
-              <PressableScale
-                onPress={() => {
-                  softTick();
-                  setProduct(undefined);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Clear product filter: ${PRODUCT_LABEL[product]}`}
-                style={styles.activeFilterChip}
-              >
-                <Text color={crm.primaryDark} style={styles.activeFilterText}>
-                  {PRODUCT_LABEL[product]}
+        <View style={styles.filterSheetBody}>
+          {!isDesigner ? (
+            <Pressable
+              onPress={() => {
+                softTick();
+                setShowLost((v) => !v);
+              }}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: showLost }}
+              style={styles.toggleRow}
+            >
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text color={crm.heading} style={styles.toggleLabel}>
+                  Show lost leads
                 </Text>
-                <Feather name="x" size={14} color={crm.primaryDark} />
-              </PressableScale>
-            ) : null}
-            {source ? (
-              <PressableScale
-                onPress={() => {
+                {status ? (
+                  <Text color={crm.muted} style={styles.toggleHint}>
+                    Overridden while a stage filter is active
+                  </Text>
+                ) : null}
+              </View>
+              <Switch
+                value={showLost}
+                onValueChange={(v) => {
                   softTick();
-                  setSource(undefined);
+                  setShowLost(v);
                 }}
-                accessibilityRole="button"
-                accessibilityLabel={`Clear source filter: ${SOURCE_LABEL[source]}`}
-                style={styles.activeFilterChip}
-              >
-                <Text color={crm.primaryDark} style={styles.activeFilterText}>
-                  {SOURCE_LABEL[source]}
-                </Text>
-                <Feather name="x" size={14} color={crm.primaryDark} />
-              </PressableScale>
-            ) : null}
-            {showLost ? (
-              <PressableScale
-                onPress={() => {
-                  softTick();
-                  setShowLost(false);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Hide lost leads"
-                style={styles.activeFilterChip}
-              >
-                <Text color={crm.primaryDark} style={styles.activeFilterText}>
-                  Showing lost
-                </Text>
-                <Feather name="x" size={14} color={crm.primaryDark} />
-              </PressableScale>
-            ) : null}
+                trackColor={{ false: crm.border, true: crm.primary }}
+                thumbColor={crm.surface}
+              />
+            </Pressable>
+          ) : null}
+
+          <View style={styles.filterSection}>
+            <View style={styles.filterSectionHead}>
+              <Text color={crm.heading} style={styles.sectionLabel}>
+                Product of interest{products.length > 0 ? ` (${products.length})` : ''}
+              </Text>
+              {products.length > 0 ? (
+                <PressableScale
+                  onPress={() => {
+                    softTick();
+                    setProducts([]);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text color={crm.primaryDark} style={styles.clearLink}>
+                    Clear
+                  </Text>
+                </PressableScale>
+              ) : null}
+            </View>
+            <View style={styles.chipGrid}>
+              {LEAD_PRODUCTS_OF_INTEREST.map((p) => {
+                const active = products.includes(p);
+                return (
+                  <PressableScale
+                    key={p}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: active }}
+                    onPress={() => {
+                      softTick();
+                      setProducts((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
+                    }}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                  >
+                    {active ? <Feather name="check" size={13} color={crm.primaryDark} /> : null}
+                    <Text
+                      color={active ? crm.primaryDark : crm.body}
+                      style={[styles.filterChipText, active && styles.filterChipTextActive]}
+                    >
+                      {PRODUCT_LABEL[p]}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
+            </View>
           </View>
-        ) : null}
-        {!isDesigner ? (
-          <SheetRow
-            icon="eye"
-            label="Show lost leads"
-            caption={status ? 'The stage filter decides this right now' : undefined}
-            selected={showLost}
-            onPress={() => {
-              softTick();
-              setShowLost((v) => !v);
-            }}
-          />
-        ) : null}
-        <Text color={crm.muted} style={styles.sectionLabel}>
-          Product of interest
-        </Text>
-        {LEAD_PRODUCTS_OF_INTEREST.map((p) => (
-          <SheetRow
-            key={p}
-            icon="tag"
-            label={PRODUCT_LABEL[p]}
-            selected={product === p}
-            onPress={() => {
-              softTick();
-              setProduct((cur) => (cur === p ? undefined : p));
-            }}
-          />
-        ))}
-        <Text color={crm.muted} style={styles.sectionLabel}>
-          Lead source
-        </Text>
-        {LEAD_SOURCES.map((s) => (
-          <SheetRow
-            key={s}
-            icon="circle"
-            label={SOURCE_LABEL[s]}
-            selected={source === s}
-            onPress={() => {
-              softTick();
-              setSource((cur) => (cur === s ? undefined : s));
-            }}
-          />
-        ))}
+
+          <View style={styles.filterSection}>
+            <View style={styles.filterSectionHead}>
+              <Text color={crm.heading} style={styles.sectionLabel}>
+                Lead source{sources.length > 0 ? ` (${sources.length})` : ''}
+              </Text>
+              {sources.length > 0 ? (
+                <PressableScale
+                  onPress={() => {
+                    softTick();
+                    setSources([]);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text color={crm.primaryDark} style={styles.clearLink}>
+                    Clear
+                  </Text>
+                </PressableScale>
+              ) : null}
+            </View>
+            <View style={styles.chipGrid}>
+              {LEAD_SOURCES.map((s) => {
+                const active = sources.includes(s);
+                return (
+                  <PressableScale
+                    key={s}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: active }}
+                    onPress={() => {
+                      softTick();
+                      setSources((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
+                    }}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                  >
+                    {active ? <Feather name="check" size={13} color={crm.primaryDark} /> : null}
+                    <Text
+                      color={active ? crm.primaryDark : crm.body}
+                      style={[styles.filterChipText, active && styles.filterChipTextActive]}
+                    >
+                      {SOURCE_LABEL[s]}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          </View>
+        </View>
       </BottomSheet>
     </View>
   );
@@ -535,31 +593,21 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, height: '100%', fontFamily: font.regular, fontSize: 15, color: crm.heading },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  filters: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[1] },
-  tabs: { flexDirection: 'row', gap: space[4] },
-  tab: {
-    height: hit,
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: { borderBottomColor: crm.primary },
-  tabText: { fontFamily: font.medium, fontSize: 14, lineHeight: 20 },
-  tabTextActive: { fontFamily: font.semibold, fontSize: 14, lineHeight: 20 },
-  spacer: { flex: 1 },
+  filters: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[2], paddingBottom: space[3] },
+  viewSwitch: { marginTop: space[2], height: 40 },
   control: {
-    height: 44,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: crm.border,
     backgroundColor: crm.surface,
   },
-  controlActive: { borderColor: crm.primary },
-  stageControl: { flexShrink: 1, gap: space[1], paddingHorizontal: space[3] },
-  iconControl: { minWidth: 44, gap: space[1], paddingHorizontal: space[2] },
+  controlActive: { borderColor: crm.primary, backgroundColor: crm.neutral },
+  stageControl: { flex: 1, justifyContent: 'space-between', gap: space[1], paddingHorizontal: space[3] },
+  iconControl: { minWidth: 40, gap: space[1], paddingHorizontal: space[2] },
   controlText: { flexShrink: 1, fontFamily: font.medium, fontSize: 13, lineHeight: 18 },
   list: { flex: 1, backgroundColor: crm.surface },
   listContent: { flexGrow: 1, paddingBottom: space[6] },
@@ -569,6 +617,9 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontFamily: font.semibold, fontSize: 16, lineHeight: 22 },
   contact: { fontFamily: font.medium, fontSize: 14, lineHeight: 20, fontVariant: ['tabular-nums'] },
   products: { fontFamily: font.regular, fontSize: 12, lineHeight: 18 },
+  followUp: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[2] },
+  nextAction: { flex: 1, fontFamily: font.medium, fontSize: 13, lineHeight: 18 },
+  dueText: { fontFamily: font.semibold, fontSize: 12, lineHeight: 18, fontVariant: ['tabular-nums'] },
   metaLine: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -603,31 +654,56 @@ const styles = StyleSheet.create({
   noticeTitle: { fontFamily: font.semibold, fontSize: 16, lineHeight: 22 },
   noticeText: { textAlign: 'center', fontSize: 14, lineHeight: 20 },
   footer: { padding: space[4] },
+  filterSheetBody: { gap: space[4] },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    minHeight: hit,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: crm.border,
+    backgroundColor: crm.background,
+  },
+  toggleLabel: { fontFamily: font.medium, fontSize: 15, lineHeight: 20 },
+  toggleHint: { fontFamily: font.regular, fontSize: 12, lineHeight: 16 },
+  filterSection: { gap: space[2] },
+  filterSectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionLabel: {
     fontFamily: font.semibold,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: space[3],
-    paddingHorizontal: space[3],
+    fontSize: 13,
+    lineHeight: 18,
   },
-  sheetActions: { flexDirection: 'row', gap: space[2] },
-  sheetAction: { flex: 1 },
-  activeFilterRow: {
+  clearLink: { fontFamily: font.semibold, fontSize: 12, lineHeight: 16 },
+  chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space[2],
-    paddingBottom: space[2],
   },
-  activeFilterChip: {
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: space[2],
-    paddingVertical: 5,
+    minHeight: 36,
+    paddingHorizontal: space[3],
+    paddingVertical: 6,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: crm.primary,
+    borderColor: crm.border,
     backgroundColor: crm.surface,
   },
-  activeFilterText: { fontFamily: font.medium, fontSize: 12, lineHeight: 16 },
+  filterChipActive: {
+    borderColor: crm.primary,
+    backgroundColor: crm.neutral,
+  },
+  filterChipText: { fontFamily: font.medium, fontSize: 13, lineHeight: 18 },
+  filterChipTextActive: { fontFamily: font.semibold },
+  sheetActions: { flexDirection: 'row', gap: space[2] },
+  sheetAction: { flex: 1 },
 });

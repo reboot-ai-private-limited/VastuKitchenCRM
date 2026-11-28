@@ -13,6 +13,7 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, hit, radius, space, tone, type Tone } from '@/constants/theme';
+import { SlidingSwitch } from '@/features/projects/sliding-switch';
 import { NetworkError } from '@/lib/api/client';
 import { formatDay } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
@@ -197,31 +198,15 @@ export function TodosScreen() {
         <Text variant="title" color={colors.inkDeep}>
           To-dos
         </Text>
-        <View style={styles.segmentedBar} accessibilityRole="tablist">
-          {(['open', 'done'] as const).map((tab) => {
-            const active = filter === tab;
-            return (
-              <PressableScale
-                key={tab}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => {
-                  if (!active) softTick();
-                  setFilter(tab);
-                }}
-                style={[styles.segment, active && styles.segmentActive]}
-              >
-                <Text
-                  variant="caption"
-                  color={active ? colors.primaryForeground : colors.inkMuted}
-                  style={active ? styles.segmentTextActive : styles.segmentText}
-                >
-                  {tab === 'open' ? 'Open' : 'Completed'}
-                </Text>
-              </PressableScale>
-            );
-          })}
-        </View>
+        <SlidingSwitch
+          options={[
+            { value: 'open', label: 'Open' },
+            { value: 'done', label: 'Completed' },
+          ]}
+          value={filter}
+          onChange={setFilter}
+          style={{ maxWidth: 240 }}
+        />
       </View>
 
       <ScrollView

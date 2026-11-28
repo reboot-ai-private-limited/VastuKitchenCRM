@@ -16,8 +16,8 @@ import { colors, font, space } from '@/constants/theme';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NetworkError } from '@/lib/api/client';
 import { formatDate, formatINR } from '@/lib/format';
-import { softTick } from '@/lib/haptics';
 import { DESIGN_SUB_LABEL, STAGE_LABEL, STAGE_ORDER, STAGE_TONE } from './project-meta';
+import { SlidingSwitch } from './sliding-switch';
 import { useProjectsList } from './use-projects';
 
 function ProjectRow({ project, isDuplicateName }: { project: ProjectDto; isDuplicateName: boolean }) {
@@ -166,38 +166,17 @@ export function ProjectsScreen() {
             style={styles.searchInput}
           />
         </View>
-        <View style={styles.segmentedBar} accessibilityRole="tablist">
-          {[undefined, ...STAGE_ORDER].map((s) => {
-            const active = s === stage;
-            const label =
-              s === undefined
-                ? 'Active'
-                : s === 'CLOSED' && closedCount > 0
-                  ? `${STAGE_LABEL[s]} (${closedCount})`
-                  : STAGE_LABEL[s];
-            return (
-              <PressableScale
-                key={s ?? 'active'}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => {
-                  if (!active) softTick();
-                  setStage(s);
-                }}
-                style={[styles.segment, active && styles.segmentActive]}
-              >
-                <Text
-                  variant="caption"
-                  color={active ? colors.primaryForeground : colors.inkMuted}
-                  numberOfLines={1}
-                  style={active ? styles.segmentTextActive : styles.segmentText}
-                >
-                  {label}
-                </Text>
-              </PressableScale>
-            );
-          })}
-        </View>
+        <SlidingSwitch
+          options={[
+            { value: 'ACTIVE' as const, label: 'Active' },
+            ...STAGE_ORDER.map((s) => ({
+              value: s,
+              label: s === 'CLOSED' && closedCount > 0 ? `${STAGE_LABEL[s]} (${closedCount})` : STAGE_LABEL[s],
+            })),
+          ]}
+          value={stage ?? 'ACTIVE'}
+          onChange={(next) => setStage(next === 'ACTIVE' ? undefined : next)}
+        />
       </View>
 
       <FlatList

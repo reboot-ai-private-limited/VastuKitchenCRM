@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Linking, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Linking, RefreshControl, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Badge } from '@/components/ui/badge';
@@ -15,11 +16,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, hit, radius, space } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
+import { useSession } from '@/lib/auth/session';
 import { formatDate, formatINR, formatPhone, timeAgo } from '@/lib/format';
-import { normalizePhone } from '@/lib/phone';
+import { softTick } from '@/lib/haptics';
+import { normalizePhone, openLink, whatsappUrlFor } from '@/lib/phone';
 import { newRequestId } from '@/lib/request-id';
 import { ProposalPreview } from './proposal-preview';
 import {
+  useDeleteProposal,
   useDuplicateProposal,
   useProposalDetail,
   useSendProposal,
@@ -35,13 +39,15 @@ export function ProposalDetailScreen() {
 }
 
 function ProposalDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, send: sendParam } = useLocalSearchParams<{ id: string; send?: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useSession();
   const q = useProposalDetail(id);
   const send = useSendProposal(id);
   const sendWa = useSendProposalWhatsapp(id);
   const duplicate = useDuplicateProposal(id);
+  const delMut = useDeleteProposal();
   const p = q.data;
 
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -49,17 +55,36 @@ function ProposalDetail() {
   const [phone, setPhone] = useState('');
   const [requestId, setRequestId] = useState('');
   const [waNote, setWaNote] = useState<string | null>(null);
+  const [manualResult, setManualResult] = useState<{ publicUrl: string; whatsappUrl?: string } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [shareConfirmOpen, setShareConfirmOpen] = useState(false);
+  const autoOpenedSend = useRef(false);
   const phoneOk = normalizePhone(phone) !== null;
+
+  const canDelete =
+    !!p && (user?.role === 'ADMIN' || (p.status === 'DRAFT' && p.createdBy?.id === user?.id));
 
   const openWaSheet = () => {
     if (!p) return;
     setPhone(p.customer.phone);
     setRequestId(newRequestId());
     setWaNote(null);
+    setManualResult(null);
+    setCopiedLink(false);
     sendWa.reset();
+    send.reset();
     setWaOpen(true);
   };
+
+  useEffect(() => {
+    if (sendParam === '1' && p && !autoOpenedSend.current) {
+      autoOpenedSend.current = true;
+      setPhone(p.customer.phone);
+      setRequestId(newRequestId());
+      setManualResult(null);
+      setWaOpen(true);
+    }
+  }, [sendParam, p]);
 
   const confirmWa = () => {
     const normalized = normalizePhone(phone);
@@ -70,16 +95,70 @@ function ProposalDetail() {
       { requestId, ...(same ? {} : { phone: normalized }) },
       {
         onSuccess: (res) => {
-          setWaOpen(false);
           if (res.delivery === 'not_configured') {
-            // Sending from here is not set up: open WhatsApp with the ready message instead.
-            void Linking.openURL(res.whatsappUrl);
+            setManualResult({
+              publicUrl: res.proposal.publicUrl ?? res.whatsappUrl,
+              whatsappUrl: res.whatsappUrl,
+            });
             return;
           }
+          setWaOpen(false);
           setWaNote(`Sent on WhatsApp to ${formatPhone(res.sentTo)}`);
         },
       },
     );
+  };
+
+  const shareMyselfFromWa = () => {
+    if (!p) return;
+    if (p.publicUrl) {
+      setManualResult({
+        publicUrl: p.publicUrl,
+        whatsappUrl: whatsappUrlFor(phone, `${p.title} (${p.number}): ${p.publicUrl}`) ?? undefined,
+      });
+      return;
+    }
+    send.mutate(undefined, {
+      onSuccess: (res) => {
+        setManualResult({
+          publicUrl: res.publicUrl,
+          whatsappUrl:
+            whatsappUrlFor(phone, `${res.proposal.title} (${res.proposal.number}): ${res.publicUrl}`) ??
+            undefined,
+        });
+      },
+    });
+  };
+
+  const confirmDelete = () => {
+    if (!p) return;
+    Alert.alert(
+      `Delete ${p.number}?`,
+      p.status === 'SENT'
+        ? 'This proposal was already sent. Deleting it will revoke the customer link.'
+        : 'This draft will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () =>
+            delMut.mutate(p.id, {
+              onSuccess: () => (router.canGoBack() ? router.back() : router.replace('/proposals' as Href)),
+              onError: (err) =>
+                Alert.alert('Could not delete', err instanceof ApiError ? err.message : 'Try again.'),
+            }),
+        },
+      ],
+    );
+  };
+
+  const copyPublicUrl = (url: string) => {
+    void Clipboard.setStringAsync(url).then(() => {
+      softTick();
+      setCopiedLink(true);
+      setWaNote('Proposal link copied');
+    });
   };
 
   const shareLink = (url: string, title: string, number: string) =>
@@ -160,6 +239,26 @@ function ProposalDetail() {
                 <Button title="Preview" variant="outline" onPress={() => setPreviewOpen(true)} fullWidth />
               </View>
             </View>
+            {p.publicUrl ? (
+              <View style={{ flexDirection: 'row', gap: space[3] }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title={copiedLink ? 'Link copied' : 'Copy link'}
+                    variant="outline"
+                    onPress={() => copyPublicUrl(p.publicUrl!)}
+                    fullWidth
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Customer view"
+                    variant="outline"
+                    onPress={() => void Linking.openURL(p.publicUrl!).catch(() => undefined)}
+                    fullWidth
+                  />
+                </View>
+              </View>
+            ) : null}
             {p.status === 'DRAFT' ? (
               <Button
                 title="Edit draft"
@@ -182,6 +281,15 @@ function ProposalDetail() {
               }
               fullWidth
             />
+            {canDelete ? (
+              <Button
+                title="Delete proposal"
+                variant="ghost"
+                loading={delMut.isPending}
+                onPress={confirmDelete}
+                fullWidth
+              />
+            ) : null}
             {waNote ? (
               <Text variant="caption" color={colors.primary} accessibilityRole="alert">
                 {waNote}
@@ -213,6 +321,14 @@ function ProposalDetail() {
                   Site address
                 </Text>
                 <Text>{p.customer.siteAddress}</Text>
+              </View>
+            ) : null}
+            {p.createdBy ? (
+              <View>
+                <Text variant="caption" muted>
+                  Prepared by
+                </Text>
+                <Text>{p.createdBy.name}</Text>
               </View>
             ) : null}
             <View style={{ gap: 2 }}>
@@ -309,7 +425,7 @@ function ProposalDetail() {
         {p.whatsappSends.length > 0 ? (
           <Card style={{ gap: space[2] }}>
             <Text variant="section">WhatsApp sends</Text>
-            {p.whatsappSends.map((w, i) => (
+            {[...p.whatsappSends].reverse().map((w, i) => (
               <Text key={`${w.at}-${i}`} variant="caption" muted>
                 {formatPhone(w.to)} · {timeAgo(w.at)}
                 {w.by ? ` · by ${w.by.name}` : ''}
@@ -324,6 +440,15 @@ function ProposalDetail() {
               Notes
             </Text>
             <Text>{p.notes}</Text>
+          </Card>
+        ) : null}
+
+        {p.terms ? (
+          <Card style={{ gap: space[1] }}>
+            <Text variant="caption" muted>
+              Terms & conditions
+            </Text>
+            <Text>{p.terms}</Text>
           </Card>
         ) : null}
       </>
@@ -347,6 +472,13 @@ function ProposalDetail() {
           paddingBottom: insets.bottom + space[8],
           gap: space[5],
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={q.isRefetching}
+            onRefresh={() => void q.refetch()}
+            tintColor={colors.primary}
+          />
+        }
       >
         {body}
         {p ? (
@@ -373,39 +505,99 @@ function ProposalDetail() {
       <BottomSheet
         visible={waOpen}
         onClose={() => setWaOpen(false)}
-        title="Send on WhatsApp"
+        title={manualResult ? 'Share proposal link' : 'Send on WhatsApp'}
         subtitle={
-          p?.status === 'DRAFT'
-            ? 'Sending marks this proposal as sent and freezes it.'
-            : 'The customer gets the proposal link as a WhatsApp message.'
+          manualResult
+            ? 'Copy the link or open WhatsApp to send it directly.'
+            : p?.status === 'DRAFT'
+              ? 'Sending marks this proposal as sent and freezes it.'
+              : 'The customer gets the proposal link as a WhatsApp message.'
         }
         footer={
-          <Button
-            title="Confirm and send"
-            size="lg"
-            loading={sendWa.isPending}
-            disabled={!phoneOk}
-            onPress={confirmWa}
-            fullWidth
-          />
+          manualResult ? (
+            <Button title="Done" onPress={() => setWaOpen(false)} fullWidth />
+          ) : (
+            <View style={{ gap: space[2] }}>
+              <Button
+                title="Confirm and send"
+                size="lg"
+                loading={sendWa.isPending}
+                disabled={!phoneOk || send.isPending}
+                onPress={confirmWa}
+                fullWidth
+              />
+              <Button
+                title="Share the link myself instead"
+                variant="outline"
+                loading={send.isPending}
+                disabled={sendWa.isPending}
+                onPress={shareMyselfFromWa}
+                fullWidth
+              />
+            </View>
+          )
         }
       >
-        <View style={{ gap: space[1] }}>
-          <Text variant="caption" muted>
-            Send to (changes only this message, not the lead)
-          </Text>
-          <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="WhatsApp number" />
-          {!phoneOk ? (
-            <Text variant="caption" color={colors.destructive}>
-              Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977)
-            </Text>
-          ) : null}
-          {sendWa.isError ? (
-            <Text variant="caption" color={colors.destructive} accessibilityRole="alert">
-              {sendWa.error.message}
-            </Text>
-          ) : null}
-        </View>
+        {manualResult ? (
+          <View style={{ gap: space[3] }}>
+            <View style={styles.waPreview}>
+              <Text variant="caption" color={colors.inkDeep} selectable>
+                {manualResult.publicUrl}
+              </Text>
+            </View>
+            <Button
+              title={copiedLink ? 'Link copied' : 'Copy link'}
+              onPress={() => copyPublicUrl(manualResult.publicUrl)}
+              fullWidth
+            />
+            {manualResult.whatsappUrl ? (
+              <Button
+                title="Open WhatsApp"
+                variant="outline"
+                onPress={() => void openLink(manualResult.whatsappUrl!)}
+                fullWidth
+              />
+            ) : null}
+          </View>
+        ) : (
+          <View style={{ gap: space[3] }}>
+            {p ? (
+              <View style={styles.waPreview}>
+                <Text variant="caption" color={colors.inkMuted}>
+                  Message preview
+                </Text>
+                <Text variant="caption" color={colors.inkDeep}>
+                  Hi {p.customer.name.split(' ')[0]}, your proposal {p.number} ({formatINR(p.total)}) from
+                  Vastu Kitchen is ready. Tap “View proposal” to review it.
+                </Text>
+              </View>
+            ) : null}
+            <View style={{ gap: space[1] }}>
+              <Text variant="caption" muted>
+                Send to (changes only this message, not the lead)
+              </Text>
+              <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="WhatsApp number" />
+              {!phoneOk ? (
+                <Text variant="caption" color={colors.destructive}>
+                  Enter a valid mobile number (India +91, Bhutan +975, or Nepal +977)
+                </Text>
+              ) : null}
+              {sendWa.isError ? (
+                <Text variant="caption" color={colors.destructive} accessibilityRole="alert">
+                  {sendWa.error.message}
+                  {p?.status === 'DRAFT'
+                    ? ' Note: if the draft was already frozen, refresh to copy or resend the link.'
+                    : ''}
+                </Text>
+              ) : null}
+              {send.isError ? (
+                <Text variant="caption" color={colors.destructive} accessibilityRole="alert">
+                  {send.error.message}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        )}
       </BottomSheet>
 
       <BottomSheet
@@ -464,5 +656,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  waPreview: {
+    padding: space[3],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.pageSoft,
+    gap: 4,
   },
 });

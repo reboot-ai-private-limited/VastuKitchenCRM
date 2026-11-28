@@ -4,6 +4,8 @@ import type {
   PaginatedDto,
   ProposalDto,
   ProposalStatus,
+  ProposalTemplate,
+  ProposalTemplateSummaryDto,
   SendProposalResponseDto,
   SendProposalWhatsappBodyDto,
   SendProposalWhatsappResponseDto,
@@ -56,3 +58,21 @@ export const createProposal = (body: CreateProposalBodyDto) =>
 /** Drafts only. */
 export const updateProposal = (id: string, body: UpdateProposalBodyDto) =>
   request<ProposalDto>('PATCH', `/proposals/${encodeURIComponent(id)}`, body);
+
+export const deleteProposal = (id: string) =>
+  request<unknown>('DELETE', `/proposals/${encodeURIComponent(id)}`);
+
+export const listProposalTemplates = (signal?: AbortSignal) =>
+  request<{ items: ProposalTemplateSummaryDto[] }>('GET', '/proposal-templates', undefined, {
+    signal,
+  });
+
+export const duplicateProposalTemplate = (key: string, name?: string) =>
+  request<ProposalTemplate>(
+    'POST',
+    `/proposal-templates/${encodeURIComponent(key)}/duplicate`,
+    name ? { name } : {},
+  );
+
+export const deleteProposalTemplate = (key: string) =>
+  request<unknown>('DELETE', `/proposal-templates/${encodeURIComponent(key)}`);

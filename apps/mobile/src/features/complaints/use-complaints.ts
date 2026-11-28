@@ -6,23 +6,34 @@ import {
   deleteComplaintComment,
   closeComplaint,
   getComplaint,
+  getComplaintCounts,
   listComplaints,
   raiseComplaint,
   reopenComplaint,
   resolveComplaint,
 } from '@/lib/api/endpoints/complaints';
 
-export const useComplaintsList = (status?: ComplaintStatus, projectId?: string) =>
+export const useComplaintsList = (
+  status?: ComplaintStatus,
+  projectId?: string,
+  assignedTo?: string,
+) =>
   useInfiniteQuery({
-    queryKey: ['complaints', 'list', { status, projectId }],
+    queryKey: ['complaints', 'list', { status, projectId, assignedTo }],
     queryFn: ({ pageParam, signal }) =>
-      listComplaints({ page: pageParam, status, projectId }, undefined, signal),
+      listComplaints({ page: pageParam, status, projectId, assignedTo }, undefined, signal),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {
       const seen = new Set<string>();
       return d.pages.flatMap((p) => p.items).filter((c) => !seen.has(c.id) && seen.add(c.id));
     },
+  });
+
+export const useComplaintCounts = () =>
+  useQuery({
+    queryKey: ['complaints', 'counts'],
+    queryFn: ({ signal }) => getComplaintCounts(signal),
   });
 
 export const useComplaintDetail = (id: string) =>

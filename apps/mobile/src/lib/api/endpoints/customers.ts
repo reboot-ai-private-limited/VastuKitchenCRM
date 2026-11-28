@@ -1,4 +1,10 @@
-import type { AddCustomerBodyDto, CustomerDto, PaginatedDto } from '@vastu/contracts';
+import type {
+  AddCustomerBodyDto,
+  CustomerDto,
+  ImportCustomersBodyDto,
+  ImportCustomersResultDto,
+  PaginatedDto,
+} from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
 export const CUSTOMERS_PAGE_SIZE = 24;
@@ -26,3 +32,6 @@ export const addCustomer = (body: AddCustomerBodyDto) =>
 
 export const startNewCustomerProject = (customerId: string) =>
   request<CustomerDto>('POST', `/customers/${encodeURIComponent(customerId)}/new-project`, {});
+
+export const importCustomers = (body: ImportCustomersBodyDto) =>
+  request<ImportCustomersResultDto>('POST', '/customers/import', body);

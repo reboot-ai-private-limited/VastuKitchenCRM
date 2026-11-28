@@ -2,12 +2,16 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import type { CreateProposalBodyDto, ProposalDto, ProposalStatus, UpdateProposalBodyDto, SendProposalWhatsappBodyDto } from '@vastu/contracts';
 import {
   createProposal,
-  updateProposal,
+  deleteProposal,
+  deleteProposalTemplate,
   duplicateProposal,
+  duplicateProposalTemplate,
   getProposal,
   listProposals,
+  listProposalTemplates,
   sendProposal,
   sendProposalWhatsapp,
+  updateProposal,
 } from '@/lib/api/endpoints/proposals';
 
 export const useProposalsList = (status?: ProposalStatus, leadId?: string) =>
@@ -27,6 +31,7 @@ export const useProposalDetail = (id: string) =>
     queryKey: ['proposals', 'detail', id],
     queryFn: ({ signal }) => getProposal(id, signal),
     enabled: !!id,
+    refetchInterval: (q) => (q.state.data?.status === 'SENT' ? 30_000 : false),
   });
 
 function useAfterSend(id: string) {
@@ -49,9 +54,49 @@ export function useSendProposal(id: string) {
 
 export function useSendProposalWhatsapp(id: string) {
   const after = useAfterSend(id);
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: SendProposalWhatsappBodyDto) => sendProposalWhatsapp(id, body),
     onSuccess: (res) => after(res.proposal),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['proposals', 'detail', id] });
+      void qc.invalidateQueries({ queryKey: ['proposals', 'list'] });
+    },
+  });
+}
+
+export function useDeleteProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteProposal(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['proposals'] });
+      void qc.invalidateQueries({ queryKey: ['leads'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export const useProposalTemplates = () =>
+  useQuery({
+    queryKey: ['proposal-templates', 'list'],
+    queryFn: ({ signal }) => listProposalTemplates(signal),
+    staleTime: 60_000,
+  });
+
+export function useDuplicateProposalTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { key: string; name?: string }) => duplicateProposalTemplate(v.key, v.name),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['proposal-templates'] }),
+  });
+}
+
+export function useDeleteProposalTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => deleteProposalTemplate(key),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['proposal-templates'] }),
   });
 }
 

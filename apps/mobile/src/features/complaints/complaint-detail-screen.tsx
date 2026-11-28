@@ -1,7 +1,8 @@
 import { Fragment, useCallback, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import type { ComplaintDto, ComplaintEventDto } from '@vastu/contracts';
 import { Avatar } from '@/components/ui/avatar';
@@ -139,7 +140,15 @@ export function ComplaintDetailScreen() {
   const staffQ = useQuery({
     queryKey: ['users', 'assignees'],
     queryFn: ({ signal }) => listUsers({ page: 1, pageSize: 100 }, signal),
-    select: (d) => d.items.filter((u) => u.role !== 'CUSTOMER'),
+    select: (d) =>
+      d.items
+        .filter((u) => u.role !== 'CUSTOMER')
+        .sort((a, b) => {
+          const aTech = a.role === 'TECHNICIAN' ? 0 : 1;
+          const bTech = b.role === 'TECHNICIAN' ? 0 : 1;
+          if (aTech !== bTech) return aTech - bTech;
+          return a.name.localeCompare(b.name);
+        }),
     enabled: !!c?.can.assign,
   });
 
@@ -194,6 +203,55 @@ export function ComplaintDetailScreen() {
     const items = complaintTimeline(c);
     content = (
       <Reveal style={{ gap: space[4] }}>
+        <View style={styles.detailsCard}>
+          <View style={styles.detailRow}>
+            <Text variant="caption" color={colors.inkMuted}>
+              Assigned to
+            </Text>
+            <Text variant="caption" color={colors.inkDeep} style={{ fontFamily: font.semibold }}>
+              {c.assignedTo?.name ?? 'Unassigned'}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text variant="caption" color={colors.inkMuted}>
+              Raised by
+            </Text>
+            <Text variant="caption" color={colors.inkDeep}>
+              {raiser} · {formatDate(c.createdAt)}
+            </Text>
+          </View>
+          {c.assignedAt ? (
+            <View style={styles.detailRow}>
+              <Text variant="caption" color={colors.inkMuted}>
+                Assigned
+              </Text>
+              <Text variant="caption" color={colors.inkDeep} style={{ fontVariant: ['tabular-nums'] }}>
+                {formatDate(c.assignedAt)}
+              </Text>
+            </View>
+          ) : null}
+          {c.resolvedAt ? (
+            <View style={styles.detailRow}>
+              <Text variant="caption" color={colors.inkMuted}>
+                Resolved
+              </Text>
+              <Text variant="caption" color={colors.inkDeep} style={{ fontVariant: ['tabular-nums'] }}>
+                {formatDate(c.resolvedAt)}
+              </Text>
+            </View>
+          ) : null}
+          {c.closedAt ? (
+            <View style={styles.detailRow}>
+              <Text variant="caption" color={colors.inkMuted}>
+                Closed
+              </Text>
+              <Text variant="caption" color={colors.inkDeep} style={{ fontVariant: ['tabular-nums'] }}>
+                {formatDate(c.closedAt)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         {c.can.assign ? (
           <SheetRow
             icon="user-plus"
@@ -281,12 +339,30 @@ export function ComplaintDetailScreen() {
   }
 
   const actions = c ? (['resolve', 'reopen', 'close'] as const).filter((a) => c.can[a]) : [];
+  const canOpenProject = !!c && user?.role !== 'TECHNICIAN';
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView style={styles.root} behavior="padding">
-        <DetailHeader title={c?.projectName ?? 'Complaint'} onBack={goBack}>
+        <DetailHeader
+          title={c?.projectName ?? 'Complaint'}
+          onBack={goBack}
+          right={
+            canOpenProject ? (
+              <PressableScale
+                onPress={() =>
+                  router.push({ pathname: '/projects/[id]', params: { id: c.projectId } } as Href)
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Open project"
+                style={styles.openProjectBtn}
+              >
+                <Feather name="external-link" size={16} color={colors.primaryForeground} />
+              </PressableScale>
+            ) : undefined
+          }
+        >
           {c ? (
             <>
               <Text variant="caption" color={headerMutedText} numberOfLines={1} style={{ flexShrink: 1 }}>
@@ -306,7 +382,7 @@ export function ComplaintDetailScreen() {
         >
           {content}
         </ScrollView>
-        {c ? (
+        {c && c.status !== 'CLOSED' ? (
           <BottomBar>
             {actions.length > 0 ? (
               <SlidingSwitch<ComplaintAction>
@@ -403,11 +479,24 @@ export function ComplaintDetailScreen() {
           return (
             <PressableScale
               key={u.id}
-              onPress={() => assign.mutate(u.id, { onSuccess: () => setAssignOpen(false) })}
-              disabled={assign.isPending}
+              onPress={() =>
+                assign.mutate(u.id, {
+                  onSuccess: () => setAssignOpen(false),
+                  onError: (err) => {
+                    if (err instanceof ApiError && err.status === 409) {
+                      setAssignOpen(false);
+                      Alert.alert(
+                        'Complaint updated',
+                        'Someone else just updated this complaint. It has been refreshed.',
+                      );
+                    }
+                  },
+                })
+              }
+              disabled={assign.isPending || selected}
               accessibilityRole="button"
               accessibilityLabel={`Assign to ${u.name}`}
-              accessibilityState={{ selected }}
+              accessibilityState={{ selected, disabled: assign.isPending || selected }}
               style={[styles.person, selected && styles.personSelected]}
             >
               <Avatar name={u.name} size={32} accent={selected} />
@@ -449,4 +538,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   personSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  openProjectBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailsCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    gap: 6,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[2],
+  },
 });

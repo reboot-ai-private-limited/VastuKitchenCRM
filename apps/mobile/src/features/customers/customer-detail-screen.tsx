@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addCustomerPhoneBodySchema,
   MAX_CUSTOMER_ADDITIONAL_PHONES,
-  type LeadActivityDto,
 } from '@vastu/contracts';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -17,13 +17,15 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, hit, radius, space } from '@/constants/theme';
-import { STATUS_LABEL, STATUS_TONE } from '@/features/leads/lead-meta';
+import { colors, hit, radius, space, tone } from '@/constants/theme';
+import { describeActivity, STATUS_LABEL, STATUS_TONE } from '@/features/leads/lead-meta';
+import { dayLabel } from '@/features/projects/chat-stream';
 import { STAGE_LABEL, STAGE_TONE } from '@/features/projects/project-meta';
+import { DaySeparator } from '@/features/projects/timeline-item';
 import { RoleGate } from '@/components/ui/role-gate';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
-import { formatDate, formatPhone, timeAgo } from '@/lib/format';
+import { businessDate, formatDate, formatPhone, formatTime } from '@/lib/format';
 import { openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
 import {
   useAddCustomerPhone,
@@ -34,19 +36,6 @@ import {
   useRemoveCustomerPhone,
   useStartNewProject,
 } from './use-customers';
-
-const ACTIVITY_LABEL: Record<LeadActivityDto['type'], string> = {
-  CREATED: 'Record created',
-  ASSIGNED: 'Owner assigned',
-  STATUS_CHANGED: 'Lead status updated',
-  CALL: 'Phone call logged',
-  VISIT: 'Site visit logged',
-  DESIGN_COMPLETED: 'Design completed',
-  PROPOSAL_SENT: 'Proposal sent',
-  PROPOSAL_SEEN: 'Proposal viewed by customer',
-  PROJECT_CREATED: 'Project started',
-  PROJECT_CLOSED: 'Project closed',
-};
 
 export function CustomerDetailScreen() {
   return (
@@ -72,6 +61,7 @@ function CustomerDetail() {
   const invite = useInviteCustomer(id);
 
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [addPhoneOpen, setAddPhoneOpen] = useState(false);
   const [newPhone, setNewPhone] = useState('');
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -149,6 +139,8 @@ function CustomerDetail() {
   } else {
     const additional = phonesQ.data?.additionalPhones ?? [];
     const primaryPhone = phonesQ.data?.primaryPhone ?? c.phone;
+    const inProgress = c.leadStatus !== 'WON' && c.leadStatus !== 'LOST';
+    const events = timeline.data ?? [];
     body = (
       <>
         <Reveal>
@@ -220,7 +212,9 @@ function CustomerDetail() {
 
         <View style={{ gap: space[2] }}>
           <View style={styles.sectionHeader}>
-            <Text variant="section">Login numbers</Text>
+            <Text variant="section" style={{ fontVariant: ['tabular-nums'] }}>
+              Login numbers ({additional.length + 1}/{MAX_CUSTOMER_ADDITIONAL_PHONES + 1})
+            </Text>
             {canManagePhones && additional.length < MAX_CUSTOMER_ADDITIONAL_PHONES ? (
               <Button
                 title="+ Add number"
@@ -305,15 +299,36 @@ function CustomerDetail() {
         <View style={{ gap: space[3] }}>
           <View style={styles.sectionHeader}>
             <Text variant="section">Projects ({c.projects.length})</Text>
-            {!c.startedAgain ? (
+            {!inProgress ? (
               <Button
                 title="Start new project"
                 variant="ghost"
                 size="sm"
-                onPress={() => setConfirmNewOpen(true)}
+                onPress={() => {
+                  setStartError(null);
+                  setConfirmNewOpen(true);
+                }}
               />
             ) : null}
           </View>
+          {inProgress ? (
+            <View style={styles.inProgressBanner}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+                <Badge label={STATUS_LABEL[c.leadStatus]} t={STATUS_TONE[c.leadStatus]} />
+                <Text variant="caption" color={colors.inkDeep} style={{ flex: 1 }}>
+                  {c.projects.length > 0
+                    ? 'A new project is being planned.'
+                    : 'Their first project is being planned.'}
+                </Text>
+              </View>
+              <Button
+                title="Continue on the lead"
+                variant="outline"
+                size="sm"
+                onPress={() => router.push({ pathname: '/leads/[id]', params: { id: c.leadId } } as Href)}
+              />
+            </View>
+          ) : null}
           {c.projects.length === 0 ? (
             <Text muted>No projects created yet.</Text>
           ) : (
@@ -352,24 +367,42 @@ function CustomerDetail() {
               </Text>
               <Button title="Retry" variant="outline" size="sm" onPress={() => void timeline.refetch()} />
             </View>
-          ) : (timeline.data ?? []).length === 0 ? (
+          ) : events.length === 0 ? (
             <Text muted>No timeline events yet.</Text>
           ) : (
-            (timeline.data ?? []).slice(0, 12).map((ev) => (
-              <Card key={ev.id} style={{ gap: 2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space[2] }}>
-                  <Text variant="label">{ACTIVITY_LABEL[ev.type]}</Text>
-                  <Text variant="caption" muted>
-                    {timeAgo(ev.at)}
-                  </Text>
-                </View>
-                {ev.by ? (
-                  <Text variant="caption" muted>
-                    by {ev.by.name}
-                  </Text>
-                ) : null}
-              </Card>
-            ))
+            <View style={{ gap: space[1] }}>
+              {events.map((ev, idx) => {
+                const prev = events[idx - 1];
+                const newDay = !prev || businessDate(prev.at) !== businessDate(ev.at);
+                const desc = describeActivity(ev);
+                const actor = ev.by?.name ?? 'System';
+                const isLast = idx === events.length - 1;
+                return (
+                  <View key={ev.id}>
+                    {newDay ? <DaySeparator label={dayLabel(ev.at)} /> : null}
+                    <View style={styles.timelineItem}>
+                      <View style={styles.timelineRail}>
+                        <Avatar name={actor} size={32} accent={ev.by?.id === user?.id} />
+                        {!isLast ? <View style={styles.timelineLine} /> : null}
+                      </View>
+                      <View style={styles.timelineContent}>
+                        <Text variant="label" color={colors.inkDeep}>
+                          {desc.title}
+                        </Text>
+                        {desc.detail ? (
+                          <Text variant="caption" color={colors.inkMuted}>
+                            {desc.detail}
+                          </Text>
+                        ) : null}
+                        <Text variant="caption" color={colors.inkMuted} style={{ fontVariant: ['tabular-nums'] }}>
+                          {formatTime(ev.at)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           )}
         </View>
       </>
@@ -393,6 +426,17 @@ function CustomerDetail() {
           paddingBottom: insets.bottom + space[8],
           gap: space[5],
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={q.isRefetching || phonesQ.isRefetching || timeline.isRefetching}
+            onRefresh={() => {
+              void q.refetch();
+              void phonesQ.refetch();
+              void timeline.refetch();
+            }}
+            tintColor={colors.primary}
+          />
+        }
       >
         {body}
       </ScrollView>
@@ -432,18 +476,33 @@ function CustomerDetail() {
             title="Confirm & start"
             size="lg"
             loading={startNew.isPending}
-            onPress={() =>
+            onPress={() => {
+              setStartError(null);
               startNew.mutate(undefined, {
-                onSuccess: () => setConfirmNewOpen(false),
-              })
-            }
+                onSuccess: (updated) => {
+                  setConfirmNewOpen(false);
+                  router.push({ pathname: '/leads/[id]', params: { id: updated.leadId } } as Href);
+                },
+                onError: (err) =>
+                  setStartError(
+                    err instanceof ApiError ? err.message : 'Could not start a new project.',
+                  ),
+              });
+            }}
             fullWidth
           />
         }
       >
-        <Text muted>
-          Existing projects and history stay untouched. Your sales team can immediately prepare a new quote.
-        </Text>
+        <View style={{ gap: space[2] }}>
+          <Text muted>
+            Existing projects and history stay untouched. Your sales team can immediately prepare a new quote.
+          </Text>
+          {startError ? (
+            <Text variant="caption" color={colors.destructive}>
+              {startError}
+            </Text>
+          ) : null}
+        </View>
       </BottomSheet>
     </>
   );
@@ -489,5 +548,33 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  inProgressBanner: {
+    padding: space[3],
+    borderRadius: radius.lg,
+    backgroundColor: tone.info.bg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    gap: space[2],
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    gap: space[3],
+  },
+  timelineRail: {
+    alignItems: 'center',
+    width: 32,
+  },
+  timelineLine: {
+    flex: 1,
+    width: 1.5,
+    backgroundColor: colors.border,
+    marginVertical: 4,
+    minHeight: 16,
+  },
+  timelineContent: {
+    flex: 1,
+    gap: 2,
+    paddingBottom: space[4],
   },
 });

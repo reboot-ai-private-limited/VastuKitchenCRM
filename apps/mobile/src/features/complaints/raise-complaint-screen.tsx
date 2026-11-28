@@ -37,7 +37,7 @@ export function RaiseComplaintScreen() {
 
   const projectsQ = useQuery({
     queryKey: ['projects', 'raise-complaint-options'],
-    queryFn: ({ signal }) => listProjects({ page: 1, pageSize: 50 }, signal),
+    queryFn: ({ signal }) => listProjects({ page: 1, pageSize: 100 }, signal),
     select: (d) => d.items.filter((p) => p.stage !== 'CLOSED'),
   });
 
@@ -105,6 +105,15 @@ export function RaiseComplaintScreen() {
       >
         {projectsQ.isPending ? (
           <Skeleton height={120} />
+        ) : projectsQ.isError ? (
+          <View style={{ alignItems: 'center', gap: space[3], paddingVertical: space[8] }}>
+            <Text muted style={{ textAlign: 'center' }}>
+              {projectsQ.error instanceof NetworkError
+                ? 'Connection lost. Check your internet and try again.'
+                : 'Could not load projects.'}
+            </Text>
+            <Button title="Retry" variant="outline" onPress={() => void projectsQ.refetch()} />
+          </View>
         ) : (projectsQ.data ?? []).length === 0 ? (
           <EmptyState
             icon="alert-circle"

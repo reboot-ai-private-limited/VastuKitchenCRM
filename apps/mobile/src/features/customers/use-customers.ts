@@ -1,8 +1,9 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddCustomerBodyDto } from '@vastu/contracts';
+import type { AddCustomerBodyDto, ImportCustomersBodyDto } from '@vastu/contracts';
 import {
   addCustomer,
   getCustomer,
+  importCustomers,
   listCustomers,
   startNewCustomerProject,
 } from '@/lib/api/endpoints/customers';
@@ -45,6 +46,16 @@ export function useAddCustomer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: AddCustomerBodyDto) => addCustomer(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+}
+
+export function useImportCustomers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ImportCustomersBodyDto) => importCustomers(body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['customers'] });
     },

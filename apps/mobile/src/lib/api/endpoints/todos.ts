@@ -10,8 +10,17 @@ import type {
 } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
-export const listMyTodos = (status: 'open' | 'done' | 'all' = 'open', signal?: AbortSignal) =>
-  request<MyTodoDto[]>('GET', `/todos/mine?status=${status}`, undefined, { signal });
+export const listMyTodos = (
+  status: 'open' | 'done' | 'all' = 'open',
+  scope?: 'mine' | 'all',
+  signal?: AbortSignal,
+) =>
+  request<MyTodoDto[]>(
+    'GET',
+    `/todos/mine?status=${status}${scope === 'all' ? '&scope=all' : ''}`,
+    undefined,
+    { signal },
+  );
 
 export const listProjectTodoLists = (projectId: string, signal?: AbortSignal) =>
   request<TodoListDto[]>('GET', `/projects/${encodeURIComponent(projectId)}/todo-lists`, undefined, {
@@ -47,3 +56,9 @@ export const listTodoComments = (todoId: string, signal?: AbortSignal) =>
 
 export const addTodoComment = (todoId: string, body: CreateTodoCommentBodyDto) =>
   request<TodoCommentDto>('POST', `/todos/${encodeURIComponent(todoId)}/comments`, body);
+
+export const deleteTodoComment = (todoId: string, commentId: string) =>
+  request<unknown>(
+    'DELETE',
+    `/todos/${encodeURIComponent(todoId)}/comments/${encodeURIComponent(commentId)}`,
+  );

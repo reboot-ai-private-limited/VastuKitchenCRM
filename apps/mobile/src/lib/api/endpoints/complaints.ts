@@ -1,4 +1,5 @@
 import type {
+  ComplaintCountsDto,
   ComplaintDto,
   ComplaintStatus,
   PaginatedDto,
@@ -43,6 +44,9 @@ export const listComplaints = (
     { signal },
   );
 };
+
+export const getComplaintCounts = (signal?: AbortSignal) =>
+  request<ComplaintCountsDto>('GET', '/complaints/counts', undefined, { signal });
 
 export const getComplaint = (id: string, signal?: AbortSignal) =>
   request<ComplaintDto>('GET', `/complaints/${encodeURIComponent(id)}`, undefined, { signal });

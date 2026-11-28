@@ -13,11 +13,19 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, font, hit, radius, space, tone, type Tone } from '@/constants/theme';
+import { BottomBar } from '@/features/projects/bottom-bar';
 import { SlidingSwitch } from '@/features/projects/sliding-switch';
 import { NetworkError } from '@/lib/api/client';
+import { useSession } from '@/lib/auth/session';
 import { formatDay } from '@/lib/format';
 import { softTick } from '@/lib/haptics';
 import { useMyTodos, usePendingTodoDone, useToggleTodo } from './use-todos';
+
+function tomorrowIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 const BUCKET_META: Record<TodoBucket, { label: string; tone: Tone }> = {
   OVERDUE: { label: 'Overdue', tone: 'danger' },
@@ -41,11 +49,15 @@ export function CompactTodoRow({
   const isDone = pendingDone ?? todo.completed !== null;
 
   let dueBadge: { label: string; tone: Tone } | null = null;
-  if (!isDone && todo.dueOn) {
-    if (todo.isOverdue || todo.bucket === 'OVERDUE') {
+  if (todo.dueOn) {
+    if (isDone) {
+      dueBadge = { label: `Due ${formatDay(todo.dueOn)}`, tone: 'neutral' };
+    } else if (todo.isOverdue || todo.bucket === 'OVERDUE') {
       dueBadge = { label: `Overdue · ${formatDay(todo.dueOn)}`, tone: 'danger' };
     } else if (todo.bucket === 'TODAY') {
       dueBadge = { label: 'Today', tone: 'warning' };
+    } else if (todo.dueOn === tomorrowIso()) {
+      dueBadge = { label: 'Due tomorrow', tone: 'info' };
     } else {
       dueBadge = { label: formatDay(todo.dueOn), tone: 'neutral' };
     }
@@ -86,10 +98,31 @@ export function CompactTodoRow({
           {todo.title}
         </Text>
         <View style={styles.metaRow}>
-          <Text variant="caption" color={colors.inkMuted} numberOfLines={1} style={{ flexShrink: 1 }}>
-            {todo.project.name} · {todo.listName}
-          </Text>
+          <PressableScale
+            onPress={() =>
+              router.push({ pathname: '/projects/[id]', params: { id: todo.project.id } } as Href)
+            }
+            hitSlop={6}
+            style={{ flexShrink: 1 }}
+          >
+            <Text variant="caption" color={colors.primary} numberOfLines={1}>
+              {todo.project.name} · {todo.listName}
+            </Text>
+          </PressableScale>
           {dueBadge ? <Badge label={dueBadge.label} t={dueBadge.tone} /> : null}
+          {todo.assignees.length > 0 ? (
+            <Text variant="caption" color={colors.inkMuted} numberOfLines={1}>
+              {todo.assignees.map((a) => a.name).join(', ')}
+            </Text>
+          ) : null}
+          {todo.images.length > 0 ? (
+            <View style={styles.commentCount}>
+              <Feather name="image" size={12} color={colors.inkMuted} />
+              <Text variant="caption" color={colors.inkMuted} style={{ fontVariant: ['tabular-nums'] }}>
+                {todo.images.length}
+              </Text>
+            </View>
+          ) : null}
           {todo.commentCount > 0 ? (
             <View style={styles.commentCount}>
               <Feather name="message-square" size={12} color={colors.inkMuted} />
@@ -111,12 +144,20 @@ export function CompactTodoRow({
 
 export function TodosScreen() {
   const insets = useSafeAreaInsets();
-  const [filter, setFilter] = useState<'open' | 'done'>('open');
-  const q = useMyTodos(filter);
+  const { user } = useSession();
+  const isAdmin = user?.role === 'ADMIN';
+  const [filter, setFilter] = useState<'open' | 'all' | 'done'>('open');
+  const [scope, setScope] = useState<'mine' | 'all'>('mine');
+  const q = useMyTodos(filter, isAdmin ? scope : 'mine');
+
+  const openCount = useMemo(
+    () => (q.data ?? []).filter((t) => t.completed === null).length,
+    [q.data],
+  );
 
   const grouped = useMemo(() => {
     const items = q.data ?? [];
-    if (filter === 'done') return [];
+    if (filter !== 'open') return [];
     return TODO_BUCKETS.map((bucket) => ({
       bucket,
       meta: BUCKET_META[bucket],
@@ -151,10 +192,16 @@ export function TodosScreen() {
     content = (
       <EmptyState
         icon="check-square"
-        message={filter === 'open' ? 'No open to-dos assigned to you.' : 'No completed to-dos yet.'}
+        message={
+          filter === 'done'
+            ? 'No completed to-dos yet.'
+            : isAdmin && scope === 'all'
+              ? 'No open to-dos across projects.'
+              : 'No open to-dos assigned to you.'
+        }
       />
     );
-  } else if (filter === 'done') {
+  } else if (filter !== 'open') {
     content = (
       <View>
         {(q.data ?? []).map((todo, idx) => (
@@ -195,22 +242,30 @@ export function TodosScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.stickyHeader, { paddingTop: insets.top + space[4] }]}>
-        <Text variant="title" color={colors.inkDeep} style={{ textAlign: 'center' }}>
-          To-dos
-        </Text>
-        <SlidingSwitch
-          options={[
-            { value: 'open', label: 'Open' },
-            { value: 'done', label: 'Completed' },
-          ]}
-          value={filter}
-          onChange={setFilter}
-          style={{ maxWidth: 240 }}
-        />
+        <View style={{ alignItems: 'center' }}>
+          <Text variant="title" color={colors.inkDeep} style={{ textAlign: 'center' }}>
+            {isAdmin && scope === 'all' ? 'All to-dos' : 'My to-dos'}
+          </Text>
+          {q.data && filter !== 'done' ? (
+            <Text variant="caption" color={colors.inkMuted} style={{ fontVariant: ['tabular-nums'] }}>
+              {openCount} open
+            </Text>
+          ) : null}
+        </View>
+        {isAdmin ? (
+          <SlidingSwitch
+            options={[
+              { value: 'mine' as const, label: 'Mine' },
+              { value: 'all' as const, label: 'Everyone' },
+            ]}
+            value={scope}
+            onChange={setScope}
+          />
+        ) : null}
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + space[8], flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: space[6], flexGrow: 1 }}
         refreshControl={
           <RefreshControl
             refreshing={q.isRefetching}
@@ -221,6 +276,18 @@ export function TodosScreen() {
       >
         {content}
       </ScrollView>
+
+      <BottomBar>
+        <SlidingSwitch
+          options={[
+            { value: 'open' as const, label: 'Open' },
+            { value: 'all' as const, label: 'All' },
+            { value: 'done' as const, label: 'Done' },
+          ]}
+          value={filter}
+          onChange={setFilter}
+        />
+      </BottomBar>
     </View>
   );
 }

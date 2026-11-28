@@ -1,17 +1,21 @@
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CreateTodoCommentBodyDto, UpdateTodoBodyDto } from '@vastu/contracts';
 import {
   addTodoComment,
+  deleteTodo,
+  deleteTodoComment,
   getTodo,
   listMyTodos,
   listTodoComments,
+  updateTodo,
 } from '@/lib/api/endpoints/todos';
 import { enqueueOutbox, usePendingOutbox, type TodoPayload } from '@/offline';
 
-export const useMyTodos = (status: 'open' | 'done' | 'all' = 'open') =>
+export const useMyTodos = (status: 'open' | 'done' | 'all' = 'open', scope?: 'mine' | 'all') =>
   useQuery({
-    queryKey: ['todos', 'mine', status],
-    queryFn: ({ signal }) => listMyTodos(status, signal),
+    queryKey: ['todos', 'mine', status, scope ?? 'mine'],
+    queryFn: ({ signal }) => listMyTodos(status, scope, signal),
   });
 
 export const useTodoDetail = (id: string) =>
@@ -56,11 +60,52 @@ export function usePendingTodoDone(id: string): boolean | null {
 export function useAddTodoComment(todoId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (text: string) => addTodoComment(todoId, { text }),
+    mutationFn: (body: CreateTodoCommentBodyDto | string) =>
+      addTodoComment(todoId, typeof body === 'string' ? { text: body } : body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['todos', 'comments', todoId] });
       void qc.invalidateQueries({ queryKey: ['todos', 'detail', todoId] });
       void qc.invalidateQueries({ queryKey: ['todos', 'mine'] });
+    },
+  });
+}
+
+export function useDeleteTodoComment(todoId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => deleteTodoComment(todoId, commentId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['todos', 'comments', todoId] });
+      void qc.invalidateQueries({ queryKey: ['todos', 'detail', todoId] });
+    },
+  });
+}
+
+export function useUpdateTodoDetail(todoId: string, projectId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateTodoBodyDto) => updateTodo(todoId, body),
+    onSuccess: (updated) => {
+      qc.setQueryData(['todos', 'detail', todoId], updated);
+      void qc.invalidateQueries({ queryKey: ['todos', 'mine'] });
+      if (projectId) {
+        void qc.invalidateQueries({ queryKey: ['projects', 'todos', projectId] });
+        void qc.invalidateQueries({ queryKey: ['projects', 'todo-lists', projectId] });
+      }
+    },
+  });
+}
+
+export function useDeleteTodoDetail(projectId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (todoId: string) => deleteTodo(todoId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['todos', 'mine'] });
+      if (projectId) {
+        void qc.invalidateQueries({ queryKey: ['projects', 'todos', projectId] });
+        void qc.invalidateQueries({ queryKey: ['projects', 'todo-lists', projectId] });
+      }
     },
   });
 }

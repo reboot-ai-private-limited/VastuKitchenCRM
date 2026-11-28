@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 import type { NotificationRefDto, RoleName } from '@vastu/contracts';
 
-const LEAD_ROLES = new Set<RoleName>(['ADMIN', 'SALES', 'OFFICE']);
+const LEAD_ROLES = new Set<RoleName>(['ADMIN', 'SALES', 'DESIGNER', 'OFFICE']);
 const PROPOSAL_ROLES = new Set<RoleName>(['ADMIN', 'SALES']);
 
 /**

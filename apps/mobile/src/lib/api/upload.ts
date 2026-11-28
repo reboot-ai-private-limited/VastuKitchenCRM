@@ -2,6 +2,7 @@ import type { ImageInputDto, UploadTicketDto } from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 60 * 1024 * 1024;
 
 /** A photo chosen on the phone, before it is uploaded. */
 export type PickedImage = { uri: string; name: string; type: string; size?: number };

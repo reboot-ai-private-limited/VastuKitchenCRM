@@ -1,4 +1,10 @@
-import type { CustomerInviteDto, PaginatedDto, RoleName, UserDto } from '@vastu/contracts';
+import type {
+  CustomerInviteDto,
+  CustomerPhonesDto,
+  PaginatedDto,
+  RoleName,
+  UserDto,
+} from '@vastu/contracts';
 import { request } from '@/lib/api/client';
 
 export type UsersQuery = {
@@ -32,3 +38,24 @@ export const listUsers = (q: UsersQuery = {}, signal?: AbortSignal) =>
 
 export const createCustomerInvite = (customerId: string) =>
   request<CustomerInviteDto>('POST', `/identity/customers/${encodeURIComponent(customerId)}/invite`, {});
+
+export const getCustomerPhones = (customerId: string, signal?: AbortSignal) =>
+  request<CustomerPhonesDto>(
+    'GET',
+    `/identity/customers/${encodeURIComponent(customerId)}/phones`,
+    undefined,
+    { signal },
+  );
+
+export const addCustomerPhone = (customerId: string, phone: string) =>
+  request<CustomerPhonesDto>(
+    'POST',
+    `/identity/customers/${encodeURIComponent(customerId)}/phones`,
+    { phone },
+  );
+
+export const removeCustomerPhone = (customerId: string, phone: string) =>
+  request<CustomerPhonesDto>(
+    'DELETE',
+    `/identity/customers/${encodeURIComponent(customerId)}/phones/${encodeURIComponent(phone)}`,
+  );

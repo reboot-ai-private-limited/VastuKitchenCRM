@@ -1,33 +1,45 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import {
+  Keyboard,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createLeadBodySchema, LEAD_SOURCES, type LeadSource } from '@vastu/contracts';
+import {
+  createLeadBodySchema,
+  LEAD_PRODUCTS_OF_INTEREST,
+  LEAD_SOURCES,
+  PHONE_COUNTRIES,
+  splitPhone,
+  type LeadProductOfInterest,
+  type LeadSource,
+} from '@vastu/contracts';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
+import { SheetRow } from '@/features/projects/sheet-row';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
+import { PRODUCT_LABEL, SOURCE_LABEL } from './lead-meta';
 import { useCreateLead } from './use-leads';
 
-const SOURCE_LABEL: Record<LeadSource, string> = {
-  WALK_IN: 'Walk-in',
-  WEBSITE: 'Website',
-  INSTAGRAM: 'Instagram',
-  FACEBOOK: 'Facebook',
-  JUSTDIAL: 'Justdial',
-  REFERRAL: 'Referral',
-  EXISTING_CUSTOMER: 'Existing customer',
-  OTHER: 'Other',
+const SOURCE_ICON: Record<LeadSource, ComponentProps<typeof Feather>['name']> = {
+  WALK_IN: 'user',
+  WEBSITE: 'globe',
+  INSTAGRAM: 'instagram',
+  FACEBOOK: 'facebook',
+  JUSTDIAL: 'search',
+  REFERRAL: 'users',
+  EXISTING_CUSTOMER: 'repeat',
+  OTHER: 'more-horizontal',
 };
 
 export function AddLeadScreen() {
@@ -38,7 +50,11 @@ export function AddLeadScreen() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [source, setSource] = useState<LeadSource>('WALK_IN');
+  // Office staff only record walk-ins here; everyone else has to say where the lead came from.
+  const [source, setSource] = useState<LeadSource | null>(user?.role === 'OFFICE' ? 'WALK_IN' : null);
+  const [pickingSource, setPickingSource] = useState(false);
+  const [products, setProducts] = useState<LeadProductOfInterest[]>([]);
+  const [pickingProducts, setPickingProducts] = useState(false);
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -49,11 +65,25 @@ export function AddLeadScreen() {
       name,
       phone,
       source,
+      ...(products.length > 0 ? { productsOfInterest: products } : {}),
       city: city.trim() || undefined,
       notes: notes.trim() || undefined,
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Enter valid lead details');
+      const issue = parsed.error.issues[0];
+      const field = issue?.path[0];
+      if (field === 'phone') {
+        const country = PHONE_COUNTRIES.find((c) => c.dial === splitPhone(phone).dial) ?? PHONE_COUNTRIES[0];
+        setError(
+          phone
+            ? `Enter a valid ${country.digits}-digit mobile number for ${country.name}`
+            : 'Enter the mobile number',
+        );
+      } else if (field === 'source') {
+        setError('Choose a lead source');
+      } else {
+        setError(issue?.message ?? 'Enter valid lead details');
+      }
       return;
     }
     setError(null);
@@ -104,77 +134,103 @@ export function AddLeadScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <Card style={{ gap: space[3] }}>
-          <View style={{ gap: space[1] }}>
-            <Text variant="caption" muted>
-              Customer name *
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g. Priya Verma"
-              placeholderTextColor={colors.placeholder}
-              autoFocus
-              style={styles.input}
-            />
-          </View>
+        <View style={styles.field}>
+          <Text variant="caption" muted>
+            Customer name *
+          </Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Priya Verma"
+            placeholderTextColor={colors.placeholder}
+            autoFocus
+            style={styles.input}
+          />
+        </View>
 
-          <View style={{ gap: space[1] }}>
-            <Text variant="caption" muted>
-              Mobile number *
-            </Text>
-            <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="Mobile number" />
-          </View>
+        <View style={styles.field}>
+          <Text variant="caption" muted>
+            Mobile number *
+          </Text>
+          <PhoneField value={phone} onChangeText={setPhone} accessibilityLabel="Mobile number" />
+        </View>
 
-          <View style={{ gap: space[2] }}>
-            <Text variant="caption" muted>
-              Source *
+        <View style={styles.field}>
+          <Text variant="caption" muted>
+            Lead source *
+          </Text>
+          <PressableScale
+            onPress={() => {
+              Keyboard.dismiss();
+              setPickingSource(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Lead source, ${source ? SOURCE_LABEL[source] : 'not chosen'}`}
+            style={[styles.input, styles.select]}
+          >
+            <Text style={styles.selectText} color={source ? colors.foreground : colors.mutedForeground}>
+              {source ? SOURCE_LABEL[source] : 'Choose source'}
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-              {LEAD_SOURCES.map((s) => {
-                const active = s === source;
-                return (
-                  <PressableScale
-                    key={s}
-                    onPress={() => setSource(s)}
-                    style={[styles.chip, active && styles.chipActive]}
-                  >
-                    <Text variant="caption" color={active ? colors.primaryForeground : colors.mutedForeground}>
-                      {SOURCE_LABEL[s]}
-                    </Text>
-                  </PressableScale>
-                );
-              })}
-            </View>
-          </View>
+            <Feather name="chevron-down" size={18} color={colors.mutedForeground} />
+          </PressableScale>
+        </View>
 
-          <View style={{ gap: space[1] }}>
-            <Text variant="caption" muted>
-              City / Locality
+        <View style={styles.field}>
+          <Text variant="caption" muted>
+            Product of interest
+          </Text>
+          <PressableScale
+            onPress={() => {
+              Keyboard.dismiss();
+              setPickingProducts(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={
+              products.length > 0
+                ? `Product of interest: ${products.map((p) => PRODUCT_LABEL[p]).join(', ')}`
+                : 'Product of interest, none selected'
+            }
+            style={[styles.input, styles.select]}
+          >
+            <Text
+              numberOfLines={1}
+              style={[styles.selectText, { flex: 1 }]}
+              color={products.length > 0 ? colors.foreground : colors.mutedForeground}
+            >
+              {products.length > 0
+                ? products.map((p) => PRODUCT_LABEL[p]).join(', ')
+                : 'Select products (optional)'}
             </Text>
-            <TextInput
-              value={city}
-              onChangeText={setCity}
-              placeholder="Optional"
-              placeholderTextColor={colors.placeholder}
-              style={styles.input}
-            />
-          </View>
+            <Feather name="chevron-down" size={18} color={colors.mutedForeground} />
+          </PressableScale>
+        </View>
 
-          <View style={{ gap: space[1] }}>
-            <Text variant="caption" muted>
-              Notes
-            </Text>
-            <TextInput
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Requirement, layout or budget notes"
-              placeholderTextColor={colors.placeholder}
-              multiline
-              style={[styles.input, styles.textarea]}
-            />
-          </View>
-        </Card>
+        <View style={styles.field}>
+          <Text variant="caption" muted>
+            City / Locality
+          </Text>
+          <TextInput
+            value={city}
+            onChangeText={setCity}
+            placeholder="Optional"
+            placeholderTextColor={colors.placeholder}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text variant="caption" muted>
+            Notes
+          </Text>
+          <TextInput
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Requirement, layout or budget notes"
+            placeholderTextColor={colors.placeholder}
+            multiline
+            style={[styles.input, styles.textarea]}
+          />
+        </View>
 
         {error ? (
           <Text variant="caption" color={colors.destructive}>
@@ -193,6 +249,45 @@ export function AddLeadScreen() {
 
         <Button title="Save lead" size="lg" loading={create.isPending} onPress={submit} fullWidth />
       </ScrollView>
+
+      <BottomSheet visible={pickingSource} onClose={() => setPickingSource(false)} title="Lead source">
+        {LEAD_SOURCES.map((s) => (
+          <SheetRow
+            key={s}
+            icon={SOURCE_ICON[s]}
+            label={SOURCE_LABEL[s]}
+            selected={s === source}
+            onPress={() => {
+              setSource(s);
+              setError(null);
+              setPickingSource(false);
+            }}
+          />
+        ))}
+      </BottomSheet>
+      <BottomSheet
+        visible={pickingProducts}
+        onClose={() => setPickingProducts(false)}
+        title="Product of interest"
+        footer={<Button title="Done" size="lg" onPress={() => setPickingProducts(false)} fullWidth />}
+      >
+        <View style={{ gap: 2 }}>
+          {LEAD_PRODUCTS_OF_INTEREST.map((p) => {
+            const active = products.includes(p);
+            return (
+              <SheetRow
+                key={p}
+                icon="tag"
+                label={PRODUCT_LABEL[p]}
+                selected={active}
+                onPress={() =>
+                  setProducts((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]))
+                }
+              />
+            );
+          })}
+        </View>
+      </BottomSheet>
     </KeyboardAvoidingView>
   );
 }
@@ -214,15 +309,11 @@ const styles = StyleSheet.create({
     paddingTop: space[3],
     textAlignVertical: 'top',
   },
-  chip: {
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: radius.full,
-    backgroundColor: colors.muted,
+  field: { gap: space[1] },
+  select: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
-  chipActive: {
-    backgroundColor: colors.primary,
-  },
+  selectText: { fontSize: 16 },
 });

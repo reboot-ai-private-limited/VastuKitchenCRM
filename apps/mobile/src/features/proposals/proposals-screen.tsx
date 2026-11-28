@@ -1,23 +1,21 @@
 import type React from 'react';
 import { useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ProposalDto, ProposalStatus } from '@vastu/contracts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { Reveal } from '@/components/ui/reveal';
+import { RoleGate } from '@/components/ui/role-gate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { Chip } from '@/components/ui/chip';
-import { RoleGate } from '@/components/ui/role-gate';
-import { colors, space, type Tone } from '@/constants/theme';
+import { colors, font, hit, radius, space, type Tone } from '@/constants/theme';
 import { NetworkError } from '@/lib/api/client';
 import { formatINR, timeAgo } from '@/lib/format';
+import { softTick } from '@/lib/haptics';
 import { useProposalsList } from './use-proposals';
 
 function statusBadge(p: ProposalDto): { label: string; tone: Tone } {
@@ -26,41 +24,39 @@ function statusBadge(p: ProposalDto): { label: string; tone: Tone } {
   return { label: 'Sent · Unseen', tone: 'info' };
 }
 
-function ProposalRow({ proposal, index }: { proposal: ProposalDto; index: number }) {
+function ProposalRow({ proposal }: { proposal: ProposalDto }) {
   const router = useRouter();
   const badge = statusBadge(proposal);
 
   return (
-    <Reveal index={index}>
-      <PressableScale
-        onPress={() =>
-          router.push({ pathname: '/proposals/[id]', params: { id: proposal.id } } as Href)
-        }
-        scaleTo={0.98}
-        accessibilityLabel={`${proposal.customer.name}, ${proposal.number}, ${formatINR(proposal.total)}, ${badge.label}`}
-      >
-        <Card style={{ gap: space[2] }}>
-          <View style={styles.row}>
-            <Text variant="section" numberOfLines={1} style={{ flex: 1 }}>
-              {proposal.customer.name}
-            </Text>
-            <Text variant="section" style={{ fontVariant: ['tabular-nums'] }}>
-              {formatINR(proposal.total)}
-            </Text>
-          </View>
-          <Text variant="caption" muted numberOfLines={1}>
-            {proposal.number} · {proposal.title}
-          </Text>
-          <View style={styles.row}>
-            <Badge label={badge.label} t={badge.tone} />
-            <Text variant="caption" muted style={{ marginLeft: 'auto' }}>
-              {proposal.sentAt ? `Sent ${timeAgo(proposal.sentAt)}` : `Created ${timeAgo(proposal.createdAt)}`}
-            </Text>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-          </View>
-        </Card>
-      </PressableScale>
-    </Reveal>
+    <PressableScale
+      onPress={() =>
+        router.push({ pathname: '/proposals/[id]', params: { id: proposal.id } } as Href)
+      }
+      scaleTo={0.99}
+      accessibilityRole="button"
+      accessibilityLabel={`${proposal.customer.name}, ${proposal.number}, ${formatINR(proposal.total)}, ${badge.label}`}
+      style={styles.flatRow}
+    >
+      <View style={styles.row}>
+        <Text color={colors.inkDeep} numberOfLines={1} style={styles.name}>
+          {proposal.customer.name}
+        </Text>
+        <Text color={colors.inkDeep} style={styles.amount}>
+          {formatINR(proposal.total)}
+        </Text>
+      </View>
+      <Text variant="caption" color={colors.inkMuted} numberOfLines={1}>
+        {proposal.number} · {proposal.title}
+      </Text>
+      <View style={styles.metaRow}>
+        <Badge label={badge.label} t={badge.tone} />
+        <Text variant="caption" color={colors.inkMuted} style={{ marginLeft: 'auto' }}>
+          {proposal.sentAt ? `Sent ${timeAgo(proposal.sentAt)}` : `Created ${timeAgo(proposal.createdAt)}`}
+        </Text>
+        <Feather name="chevron-right" size={16} color={colors.inkMuted} />
+      </View>
+    </PressableScale>
   );
 }
 
@@ -80,38 +76,22 @@ function ProposalsList() {
   const [status, setStatus] = useState<ProposalStatus | undefined>();
   const q = useProposalsList(status, leadId);
 
-  const header = (
-    <View style={{ gap: space[2], paddingBottom: space[1] }}>
-      {leadId ? (
-        <Chip label="One lead only (tap to clear)" active onPress={() => setLeadId(undefined)} />
-      ) : null}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space[2] }}>
-        {([undefined, 'SENT', 'DRAFT'] as const).map((s) => {
-          const active = s === status;
-          const label = s === 'SENT' ? 'Sent' : s === 'DRAFT' ? 'Drafts' : 'All';
-          return (
-            <Chip key={s ?? 'all'} label={label} active={active} onPress={() => setStatus(s)} />
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-
   let empty: React.ReactElement | undefined;
   if (q.isPending) {
     empty = (
-      <View style={{ gap: space[3] }}>
-        {[0, 1, 2].map((i) => (
-          <Card key={i} style={{ gap: space[2] }}>
+      <View>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={[styles.flatRow, i > 0 && styles.divider]}>
             <Skeleton height={18} width="55%" />
-            <Skeleton width="40%" />
-          </Card>
+            <Skeleton height={14} width="45%" />
+            <Skeleton height={20} width={92} />
+          </View>
         ))}
       </View>
     );
   } else if (q.isError) {
     empty = (
-      <View style={{ alignItems: 'center', gap: space[3], paddingVertical: space[8] }}>
+      <View style={styles.errorWrap}>
         <Text muted style={{ textAlign: 'center' }}>
           {q.error instanceof NetworkError
             ? 'Connection lost. Check your internet and try again.'
@@ -125,7 +105,7 @@ function ProposalsList() {
   }
 
   return (
-    <>
+    <View style={styles.root}>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -146,19 +126,66 @@ function ProposalsList() {
           ),
         }}
       />
+
+      <View style={styles.stickyBar}>
+        <View style={styles.segmentedBar} accessibilityRole="tablist">
+          {([undefined, 'SENT', 'DRAFT'] as const).map((s) => {
+            const active = s === status;
+            const label = s === 'SENT' ? 'Sent' : s === 'DRAFT' ? 'Drafts' : 'All';
+            return (
+              <PressableScale
+                key={s ?? 'all'}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => {
+                  if (!active) softTick();
+                  setStatus(s);
+                }}
+                style={[styles.segment, active && styles.segmentActive]}
+              >
+                <Text
+                  variant="caption"
+                  color={active ? colors.primaryForeground : colors.inkMuted}
+                  style={active ? styles.segmentTextActive : styles.segmentText}
+                >
+                  {label}
+                </Text>
+              </PressableScale>
+            );
+          })}
+        </View>
+        {leadId ? (
+          <PressableScale
+            onPress={() => {
+              softTick();
+              setLeadId(undefined);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear lead filter"
+            style={styles.leadFilterPill}
+          >
+            <Text variant="caption" color={colors.primaryPressed} style={{ fontFamily: font.semibold }}>
+              Filtered to lead
+            </Text>
+            <Feather name="x" size={14} color={colors.primaryPressed} />
+          </PressableScale>
+        ) : null}
+      </View>
+
       <FlatList
-        style={styles.root}
-        contentContainerStyle={{
-          padding: space[4],
-          paddingBottom: insets.bottom + space[8],
-          gap: space[3],
-        }}
         data={q.data ?? []}
         keyExtractor={(p) => p.id}
-        renderItem={({ item, index }) => <ProposalRow proposal={item} index={index} />}
-        ListHeaderComponent={header}
+        renderItem={({ item }) => <ProposalRow proposal={item} />}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={empty}
-        ListFooterComponent={q.isFetchingNextPage ? <Skeleton height={80} /> : undefined}
+        ListFooterComponent={
+          q.isFetchingNextPage ? (
+            <View style={{ padding: space[4] }}>
+              <Skeleton height={56} />
+            </View>
+          ) : undefined
+        }
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + space[8] }}
         onEndReached={() => q.hasNextPage && !q.isFetchingNextPage && void q.fetchNextPage()}
         onEndReachedThreshold={0.5}
         refreshControl={
@@ -169,11 +196,74 @@ function ProposalsList() {
           />
         }
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: colors.card },
+  stickyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: space[2],
+    paddingHorizontal: space[4],
+    paddingTop: space[1],
+    paddingBottom: space[3],
+    backgroundColor: colors.card,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  segmentedBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.muted,
+    borderRadius: radius.lg,
+    padding: 3,
+    gap: 2,
+  },
+  segment: {
+    minHeight: 34,
+    paddingHorizontal: space[3],
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentActive: { backgroundColor: colors.primary },
+  segmentText: { fontFamily: font.medium },
+  segmentTextActive: { fontFamily: font.semibold },
+  leadFilterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 34,
+    paddingHorizontal: space[3],
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+  },
+  flatRow: {
+    backgroundColor: colors.card,
+    paddingHorizontal: space[4],
+    paddingVertical: space[3],
+    gap: 4,
+    minHeight: hit,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  name: { flex: 1, fontSize: 16, lineHeight: 22, fontFamily: font.semibold },
+  amount: { fontSize: 15, lineHeight: 22, fontFamily: font.semibold, fontVariant: ['tabular-nums'] },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingTop: 4 },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: space[4],
+  },
+  divider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  errorWrap: {
+    alignItems: 'center',
+    gap: space[3],
+    paddingVertical: space[8],
+    paddingHorizontal: space[4],
+  },
 });

@@ -1,18 +1,23 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ChangeLeadStatusBodyDto,
+  CompleteLeadDesignBodyDto,
   CreateLeadBodyDto,
   LeadDto,
+  LeadProductOfInterest,
+  LeadSource,
   RecordCallBodyDto,
   RecordVisitBodyDto,
   UpdateLeadBodyDto,
 } from '@vastu/contracts';
 import {
   assignLead,
+  completeLeadDesign,
   createLead,
   getLead,
   getLeadTimeline,
   listCalls,
+  listDesigns,
   listLeads,
   listVisits,
   updateLead,
@@ -30,11 +35,18 @@ export function usePendingForLead(id: string, ...types: string[]): OutboxItem[] 
   return usePendingOutbox((i) => i.entityKey === leadKey(id) && (types.length === 0 || types.includes(i.type)));
 }
 
-export const useLeadsList = (search: string, status?: LeadDto['status'], stuck?: boolean) =>
+export const useLeadsList = (
+  search: string,
+  status?: LeadDto['status'],
+  stuck?: boolean,
+  product?: LeadProductOfInterest,
+  excludeLost?: boolean,
+  source?: LeadSource,
+) =>
   useInfiniteQuery({
-    queryKey: ['leads', 'list', { search, status, stuck }],
+    queryKey: ['leads', 'list', { search, status, stuck, product, excludeLost, source }],
     queryFn: ({ pageParam, signal }) =>
-      listLeads({ page: pageParam, search: search || undefined, status, stuck }, signal),
+      listLeads({ page: pageParam, search: search || undefined, status, stuck, product, excludeLost, source }, signal),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     select: (d) => {
@@ -42,6 +54,14 @@ export const useLeadsList = (search: string, status?: LeadDto['status'], stuck?:
       const seen = new Set<string>();
       return d.pages.flatMap((p) => p.items).filter((l) => !seen.has(l.id) && seen.add(l.id));
     },
+  });
+
+/** Header totals, independent of the search and filters (except whether lost leads are shown). */
+export const useLeadCount = (query: { stuck?: boolean; excludeLost?: boolean }) =>
+  useQuery({
+    queryKey: ['leads', 'count', query],
+    queryFn: ({ signal }) => listLeads({ page: 1, pageSize: 1, ...query }, signal),
+    select: (d) => d.total,
   });
 
 export const useLeadDetail = (id: string) =>
@@ -111,6 +131,22 @@ export const useLeadCalls = (id: string, enabled = true) =>
 
 export const useLeadVisits = (id: string, enabled = true) =>
   useQuery({ queryKey: ['leads', 'visits', id], queryFn: ({ signal }) => listVisits(id, signal), enabled });
+
+export const useLeadDesigns = (id: string, enabled = true) =>
+  useQuery({ queryKey: ['leads', 'designs', id], queryFn: ({ signal }) => listDesigns(id, signal), enabled });
+
+export function useCompleteLeadDesign(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CompleteLeadDesignBodyDto) => completeLeadDesign(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['leads', 'designs', id] });
+      void qc.invalidateQueries({ queryKey: ['leads', 'detail', id] });
+      void qc.invalidateQueries({ queryKey: ['leads', 'list'] });
+      void qc.invalidateQueries({ queryKey: ['leads', 'timeline', id] });
+    },
+  });
+}
 
 /** Queue a call log. Safe to replay: the API dedupes on startedAt. */
 export function useRecordCall(id: string) {

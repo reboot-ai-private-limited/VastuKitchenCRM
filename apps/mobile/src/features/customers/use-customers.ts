@@ -7,7 +7,12 @@ import {
   startNewCustomerProject,
 } from '@/lib/api/endpoints/customers';
 import { getLeadTimeline } from '@/lib/api/endpoints/leads';
-import { createCustomerInvite } from '@/lib/api/endpoints/users';
+import {
+  addCustomerPhone,
+  createCustomerInvite,
+  getCustomerPhones,
+  removeCustomerPhone,
+} from '@/lib/api/endpoints/users';
 
 export const useCustomersList = (search: string) =>
   useInfiniteQuery({
@@ -61,5 +66,32 @@ export function useStartNewProject(customerId: string) {
 export function useInviteCustomer(customerId: string) {
   return useMutation({
     mutationFn: () => createCustomerInvite(customerId),
+  });
+}
+
+export const useCustomerPhones = (customerId: string) =>
+  useQuery({
+    queryKey: ['customers', 'phones', customerId],
+    queryFn: ({ signal }) => getCustomerPhones(customerId, signal),
+    enabled: !!customerId,
+  });
+
+export function useAddCustomerPhone(customerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phone: string) => addCustomerPhone(customerId, phone),
+    onSuccess: (updated) => {
+      qc.setQueryData(['customers', 'phones', customerId], updated);
+    },
+  });
+}
+
+export function useRemoveCustomerPhone(customerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phone: string) => removeCustomerPhone(customerId, phone),
+    onSuccess: (updated) => {
+      qc.setQueryData(['customers', 'phones', customerId], updated);
+    },
   });
 }

@@ -85,6 +85,14 @@ const ITEM_CATALOG = {
     tone: 'violet',
     href: '/projects' as Href,
   },
+  leads: {
+    key: 'leads',
+    title: 'Leads',
+    subtitle: 'Leads ready for design and estimate',
+    icon: 'phone-call',
+    tone: 'accent',
+    href: '/leads' as Href,
+  },
   todos: {
     key: 'todos',
     title: 'To-dos',
@@ -163,7 +171,7 @@ export function moreItemsForUser(user: UserDto | null): MoreItem[] {
       );
       break;
     case 'DESIGNER':
-      out.push(ITEM_CATALOG.complaints);
+      out.push(ITEM_CATALOG.leads, ITEM_CATALOG.complaints);
       break;
     case 'TECHNICIAN':
       out.push(ITEM_CATALOG.todos);

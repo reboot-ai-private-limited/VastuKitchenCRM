@@ -1,5 +1,16 @@
-import type { LeadActivityDto, LeadStatus } from '@vastu/contracts';
-import type { Tone } from '@/constants/theme';
+import type { LeadActivityDto, LeadProductOfInterest, LeadSource, LeadStatus } from '@vastu/contracts';
+import type { StageTone, Tone } from '@/constants/theme';
+
+export const PRODUCT_LABEL: Record<LeadProductOfInterest, string> = {
+  MODULAR_KITCHEN: 'Modular kitchen',
+  WARDROBE: 'Wardrobe',
+  TV_UNIT: 'TV unit',
+  STORAGE_CROCKERY: 'Storage / Crockery',
+  VANITY_BATHROOM: 'Vanity / Bathroom',
+  FULL_HOME_INTERIOR: 'Full home interior',
+  APPLIANCES_HARDWARE: 'Appliances / Hardware',
+  OTHER: 'Other',
+};
 
 export const STATUS_LABEL: Record<LeadStatus, string> = {
   NEW: 'New',
@@ -31,6 +42,34 @@ export const STATUS_TONE: Record<LeadStatus, Tone> = {
   FOLLOW_UP: 'warning',
   WON: 'success',
   LOST: 'neutral',
+};
+
+export const SOURCE_LABEL: Record<LeadSource, string> = {
+  WALK_IN: 'Walk-in',
+  WEBSITE: 'Website',
+  INSTAGRAM: 'Instagram',
+  FACEBOOK: 'Facebook',
+  JUSTDIAL: 'Justdial',
+  REFERRAL: 'Referral',
+  EXISTING_CUSTOMER: 'Existing customer',
+  OTHER: 'Other',
+};
+
+/** Badge colour on the Leads list: grouped by where the lead is in the pipeline. */
+export const STAGE_TONE: Record<LeadStatus, StageTone> = {
+  NEW: 'neutral',
+  CONTACTED: 'contact',
+  INVALID_DATA: 'closed',
+  BROCHURE_SENT: 'contact',
+  VISIT: 'site',
+  MEASUREMENT_SCHEDULED: 'site',
+  MEASUREMENT_DONE: 'site',
+  DESIGN_ESTIMATE_SCHEDULED: 'site',
+  DESIGN_ESTIMATE_DONE: 'site',
+  PROPOSAL_SENT: 'proposal',
+  FOLLOW_UP: 'proposal',
+  WON: 'won',
+  LOST: 'closed',
 };
 
 export const STATUS_ORDER = Object.keys(STATUS_LABEL) as LeadStatus[];
@@ -86,8 +125,11 @@ export function describeActivity(a: LeadActivityDto): { title: string; detail?: 
     }
     case 'VISIT':
       return { title: 'Site visit', detail: join(who && `By ${who}`, str(d['note'])) };
-    case 'DESIGN_COMPLETED':
-      return { title: 'Design completed', detail: join(who && `By ${who}`, str(d['note'])) };
+    case 'DESIGN_COMPLETED': {
+      const count = typeof d['mediaCount'] === 'number' ? d['mediaCount'] : 0;
+      const files = count > 0 ? `${count} ${count === 1 ? 'file' : 'files'}` : null;
+      return { title: 'Design completed', detail: join(who && `By ${who}`, files, str(d['note'])) };
+    }
     case 'PROPOSAL_SENT':
       return { title: `Proposal ${str(d['number']) ?? ''} sent`.replace('  ', ' '), detail: who ? `By ${who}` : undefined };
     case 'PROPOSAL_SEEN':

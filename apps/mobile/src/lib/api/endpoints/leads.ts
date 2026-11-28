@@ -3,9 +3,13 @@ import type {
   UpdateLeadBodyDto,
   CallDto,
   ChangeLeadStatusBodyDto,
+  CompleteLeadDesignBodyDto,
   CreateLeadBodyDto,
   LeadActivityDto,
+  LeadDesignDto,
   LeadDto,
+  LeadProductOfInterest,
+  LeadSource,
   LeadStatus,
   PaginatedDto,
   RecordCallBodyDto,
@@ -22,7 +26,10 @@ export type LeadsQuery = {
   pageSize?: number;
   search?: string;
   status?: LeadStatus;
+  product?: LeadProductOfInterest;
   stuck?: boolean;
+  excludeLost?: boolean;
+  source?: LeadSource;
   assignedTo?: string;
 };
 
@@ -41,7 +48,10 @@ export const listLeads = (q: LeadsQuery, signal?: AbortSignal) =>
       pageSize: q.pageSize ?? LEADS_PAGE_SIZE,
       search: q.search,
       status: q.status,
+      product: q.product,
       stuck: q.stuck === undefined ? undefined : String(q.stuck),
+      excludeLost: q.excludeLost === undefined ? undefined : String(q.excludeLost),
+      source: q.source,
       assignedTo: q.assignedTo,
     })}`,
     undefined,
@@ -78,6 +88,16 @@ export const updateLead = (id: string, body: UpdateLeadBodyDto) =>
 export const assignLead = (id: string, body: AssignLeadBodyDto) =>
   request<LeadDto>('POST', `/leads/${encodeURIComponent(id)}/assign`, body);
 
-/** One-time ticket to upload a visit photo for this lead. */
-export const signVisitPhoto = (id: string) =>
-  request<UploadTicketDto>('POST', `/leads/${encodeURIComponent(id)}/visits/photo-upload/sign`, {});
+/** One-time ticket to upload visit photos and videos for this lead. */
+export const signVisitMedia = (id: string) =>
+  request<UploadTicketDto>('POST', `/leads/${encodeURIComponent(id)}/visits/media-upload/sign`, {});
+
+export const listDesigns = (id: string, signal?: AbortSignal) =>
+  request<LeadDesignDto[]>('GET', `/leads/${encodeURIComponent(id)}/design`, undefined, { signal });
+
+/** One-time ticket to upload design images, videos, or PDFs for this lead. */
+export const signDesignMedia = (id: string) =>
+  request<UploadTicketDto>('POST', `/leads/${encodeURIComponent(id)}/design/media-upload/sign`, {});
+
+export const completeLeadDesign = (id: string, body: CompleteLeadDesignBodyDto) =>
+  request<LeadDesignDto>('POST', `/leads/${encodeURIComponent(id)}/design/complete`, body);

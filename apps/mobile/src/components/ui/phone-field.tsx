@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import {
   PHONE_COUNTRIES,
   joinPhone,
   splitPhone,
   type PhoneDialCode,
 } from '@vastu/contracts';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { ListRow } from '@/components/ui/list-row';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
-import { colors, font, radius, space } from '@/constants/theme';
+import { colors, font, hit, radius, space } from '@/constants/theme';
 
 export interface PhoneFieldProps {
   value: string;
@@ -17,7 +20,7 @@ export interface PhoneFieldProps {
   autoFocus?: boolean;
 }
 
-/** Country-code chips (IN +91, BT +975, NP +977) + numeric input for mobile forms. */
+/** Numeric mobile input with a leading country selector (India, Bhutan, Nepal). */
 export function PhoneField({
   value,
   onChangeText,
@@ -25,12 +28,11 @@ export function PhoneField({
   autoFocus,
 }: PhoneFieldProps) {
   const parsed = splitPhone(value);
-  const [dial, setDial] = useState<PhoneDialCode>(parsed.dial);
+  const [chosenDial, setDial] = useState<PhoneDialCode>(parsed.dial);
+  const [picking, setPicking] = useState(false);
 
-  useEffect(() => {
-    if (value.trim()) setDial(splitPhone(value).dial);
-  }, [value]);
-
+  // A filled value carries its own country; the choice only matters while the field is empty.
+  const dial = value.trim() ? parsed.dial : chosenDial;
   const country = PHONE_COUNTRIES.find((c) => c.dial === dial) ?? PHONE_COUNTRIES[0];
   const local = value.trim() ? parsed.local : '';
 
@@ -42,35 +44,27 @@ export function PhoneField({
 
   const handleLocalChange = (raw: string) => {
     const digits = raw.replace(/\D/g, '').slice(0, country.digits);
+    setDial(dial); // keep the country if the digits are cleared
     onChangeText(joinPhone(dial, digits));
   };
 
   return (
-    <View style={{ gap: space[2] }}>
-      <View style={styles.chipRow}>
-        {PHONE_COUNTRIES.map((c) => {
-          const active = c.dial === dial;
-          return (
-            <PressableScale
-              key={c.code}
-              onPress={() => selectDial(c.dial)}
-              style={[styles.chip, active && styles.chipActive]}
-              accessibilityLabel={`${c.name} ${c.dial}`}
-            >
-              <Text
-                variant="caption"
-                color={active ? colors.primaryForeground : colors.mutedForeground}
-              >
-                {c.code} {c.dial}
-              </Text>
-            </PressableScale>
-          );
-        })}
-      </View>
+    <>
       <View style={styles.inputRow}>
-        <Text variant="label" muted style={styles.dialPrefix}>
-          {dial}
-        </Text>
+        <PressableScale
+          onPress={() => {
+            Keyboard.dismiss();
+            setPicking(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Country code, ${country.name} ${dial}. Change`}
+          style={styles.country}
+        >
+          <Text variant="label" style={styles.dial}>
+            {country.code} {dial}
+          </Text>
+          <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+        </PressableScale>
         <TextInput
           value={local}
           onChangeText={handleLocalChange}
@@ -84,38 +78,49 @@ export function PhoneField({
           style={styles.input}
         />
       </View>
-    </View>
+      <BottomSheet visible={picking} onClose={() => setPicking(false)} title="Country">
+        {PHONE_COUNTRIES.map((c) => (
+          <ListRow
+            key={c.code}
+            title={`${c.name} ${c.dial}`}
+            showChevron={false}
+            trailing={c.dial === dial ? <Feather name="check" size={18} color={colors.primary} /> : null}
+            onPress={() => {
+              selectDial(c.dial);
+              setPicking(false);
+            }}
+          />
+        ))}
+      </BottomSheet>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  chipRow: { flexDirection: 'row', gap: space[2] },
-  chip: {
-    paddingHorizontal: space[3],
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.muted,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[2],
-    backgroundColor: colors.card,
+    height: hit,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: space[3],
-    minHeight: 48,
+    borderColor: colors.input,
+    borderRadius: radius.lg,
+    backgroundColor: colors.background,
   },
-  dialPrefix: { fontVariant: ['tabular-nums'] },
+  country: {
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[1],
+    paddingHorizontal: space[3],
+    borderRightWidth: 1,
+    borderRightColor: colors.input,
+  },
+  dial: { fontVariant: ['tabular-nums'] },
   input: {
     flex: 1,
+    paddingHorizontal: space[3],
     fontFamily: font.regular,
     fontSize: 16,
     color: colors.foreground,
-    paddingVertical: 10,
   },
 });

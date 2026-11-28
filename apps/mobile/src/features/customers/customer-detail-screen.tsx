@@ -1,29 +1,37 @@
 import { useState } from 'react';
-import { ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { LeadActivityDto } from '@vastu/contracts';
+import {
+  addCustomerPhoneBodySchema,
+  MAX_CUSTOMER_ADDITIONAL_PHONES,
+  type LeadActivityDto,
+} from '@vastu/contracts';
 import { Badge } from '@/components/ui/badge';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Reveal } from '@/components/ui/reveal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { colors, space } from '@/constants/theme';
+import { colors, hit, radius, space } from '@/constants/theme';
 import { STATUS_LABEL, STATUS_TONE } from '@/features/leads/lead-meta';
 import { STAGE_LABEL, STAGE_TONE } from '@/features/projects/project-meta';
 import { RoleGate } from '@/components/ui/role-gate';
 import { ApiError, NetworkError } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
 import { formatDate, formatPhone, timeAgo } from '@/lib/format';
-import { normalizePhone, openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
+import { openLink, telUrl, whatsappUrlFor } from '@/lib/phone';
 import {
+  useAddCustomerPhone,
   useCustomerDetail,
+  useCustomerPhones,
   useCustomerTimeline,
   useInviteCustomer,
+  useRemoveCustomerPhone,
   useStartNewProject,
 } from './use-customers';
 
@@ -56,14 +64,59 @@ function CustomerDetail() {
 
   const q = useCustomerDetail(id);
   const c = q.data;
+  const phonesQ = useCustomerPhones(id);
+  const addPhone = useAddCustomerPhone(id);
+  const removePhone = useRemoveCustomerPhone(id);
   const timeline = useCustomerTimeline(c?.leadId);
   const startNew = useStartNewProject(id);
   const invite = useInviteCustomer(id);
 
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
+  const [addPhoneOpen, setAddPhoneOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   const canInvite = user?.role === 'ADMIN' || user?.role === 'SALES';
+  const canManagePhones = canInvite;
+
+  const submitPhone = () => {
+    const parsed = addCustomerPhoneBodySchema.safeParse({ phone: newPhone });
+    if (!parsed.success) {
+      setPhoneError(parsed.error.issues[0]?.message ?? 'Enter a valid mobile number');
+      return;
+    }
+    setPhoneError(null);
+    addPhone.mutate(parsed.data.phone, {
+      onSuccess: () => {
+        setNewPhone('');
+        setAddPhoneOpen(false);
+      },
+      onError: (err) => {
+        setPhoneError(
+          err instanceof NetworkError
+            ? 'Connection lost. Check your internet and try again.'
+            : err instanceof ApiError
+              ? err.message
+              : 'Could not add number',
+        );
+      },
+    });
+  };
+
+  const confirmRemovePhone = (phone: string) =>
+    Alert.alert('Remove login number?', `${formatPhone(phone)} will no longer be able to sign in.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () =>
+          removePhone.mutate(phone, {
+            onError: (err) =>
+              Alert.alert('Could not remove number', err instanceof ApiError ? err.message : 'Try again.'),
+          }),
+      },
+    ]);
 
   const handleInvite = () => {
     invite.mutate(undefined, {
@@ -94,7 +147,8 @@ function CustomerDetail() {
       </View>
     );
   } else {
-    const digits = normalizePhone(c.phone);
+    const additional = phonesQ.data?.additionalPhones ?? [];
+    const primaryPhone = phonesQ.data?.primaryPhone ?? c.phone;
     body = (
       <>
         <Reveal>
@@ -163,6 +217,62 @@ function CustomerDetail() {
             </PressableScale>
           </Card>
         </Reveal>
+
+        <View style={{ gap: space[2] }}>
+          <View style={styles.sectionHeader}>
+            <Text variant="section">Login numbers</Text>
+            {canManagePhones && additional.length < MAX_CUSTOMER_ADDITIONAL_PHONES ? (
+              <Button
+                title="+ Add number"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setNewPhone('');
+                  setPhoneError(null);
+                  setAddPhoneOpen(true);
+                }}
+              />
+            ) : null}
+          </View>
+          {phonesQ.isPending ? (
+            <Skeleton height={52} />
+          ) : phonesQ.isError ? (
+            <View style={{ gap: space[2], alignItems: 'flex-start' }}>
+              <Text variant="caption" muted>
+                Could not load login numbers.
+              </Text>
+              <Button title="Retry" variant="outline" size="sm" onPress={() => void phonesQ.refetch()} />
+            </View>
+          ) : (
+            <View style={styles.phoneGroup}>
+              <View style={styles.phoneRow}>
+                <Text variant="label" color={colors.inkDeep} style={{ flex: 1, fontVariant: ['tabular-nums'] }}>
+                  {formatPhone(primaryPhone)}
+                </Text>
+                <Badge label="Primary" t="accent" />
+              </View>
+              {additional.map((phone) => (
+                <View key={phone} style={[styles.phoneRow, styles.phoneDivider]}>
+                  <Text variant="label" color={colors.inkDeep} style={{ flex: 1, fontVariant: ['tabular-nums'] }}>
+                    {formatPhone(phone)}
+                  </Text>
+                  {canManagePhones ? (
+                    <PressableScale
+                      onPress={() => confirmRemovePhone(phone)}
+                      disabled={removePhone.isPending}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${formatPhone(phone)}`}
+                      hitSlop={10}
+                      style={styles.removeBtn}
+                    >
+                      <Feather name="trash-2" size={16} color={colors.destructive} />
+                    </PressableScale>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
 
         {canInvite ? (
           <Reveal index={3}>
@@ -288,6 +398,31 @@ function CustomerDetail() {
       </ScrollView>
 
       <BottomSheet
+        visible={addPhoneOpen}
+        onClose={() => setAddPhoneOpen(false)}
+        title="Add login number"
+        subtitle={`Up to ${MAX_CUSTOMER_ADDITIONAL_PHONES} additional numbers can sign in with OTP.`}
+        footer={
+          <Button
+            title="Add number"
+            size="lg"
+            loading={addPhone.isPending}
+            onPress={submitPhone}
+            fullWidth
+          />
+        }
+      >
+        <View style={{ gap: space[2] }}>
+          <PhoneField value={newPhone} onChangeText={setNewPhone} accessibilityLabel="Additional login number" />
+          {phoneError ? (
+            <Text variant="caption" color={colors.destructive}>
+              {phoneError}
+            </Text>
+          ) : null}
+        </View>
+      </BottomSheet>
+
+      <BottomSheet
         visible={confirmNewOpen}
         onClose={() => setConfirmNewOpen(false)}
         title="Start another project?"
@@ -330,5 +465,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[1],
     minHeight: 48,
+  },
+  phoneGroup: {
+    backgroundColor: colors.pageSoft,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[3],
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    minHeight: hit,
+    paddingVertical: space[2],
+  },
+  phoneDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  removeBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

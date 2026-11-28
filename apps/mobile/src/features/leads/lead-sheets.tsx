@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import {
   changeLeadStatusBodySchema,
+  LEAD_PRODUCTS_OF_INTEREST,
   updateLeadBodySchema,
   type LeadDto,
+  type LeadProductOfInterest,
   type LeadStatus,
   type UpdateLeadBodyDto,
 } from '@vastu/contracts';
@@ -13,7 +15,7 @@ import { PhoneField } from '@/components/ui/phone-field';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Text } from '@/components/ui/text';
 import { colors, font, radius, space } from '@/constants/theme';
-import { STATUS_LABEL } from './lead-meta';
+import { PRODUCT_LABEL, STATUS_LABEL } from './lead-meta';
 import { useAssignLead, useChangeLeadStatus, useSalesUsers, useUpdateLead } from './use-leads';
 
 const errMsg = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
@@ -138,6 +140,7 @@ export function AssignSheet({ lead, visible, onClose }: { lead: LeadDto; visible
 export function EditLeadSheet({ lead, visible, onClose }: { lead: LeadDto; visible: boolean; onClose: () => void }) {
   const update = useUpdateLead(lead.id);
   const [f, setF] = useState({ name: '', phone: '', altPhone: '', email: '', city: '', notes: '' });
+  const [products, setProducts] = useState<LeadProductOfInterest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [prevVisible, setPrevVisible] = useState(false);
   if (prevVisible !== visible) {
@@ -152,11 +155,12 @@ export function EditLeadSheet({ lead, visible, onClose }: { lead: LeadDto; visib
         city: lead.city ?? '',
         notes: lead.notes ?? '',
       });
+      setProducts(lead.productsOfInterest);
     }
   }
 
   const submit = () => {
-    const body: Record<string, string | null> = {};
+    const body: Record<string, unknown> = {};
     const name = f.name.trim();
     const phone = f.phone.trim();
     if (name !== lead.name) body.name = name;
@@ -165,6 +169,9 @@ export function EditLeadSheet({ lead, visible, onClose }: { lead: LeadDto; visib
       const v = f[k].trim() || null;
       if (v !== (lead[k] ?? null)) body[k] = v;
     });
+    const prevKey = [...lead.productsOfInterest].sort().join(',');
+    const nextKey = [...products].sort().join(',');
+    if (prevKey !== nextKey) body.productsOfInterest = products;
     const parsed = updateLeadBodySchema.safeParse(body);
     if (!parsed.success) {
       return setError(parsed.error.issues[0]?.message ?? 'Nothing to update');
@@ -223,6 +230,35 @@ export function EditLeadSheet({ lead, visible, onClose }: { lead: LeadDto; visib
         </View>
         {field('email', 'Email', false, { keyboardType: 'email-address', autoCapitalize: 'none' })}
         {field('city', 'City / locality')}
+        <View style={{ gap: 6 }}>
+          <Text variant="caption" muted>
+            Product of interest
+          </Text>
+          <View style={styles.productWrap}>
+            {LEAD_PRODUCTS_OF_INTEREST.map((p) => {
+              const active = products.includes(p);
+              return (
+                <PressableScale
+                  key={p}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: active }}
+                  onPress={() =>
+                    setProducts((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]))
+                  }
+                  style={[styles.productPill, active && styles.productPillActive]}
+                >
+                  <Text
+                    variant="caption"
+                    color={active ? colors.primaryPressed : colors.inkMuted}
+                    style={active ? { fontFamily: font.semibold } : undefined}
+                  >
+                    {PRODUCT_LABEL[p]}
+                  </Text>
+                </PressableScale>
+              );
+            })}
+          </View>
+        </View>
         {field('notes', 'Notes', true)}
         {error ? (
           <Text variant="caption" color={colors.destructive}>
@@ -253,5 +289,22 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.muted,
     justifyContent: 'center',
+  },
+  productWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space[2],
+  },
+  productPill: {
+    paddingHorizontal: space[3],
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  productPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
   },
 });
